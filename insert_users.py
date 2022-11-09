@@ -9,7 +9,7 @@ users = [{'email':'ldau@wellesley.edu', 'pass':'pass12345', 'username':'ldau', '
         'year':'2024', 'bio':'', 'strikes':0},
         {'email':'ir101@wellesley.edu', 'pass':'ggez', 'username':'ir101', 'first_name':'Indira', 'last_name':'Ruslanova', 
         'year':'2025', 'bio':'', 'strikes':0},
-        {'email':' hs1@wellesley.edu', 'pass':'passpass', 'username':'hs1', 'first_name':'Heidi', 'last_name':'Salgado', 
+        {'email':'hs1@wellesley.edu', 'pass':'passpass', 'username':'hs1', 'first_name':'Heidi', 'last_name':'Salgado', 
         'year':'2023', 'bio':'', 'strikes':0}]
 
 

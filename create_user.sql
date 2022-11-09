@@ -1,8 +1,6 @@
-use waggle_db;
-
 drop table if exists user;
 CREATE TABLE user (
-  user_id int auto_increment,
+  user_id int not null auto_increment,
   email varchar(30),
   hashed_pass varchar(20),
   username varchar(20) not null,
@@ -14,5 +12,5 @@ CREATE TABLE user (
   unique(username),
   index(username),
   primary key (user_id)
-);
+) ENGINE = InnoDB;
 describe user;
