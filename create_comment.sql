@@ -6,7 +6,7 @@ CREATE TABLE comment {
     post_id int,
     commentor_id int,
     content varchar(5000),
-    posted_date datetime
+    posted_date datetime,
     primary key (comment_id),
     foreign key (post_id) references post(post_id),
     foreign key (commentor_id) references user(user_id),
