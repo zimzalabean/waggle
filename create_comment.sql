@@ -1,4 +1,4 @@
-drop table if exists comment
+drop table if exists comment;
 
 CREATE TABLE comment {
     comment_id int not null auto_increment,
