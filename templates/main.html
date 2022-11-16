@@ -3,6 +3,7 @@
 {% block main_content %}
 <h1>Hello {{username}}!</h1>
 
+<p>My gaggles</p>
 <ul>
     {% for gaggle in gaggles %}
     <li>{{gaggle['gaggle_name']}}</li>
@@ -12,7 +13,15 @@
 <p>My feed</p>
 
 {% for post in posts %}
-<p>{{post}}</p>
+<div class="post" id="{{post['post_id']}}">
+    <p>post id: {{post['post_id']}}</p>
+    <p>author: {{post['author']}} gaggle: {{post['gaggle']}}</p>
+    <p>content: {{post['content']}}</p>
+    <p>likes: {{post['likes']}}</p>
+    <p>dislikes: {{post['dislikes']}}</p>
+    <p>{{post['posted_date']}}</p>  
+</div>
+
 {% endfor %}
 
 {% endblock %}
