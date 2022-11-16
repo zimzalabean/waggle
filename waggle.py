@@ -26,14 +26,6 @@ def getUserGaggle(conn,username):
                  [user_id]) #Get a list of all gaggle
     return curs.fetchall()
 
-def getPosts(conn):
-    curs = dbi.dict_cursor(conn)
-    curs.execute('''
-        select * from post limit 20
-    ''')
-<<<<<<< HEAD
-    return curs.fetchall()
-
 def searchGaggle(conn, query):
     curs = dbi.dict_cursor(conn)
     curs.execute('''
@@ -50,9 +42,20 @@ def getGaggle(conn, gaggle_name):
         WHERE gaggle_name = %s''',
                  [gaggle_name])
     return curs.fetchone()      
-=======
     posts = curs.fetchall()
     post_ids = (post['post_id'] for post in posts)
+    all_posts = []
+    for pid in post_ids:
+        all_posts.append(getOnePost(conn, pid))
+    return all_posts
+
+def getPosts(conn):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        select * from post limit 20
+    ''')
+    posts = curs.fetchall()
+    post_ids = [post['post_id'] for post in posts]
     all_posts = []
     for pid in post_ids:
         all_posts.append(getOnePost(conn, pid))
@@ -97,4 +100,3 @@ def getOnePost(conn, post_id):
     post_info['author'] = author['username']
     post_info['gaggle'] = gaggle['gaggle_name']
     return post_info
->>>>>>> 7d353bfb2046943f6f5eb967254dec3dacbf1045
