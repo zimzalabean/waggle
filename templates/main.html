@@ -1,12 +1,18 @@
 {% extends "base.html" %}
 
 {% block main_content %}
-<h1>Hello! {{username}}</h1>
+<h1>Hello {{username}}!</h1>
 
 <ul>
     {% for gaggle in gaggles %}
     <li>{{gaggle['gaggle_name']}}</li>
     {% endfor %}
 </ul>
+
+<p>My feed</p>
+
+{% for post in posts %}
+<p>{{post}}</p>
+{% endfor %}
 
 {% endblock %}
