@@ -30,6 +30,24 @@ def homepage():
 
     return render_template('main.html', gaggles = gaggles, username=username, posts=posts)
 
+@app.route('/search/', methods=["GET"])
+def search():
+    conn = dbi.connect()
+    query = request.form.get('search-query')
+    results = waggle.search(conn, query)
+    if len(results) == 0:
+        flash('No result found')
+        #should access session to get what page they were querying on and redirect to that page
+        return render_template('main.html')
+    else:
+        return render_template('results.html', query = query, results = results)
+
+@app.route('/gaggle/<gaggle_name>')
+def gaggle(gaggle_name):
+    conn = dbi.connect() 
+    gaggle = waggle.getGaggle(conn, gaggle_name)   
+    posts = waggle.getPosts(conn, gaggle_name)
+    return render_template('gaggle.html', gaggle = gaggle, posts = posts)
 
 @app.before_first_request
 def init_db():

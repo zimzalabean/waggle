@@ -32,3 +32,20 @@ def getPosts(conn):
         select * from post limit 20
     ''')
     return curs.fetchall()
+
+def searchGaggle(conn, query):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT * from gaggle 
+        WHERE gaggle_name LIKE %s''',
+                 ['%'+query+'%']) 
+    return curs.fetchall()    
+
+def getGaggle(conn, gaggle_name):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT *
+        FROM gaggle 
+        WHERE gaggle_name = %s''',
+                 [gaggle_name])
+    return curs.fetchone()      
