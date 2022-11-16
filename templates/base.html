@@ -20,7 +20,11 @@
 </div>
 {% endif %}
 {% endwith %}
-            
+  <form method=POST action="{{url_for('search')}}">
+    <label for="search-query">Title: </label>
+    <input id="search-query" name="search-query" value="">
+    <input type="submit" name="submit-btn" value="Search">
+  </form>         
 {% block nav %}
 
 {% endblock %}
