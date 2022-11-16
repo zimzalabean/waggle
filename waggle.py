@@ -31,4 +31,49 @@ def getPosts(conn):
     curs.execute('''
         select * from post limit 20
     ''')
-    return curs.fetchall()
+    posts = curs.fetchall()
+    post_ids = (post['post_id'] for post in posts)
+    all_posts = []
+    for pid in post_ids:
+        all_posts.append(getOnePost(conn, pid))
+    return all_posts
+
+def getOnePost(conn, post_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        select * from post where post_id = %s
+    ''', [post_id])
+    post_info = curs.fetchone()
+    curs.execute('''
+        select count(*) as num
+        from post_like
+        where post_id = %s and kind = 'Like'
+        group by user_id
+    ''', [post_id])
+    likes = curs.fetchone()
+    curs.execute('''
+        select count(*) as num
+        from post_like
+        where post_id = %s and kind = 'Dislike'
+        group by user_id
+    ''', [post_id])
+    dislikes = curs.fetchone()
+    curs.execute('''
+        select username from user where user_id = %s
+    ''', [post_info['poster_id']])
+    author = curs.fetchone()
+    curs.execute('''
+        select gaggle_name from gaggle where gaggle_id = %s
+    ''', [post_info['gaggle_id']])
+    gaggle = curs.fetchone()
+    if likes:
+        post_info['likes'] = likes['num']
+    else:
+        post_info['likes'] = 0
+    if dislikes:
+        post_info['dislikes'] = dislikes['num']
+    else:
+        post_info['dislikes'] = 0
+    post_info['author'] = author['username']
+    post_info['gaggle'] = gaggle['gaggle_name']
+    return post_info

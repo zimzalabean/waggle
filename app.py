@@ -26,16 +26,15 @@ def homepage():
     conn = dbi.connect()
     username = session.get('username', 'ldau')  
     gaggles = waggle.getUserGaggle(conn, username)
-    posts = waggle.getPosts(conn)
-
-    return render_template('main.html', gaggles = gaggles, username=username, posts=posts)
+    posts_info = waggle.getPosts(conn)
+    return render_template('main.html', gaggles = gaggles, username=username, posts=posts_info)
 
 
 @app.before_first_request
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'ldau_db' 
+    db_to_use = 'mp2_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 
