@@ -26,4 +26,9 @@ def getUserGaggle(conn,username):
                  [user_id]) #Get a list of all gaggle
     return curs.fetchall()
 
-
+def getPosts(conn):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        select * from post limit 20
+    ''')
+    return curs.fetchall()

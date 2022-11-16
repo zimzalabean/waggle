@@ -26,7 +26,9 @@ def homepage():
     conn = dbi.connect()
     username = session.get('username', 'ldau')  
     gaggles = waggle.getUserGaggle(conn, username)
-    return render_template('main.html', gaggles = gaggles)
+    posts = waggle.getPosts(conn)
+
+    return render_template('main.html', gaggles = gaggles, username=username, posts=posts)
 
 
 @app.before_first_request
