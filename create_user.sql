@@ -2,7 +2,7 @@ drop table if exists user;
 CREATE TABLE user (
   user_id int not null auto_increment,
   email varchar(30),
-  hashed_pass varchar(20),
+  hashed_pass varchar(60),
   username varchar(20) not null,
   first_name varchar(30),
   last_name varchar(30),

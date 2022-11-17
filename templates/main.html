@@ -10,12 +10,16 @@
     {% endfor %}
 </ul>
 
+<form action="{{url_for('logout')}}">
+    <button type="submit">logout</button>
+</form>
+
 <p>My feed</p>
 
 {% for post in posts %}
 <div class="post" id="{{post['post_id']}}">
     <p>post id: {{post['post_id']}}</p>
-    <p>author: {{post['author']}} gaggle: {{post['gaggle']}}</p>
+    <p>author: <a href="{{url_for('user', username=post['author'])}}">{{post['author']}}</a> gaggle: {{post['gaggle']}}</p>
     <p>content: {{post['content']}}</p>
     <p>likes: {{post['likes']}}</p>
     <p>dislikes: {{post['dislikes']}}</p>

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block main_content %}
+<div>
+    <p>This is a profile of {{username}}</p>
+
+    <p>Gaggles:</p>
+    <ul>
+        {% for gaggle in gaggles %}
+        <li>{{gaggle['gaggle_name']}}</li>
+        {% endfor %}
+    </ul>
+
+</div>
+{% endblock %}
