@@ -58,10 +58,8 @@ def logout():
     try:
         if 'username' in session:
             username = session['username']
-            print(session)
             session.pop('username')
             session.pop('logged_in')
-            print(session)
             flash('You are logged out')
             return redirect(url_for('login'))
         else:
