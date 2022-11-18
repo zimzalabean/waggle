@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block main_content %}
+    <p>welcome to {{gaggle.gaggle_name}}
+    created by {{gaggle.author_id}}
+    about:  {{gaggle.description}}
+    </p>
+
+    {% for post in posts %}
+    <div class="post" id="{{post.post_id}}">
+        <p>content: {{post.content}}</p>
+        <p> likes: {{post.num_likes}}</p>
+    </div>
+
+    {% endfor %}
+
+{% endblock %}

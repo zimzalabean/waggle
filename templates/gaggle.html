@@ -1,16 +1,8 @@
 {% extends "base.html" %}
 
 {% block content %}
-<body>
-    <div class="row">
-        <div class="column" style="background-color:#ccc;">
-          <h2>Column 3</h2>
-          <p>Some text..</p>
-        </div>
-        <div class="column" style="background-color:#ddd;">
-          <h2>Column 4</h2>
-          <p>Some text..</p>
-        </div>
-      </div>
-</body>
+<p>Welcome to {{gaggle.gaggle_name}}</p>
+<p> Created by {{gaggle.author_id}} </p>
+<p> About us: {{gaggle.description}}</p>
+
 {% endblock %}
