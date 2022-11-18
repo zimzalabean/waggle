@@ -47,7 +47,10 @@ def getGaggle(conn, gaggle_name):
 def getPosts(conn):
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        select * from post limit 20
+        select * 
+        from post 
+        order by posted_date DESC
+        limit 20 
     ''')
     posts = curs.fetchall()
     post_ids = [post['post_id'] for post in posts]
@@ -111,7 +114,8 @@ def getGagglePosts(conn, gaggle_name):
     curs.execute('''
         SELECT *
         FROM post
-        WHERE gaggle_id = %s''',
+        WHERE gaggle_id = %s
+        order by posted_date DESC''',
                  [gaggle_id])
     posts = curs.fetchall()
     post_ids = [post['post_id'] for post in posts]

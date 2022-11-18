@@ -6,7 +6,7 @@
 <p>Joined gaggles:</p>
 <ul>
     {% for gaggle in gaggles %}
-    <li>{{gaggle['gaggle_name']}}</li>
+    <li><a href="{{url_for('gaggle', gaggle_name=gaggle['gaggle_name'])}}">{{gaggle['gaggle_name']}}</a></li>
     {% endfor %}
 </ul>
 
