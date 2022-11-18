@@ -7,11 +7,14 @@
     </p>
 
     {% for post in posts %}
-    <div class="post" id="{{post.post_id}}">
-        <p>content: {{post.content}}</p>
-        <p> likes: {{post.num_likes}}</p>
+    <div class="post" id="{{post['post_id']}}">
+        <p>post id: {{post['post_id']}}</p>
+        <p>author: <a href="{{url_for('user', username=post['author'])}}">{{post['author']}}</a> gaggle: <a href="{{url_for('gaggle',gaggle_name=post['gaggle'])}}">{{post['gaggle']}}</a></p>
+        <p>content: {{post['content']}}</p>
+        <p>likes: {{post['likes']}}</p>
+        <p>dislikes: {{post['dislikes']}}</p>
+        <p>{{post['posted_date']}}</p>  
     </div>
-
     {% endfor %}
 
 {% endblock %}

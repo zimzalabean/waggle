@@ -113,5 +113,10 @@ def getGagglePosts(conn, gaggle_name):
         FROM post
         WHERE gaggle_id = %s''',
                  [gaggle_id])
-    return curs.fetchall() 
+    posts = curs.fetchall()
+    post_ids = [post['post_id'] for post in posts]
+    all_posts = []
+    for pid in post_ids:
+        all_posts.append(getOnePost(conn, pid))
+    return all_posts
 
