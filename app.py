@@ -2,6 +2,7 @@ from flask import (Flask, render_template, make_response, url_for, request,
                    redirect, flash, session, send_from_directory, jsonify)
 from werkzeug.utils import secure_filename
 import bcrypt
+from datetime import datetime
 app = Flask(__name__)
 
 # one or the other of these. Defaults to MySQL (PyMySQL)
@@ -108,11 +109,34 @@ def user(username):
     gaggles = waggle.getUserGaggle(conn, username)
     return render_template('user.html', username=username, gaggles=gaggles)
 
+@app.route('/newpost/<gaggle_name>/<gaggle_id>/', methods=["POST"])
+def addPost(gaggle_name, gaggle_id):
+    conn = dbi.connect()
+    content = request.form.get('content')
+    if len(content) == 0:
+        flash('Please enter some content')
+        return redirect(url_for('gaggle', gaggle_name=gaggle_name))
+    else:
+        poster_id = session.get('username')
+        now = datetime.now()
+        posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
+        #check last post_id
+        try: 
+            curs.execute('''INSERT INTO post(gaggle_id, poster_id, content, tag_id, posted_date) VALUES(%s, %s, %s, %s, %s)''',
+                        [gaggle_id, poster_id, content, NULL, posted_date])
+            conn.commit()
+            curs.execute('select last_insert_id()')
+            row = curs.fetchone()
+            print('New Post Id: ', row[0])
+        except:
+            flash('some other error!')
+        return redirect(url_for('gaggle', gaggle_name=gaggle_name))
+
 @app.before_first_request
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'ldau_db' 
+    db_to_use = 'mp2_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 
