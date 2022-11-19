@@ -93,7 +93,7 @@ def search():
         flash('No result found')
         return redirect(url_for('homepage'))
     else:
-        return render_template('results.html', query = query, results = results)
+        return render_template('testform.html', query = query, results = results)
 
 @app.route('/gaggle/<gaggle_name>')
 def gaggle(gaggle_name):
@@ -157,10 +157,25 @@ def post(post_id):
     if request.method == 'GET':
         return render_template('post.html', post = post, comments = comments)
     else:
-        content = request.form['comment_content']
-        print(post_id)
+        content = request.form['comment_content']  
         add_comment = waggle.addComment(conn, post_id, content, commentor_id, posted_date)
         return redirect( url_for('post', post_id = post_id ))
+
+@app.route('/likePost/', methods=["GET"])
+def likePost(post_id):
+    conn = dbi.connect()     
+    kind = request.args.get('submit')
+    user_id = session.get('user_id', '')
+    interaction = waggle.likePost(conn, post_id, user_id, kind)
+    return redirect( url_for('post', post_id = post_id ))
+
+@app.route('/likeComment/', methods=["GET"])
+def likeComment(post_id, comment_id):
+    conn = dbi.connect()     
+    kind = request.args.get('submit')
+    user_id = session.get('user_id', '')
+    interaction = waggle.likeComment(conn, comment_id, user_id, kind)
+    return redirect( url_for('post', post_id = post_id ))
 
 
 @app.before_first_request
@@ -180,4 +195,5 @@ if __name__ == '__main__':
     else:
         port = os.getuid()
     app.debug = True
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
     app.run('0.0.0.0',port)

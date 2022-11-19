@@ -8,6 +8,12 @@
         <p>likes: {{post['likes']}}</p>
         <p>dislikes: {{post['dislikes']}}</p>
         <p>{{post['posted_date']}}</p>  
+
+        <form method=get action="{{url_for('likePost', post_id = post.post_id)}}" >
+            <input type="submit" name="Like" value="Like">
+            <input type="submit" name="Dislike" value="Dislike">        
+        </form>
+
         <form method=post action="{{url_for('post', post_id = post.post_id)}}" >
             <textarea name="comment_content" rows="4" cols="50"></textarea>
             <input type="submit" value="Submit">
@@ -17,7 +23,13 @@
         <div class="comment" id="{{comment.comment_id}}">
             <p>author: <a href="{{url_for('user', username=comment.commentor_id)}}">{{comment.commentor_id}}</a> </p>
             <p>content: {{comment.content}}</p>
-            <p>{{comment.posted_date}}</p>  
+            <p>{{comment.posted_date}}</p>
+
+        <form method=get action="{{url_for('likeComment', post_id = post.post_id, comment_id = comment.comment_id)}}" >
+            <input type="submit" name="Like" value="Like">
+            <input type="submit" name="Dislike" value="Dislike"> 
+        </form> 
+
         </div>
         {% endfor %}
     </div>

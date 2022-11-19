@@ -143,3 +143,20 @@ def addComment(conn, post_id, content, commentor_id, posted_date):
     conn.commit()  # need this!   
     return commentor_id
   
+def likePost(conn, post_id, user_id, kind):
+    curs = dbi.cursor(conn)
+    curs.execute('''
+        INSERT INTO post_like(post_id, user_id, kind) 
+        VALUES (%s,%s,%s,%s) ''', 
+                [post_id, user_id, kind])
+    conn.commit()  # need this!   
+    return post_id     
+
+def likeComment(conn, comment_id, user_id, kind):
+    curs = dbi.cursor(conn)
+    curs.execute('''
+        INSERT INTO comment_like(post_id, user_id, kind) 
+        VALUES (%s,%s,%s,%s) ''', 
+                [comment_id, user_id, kind])
+    conn.commit()  # need this!   
+    return comment_id  
