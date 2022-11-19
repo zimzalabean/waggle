@@ -6,11 +6,13 @@
     about:  {{gaggle.description}}
     </p>
 
-    <form name="write_post" action="{{url_for('addPost', gaggle_name = gaggle.gaggle_name, gaggle_id = gaggle.gaggle_id)}}" method="POST">
-        <textarea name="content" rows="4" cols="50"></textarea>
-        <input type="submit" value="Submit">
-    </form>
-
+    <div class="add_post_form">
+        <form name="write_post" action="{{url_for('addPost', gaggle_name = gaggle.gaggle_name, gaggle_id = gaggle.gaggle_id)}}" method="POST">
+            <textarea name="content" rows="4" cols="50"></textarea>
+            <input type="submit" value="Post">
+        </form>
+    </div>
+    
     {% for post in posts %}
     <div class="post" id="{{post['post_id']}}">
         <p>post id: {{post['post_id']}}</p>

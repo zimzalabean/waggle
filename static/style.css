@@ -83,3 +83,18 @@ nav button:hover, button:focus, nav a:hover, nav a:focus {
     border-width: 2px;
     width: 700px;
 }
+
+.add_post_form{
+    margin: 10px;
+    padding: 10px;
+    border-style: solid;
+    border-width: 2px;
+    border-color: #007ea9;
+    width: 700px;
+}
+
+textarea {
+    margin: 10px;
+    width: 600px;
+    height: 100px;
+}

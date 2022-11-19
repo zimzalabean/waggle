@@ -48,6 +48,7 @@ def login():
         if hashed2_str == stored:
             flash('successfully logged in as '+username)
             session['username'] = username
+            session['user_id'] = row['user_id']
             session['logged_in'] = True
             return redirect(url_for('homepage'))
         else:
@@ -60,6 +61,7 @@ def logout():
         if 'username' in session:
             username = session['username']
             session.pop('username')
+            session.pop('user_id')
             session.pop('logged_in')
             flash('You are logged out')
             return redirect(url_for('login'))
@@ -117,20 +119,33 @@ def addPost(gaggle_name, gaggle_id):
         flash('Please enter some content')
         return redirect(url_for('gaggle', gaggle_name=gaggle_name))
     else:
-        poster_id = session.get('username')
-        now = datetime.now()
-        posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
-        #check last post_id
-        try: 
-            curs.execute('''INSERT INTO post(gaggle_id, poster_id, content, tag_id, posted_date) VALUES(%s, %s, %s, %s, %s)''',
-                        [gaggle_id, poster_id, content, NULL, posted_date])
-            conn.commit()
-            curs.execute('select last_insert_id()')
-            row = curs.fetchone()
-            print('New Post Id: ', row[0])
-        except:
-            flash('some other error!')
-        return redirect(url_for('gaggle', gaggle_name=gaggle_name))
+        poster_id = session.get('user_id', '')
+        if poster_id != '':
+            now = datetime.now()
+            posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
+            print('poster_id', poster_id, type(poster_id))
+            print(posted_date, type(posted_date))
+            print('content', content, type(poster_id))
+            print('gaggle_id', gaggle_id, type(poster_id))
+            #check last post_id
+            try:
+                print('trying')
+                curs = dbi.dict_cursor(conn)
+                curs.execute('''INSERT INTO post(gaggle_id, poster_id, content, tag_id, posted_date) VALUES(%s, %s, %s, %s, %s)''',
+                            [gaggle_id, poster_id, content, None, posted_date])
+                conn.commit()
+                print('commited')
+                #curs.execute('select last_insert_id()')
+                #row = curs.fetchone()
+                #print(row)
+                #print('New Post Id: ', row[0])
+            except Exception as e: 
+                print(e)
+                flash('some other error!')
+            return redirect(url_for('gaggle', gaggle_name=gaggle_name))
+        else:
+            flash('You are logged out')
+            return redirect(url_for('login'))
 
 @app.before_first_request
 def init_db():
