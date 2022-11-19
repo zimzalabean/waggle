@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block main_content %}
+    <div class="post" id="{{post['post_id']}}">
+        <p>post id: {{post['post_id']}}</p>
+        <p>author: <a href="{{url_for('user', username=post['author'])}}">{{post['author']}}</a> gaggle: <a href="{{url_for('gaggle',gaggle_name=post['gaggle'])}}">{{post['gaggle']}}</a></p>
+        <p>content: {{post['content']}}</p>
+        <p>likes: {{post['likes']}}</p>
+        <p>dislikes: {{post['dislikes']}}</p>
+        <p>{{post['posted_date']}}</p>  
+        <form method=post action="{{url_for('post', post_id = post.post_id)}}" >
+            <textarea name="comment_content" rows="4" cols="50"></textarea>
+            <input type="submit" value="Submit">
+        </form>
+
+        {% for comment in comments %}
+        <div class="comment" id="{{comment.comment_id}}">
+            <p>author: <a href="{{url_for('user', username=comment.commentor_id)}}">{{comment.commentor_id}}</a> </p>
+            <p>content: {{comment.content}}</p>
+            <p>{{comment.posted_date}}</p>  
+        </div>
+        {% endfor %}
+    </div>
+    
+
+
+{% endblock %}

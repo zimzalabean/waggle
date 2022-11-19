@@ -99,8 +99,21 @@ def gaggle(gaggle_name):
     gaggle = waggle.getGaggle(conn, gaggle_name)  
     posts = waggle.getGagglePosts(conn, gaggle_name)
     return render_template('group.html', gaggle = gaggle, posts = posts) 
-    # posts = waggle.getGagglePosts(conn, gaggle_name)
-    # return render_template('gaggle.html', gaggle = gaggle, posts = posts)
+
+@app.route('/post/<post_id>', methods=['GET', 'POST']) #add hyperlink from group.html to post
+def post(post_id):
+    posted_date =  '2022-11-12 11:13:11'
+    conn = dbi.connect() 
+    post = waggle.getOnePost(conn, post_id)
+    comments = waggle.getPostComments(conn, post_id)
+    commentor_id = 1; #change after implementing session
+    if request.method == 'GET':
+        return render_template('post.html', post = post, comments = comments)
+    else:
+        content = request.form['comment_content']
+        print(post_id)
+        add_comment = waggle.addComment(conn, post_id, content, commentor_id, posted_date)
+        return redirect( url_for('post', post_id = post_id ))
 
 @app.route('/user/<username>')
 def user(username):
@@ -113,7 +126,7 @@ def user(username):
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'mp2_db' 
+    db_to_use = 'ldau_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 
