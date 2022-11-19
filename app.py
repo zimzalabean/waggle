@@ -91,8 +91,7 @@ def search():
     results = waggle.searchGaggle(conn, query)
     if len(results) == 0:
         flash('No result found')
-        #should access session to get what page they were querying on and redirect to that page
-        return render_template('main.html')
+        return redirect(url_for('homepage'))
     else:
         return render_template('results.html', query = query, results = results)
 
@@ -146,6 +145,23 @@ def addPost(gaggle_name, gaggle_id):
         else:
             flash('You are logged out')
             return redirect(url_for('login'))
+
+@app.route('/post/<post_id>', methods=['GET', 'POST']) #add hyperlink from group.html to post
+def post(post_id):
+    now = datetime.now()
+    posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
+    commentor_id = session.get('user_id', '')
+    conn = dbi.connect() 
+    post = waggle.getOnePost(conn, post_id)
+    comments = waggle.getPostComments(conn, post_id)
+    if request.method == 'GET':
+        return render_template('post.html', post = post, comments = comments)
+    else:
+        content = request.form['comment_content']
+        print(post_id)
+        add_comment = waggle.addComment(conn, post_id, content, commentor_id, posted_date)
+        return redirect( url_for('post', post_id = post_id ))
+
 
 @app.before_first_request
 def init_db():

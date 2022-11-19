@@ -31,7 +31,7 @@ def searchGaggle(conn, query):
     curs.execute('''
         SELECT * from gaggle 
         WHERE gaggle_name LIKE %s''',
-                 ['%'+query+'%']) 
+                 ["%"+query+"%"]) 
     return curs.fetchall()    
 
 def getGaggle(conn, gaggle_name):
