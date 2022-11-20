@@ -132,7 +132,8 @@ def getPostComments(conn, post_id):
         LEFT JOIN user b
         ON a.commentor_id = b.user_id
         WHERE parent_comment_id IS NULL 
-        AND post_id = %s''',
+        AND post_id = %s
+        ORDER BY a.posted_date desc''',
                  [post_id])
     return curs.fetchall()      
 
