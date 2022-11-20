@@ -2,7 +2,6 @@
 
 {% block main_content %}
     {% for member in members %}
-    {{member}}
     <ul>
         <li><a href="{{url_for('user', username=member[0])}}">"{{member[0]}}"</a></li>
     </ul>
