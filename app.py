@@ -78,11 +78,33 @@ def homepage():
     username = session.get('username', '')
     logged = session.get('logged_in', False)
     if logged == False:
+        flash('you are not logged in. Please login or join')
         return redirect(url_for('login'))
     else:
         gaggles = waggle.getUserGaggle(conn, username)
         posts_info = waggle.getPosts(conn)
         return render_template('main.html', gaggles = gaggles, username=username, posts=posts_info)
+
+@app.route('/deletePost/<post_id>/<author_id>', methods=['POST'])
+def deletePost(post_id, author_id):
+    username = session.get('username', '')
+    user_id = session.get('user_id', '')
+    logged = session.get('logged_in', False)
+    if logged == False:
+        flash('you are not logged in. Please login or join')
+        return redirect(url_for('login'))
+    if user_id != int(author_id):
+        flash('you are not authorized to delete this post/comment')
+        return redirect(url_for('homepage'))
+    conn = dbi.connect()
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''delete
+                    from post
+                    where post_id = %s''',
+                    [post_id])
+    conn.commit()
+    flash('Deleted post with post_id {pid}'.format(pid=post_id))
+    return redirect(url_for('homepage'))
 
 @app.route('/search/', methods=["GET"])
 def search():
@@ -100,7 +122,6 @@ def gaggle(gaggle_name):
     conn = dbi.connect() 
     gaggle = waggle.getGaggle(conn, gaggle_name)  
     posts = waggle.getGagglePosts(conn, gaggle_name)
-    print(posts)
     return render_template('group.html', gaggle = gaggle, posts = posts) 
     # posts = waggle.getGagglePosts(conn, gaggle_name)
     # return render_template('gaggle.html', gaggle = gaggle, posts = posts)
@@ -136,8 +157,8 @@ def addPost(gaggle_name, gaggle_id):
             flash('You are logged out')
             return redirect(url_for('login'))
 
-@app.route('/post/<post_id>', methods=['GET', 'POST']) #add hyperlink from group.html to post
-def post(post_id):
+@app.route('/gaggle/<gaggle_name>/post/<post_id>', methods=['GET', 'POST']) #add hyperlink from group.html to post
+def post(gaggle_name, post_id):
     now = datetime.now()
     posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
     user_id = session.get('user_id', '')
@@ -191,7 +212,7 @@ def gaggleMembers(gaggle_name):
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'ldau_db' 
+    db_to_use = 'mp2_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 

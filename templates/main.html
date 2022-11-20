@@ -23,7 +23,10 @@
     <p>content: {{post['content']}}</p>
     <p>likes: {{post['likes']}}</p>
     <p>dislikes: {{post['dislikes']}}</p>
-    <p>{{post['posted_date']}}</p>  
+    <p>{{post['posted_date']}}</p>
+    <form method="post" action="{{url_for('deletePost', post_id=post['post_id'], author_id=post['poster_id'])}}">
+        <input type="submit" name="delete" value="Delete Post">
+    </form> 
 </div>
 
 {% endfor %}
