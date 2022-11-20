@@ -139,8 +139,8 @@ def addPost(gaggle_name, gaggle_id):
 def post(post_id):
     now = datetime.now()
     posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
-    #commentor_id = session.get('user_id', '')
-    user_id = 3
+    user_id = session.get('user_id', '')
+    #user_id = 4
     conn = dbi.connect() 
     post = waggle.getOnePost(conn, post_id)
     comments = waggle.getPostComments(conn, post_id)
@@ -148,8 +148,10 @@ def post(post_id):
         return render_template('post.html', post = post, comments = comments)
     else:
         kind = request.form.get('submit')
+        print(kind)
         if kind == 'Comment':
             content = request.form['comment_content']  
+            print(content)
             add_comment = waggle.addComment(conn, post_id, content, user_id, posted_date)
         else: 
             interaction = waggle.likePost(conn, post_id, user_id, kind)    
