@@ -129,10 +129,12 @@ def getGagglePosts(conn, gaggle_name):
 def getPostComments(conn, post_id):
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.*, b.username
+        SELECT a.*, b.username, c.num_likes, c.num_dislikes
         FROM comment a
         LEFT JOIN user b
         ON a.commentor_id = b.user_id
+        LEFT JOIN comment_like_count c
+        ON a.comment_id = c.comment_id
         WHERE parent_comment_id IS NULL 
         AND post_id = %s
         ORDER BY a.posted_date desc''',
@@ -177,3 +179,60 @@ def getMembers(conn, gaggle_name):
         WHERE gaggle_id = %s''',
                  [gaggle_id])
     return curs.fetchall()  
+
+def hasLiked(conn, post_id, user_id):
+    curs = dbi.cursor(conn)  
+    curs.execute('''
+        SELECT * from post_like 
+        WHERE post_id = %s
+        AND user_id = %s''',
+                 [post_id, user_id]) 
+    return curs.fetchall()    
+
+def hasLikedComment(conn, comment_id, user_id):
+    curs = dbi.cursor(conn)  
+    curs.execute('''
+        SELECT * from comment_like 
+        WHERE comment_id = %s
+        AND user_id = %s''',
+                 [comment_id, user_id]) 
+    return curs.fetchall()  
+
+def startCommentMetrics(conn, comment_id):
+    curs = dbi.cursor(conn)
+    curs.execute('''
+        SELECT * from comment_like 
+        WHERE comment_id = %s''',
+                 [comment_id])     
+    result = curs.fetchall()
+    if len(result) == 0:             
+        curs.execute('''
+            INSERT INTO comment_like_count(comment_id, num_likes, num_dislikes) 
+            VALUES (%s,%s,%s) ''', 
+                    [comment_id, 0, 0])
+        conn.commit()  # need this!   
+    return comment_id      
+
+def commentMetrics(conn, comment_id):
+    curs = dbi.cursor(conn)  
+    curs.execute('''
+        SELECT * from comment_like_count 
+        WHERE comment_id = %s''',
+                 [comment_id])     
+    return curs.fetchall()  
+
+def updateCommentMetrics(conn, comment_id, kind):
+    curs = dbi.cursor(conn)  
+    if kind == 'Like':
+        curs.execute('''
+            UPDATE comment_like_count SET num_likes = num_likes + 1 
+            WHERE comment_id = %s''',
+                    [comment_id]) 
+    else:
+        curs.execute('''
+            UPDATE comment_like_count SET num_dislikes = num_dislikes + 1 
+            WHERE comment_id = %s''',
+                    [comment_id])            
+    conn.commit()  
+    return comment_id 
+    

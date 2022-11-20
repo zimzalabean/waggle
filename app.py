@@ -150,13 +150,15 @@ def post(post_id):
     else:
         print(request.form)
         kind = request.form.get('submit')
-        print(kind)
         if kind == 'Comment':
             content = request.form['comment_content']  
-            print(content)
             add_comment = waggle.addComment(conn, post_id, content, user_id, posted_date)
         else: 
-            interaction = waggle.likePost(conn, post_id, user_id, kind)    
+            hasLiked = waggle.hasLiked(conn, post_id, user_id)
+            if len(hasLiked) == 0:
+                interaction = waggle.likePost(conn, post_id, user_id, kind)   
+            else:
+                flash(f"You already {kind}d")     
         return redirect( url_for('post', post_id = post_id ))
     
 @app.route('/likeComment/<post_id>/<comment_id>', methods=['GET', 'POST'])
@@ -170,22 +172,26 @@ def likeComment(post_id, comment_id):
         return render_template('post.html', post = post, comments = comments) 
     else:     
         kind = request.form.get('submit')
-        interaction = waggle.likeComment(conn, comment_id, user_id, kind)
-        #return render_template('test.html', kind = kind) 
+        display = waggle.startCommentMetrics(conn, comment_id)
+        hasLiked = waggle.hasLikedComment(conn, comment_id, user_id)
+        if len(hasLiked) == 0:
+            interaction = waggle.likeComment(conn, comment_id, user_id, kind)
+            update = waggle.updateCommentMetrics(conn, comment_id, kind)
+        else: 
+            flash(f"You already {kind}d")    
         return redirect( url_for('post', post_id = post_id ))
 
 @app.route('/gaggle/members/<gaggle_name>')
 def gaggleMembers(gaggle_name):
     conn = dbi.connect() 
     members = waggle.getMembers(conn, gaggle_name)  
-    print(members[0][0])
     return render_template('groupMembers.html', gaggle_name = gaggle_name, members = members) 
 
 @app.before_first_request
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'mp2_db' 
+    db_to_use = 'ldau_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 

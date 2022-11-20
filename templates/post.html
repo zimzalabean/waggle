@@ -21,7 +21,8 @@
             <p>author: <a href="{{url_for('user', username=comment.commentor_id)}}">{{comment.username}}</a> </p>
             <p>content: {{comment.content}}</p>
             <p>{{comment.posted_date}}</p>
-
+            <p>Likes: {{comment.num_likes}}</p>
+            <p>Dislikes: {{comment.num_dislikes}}</p>
         <form method=post action="{{url_for('likeComment', post_id = post.post_id, comment_id = comment.comment_id)}}" >
             <input type="submit" name="submit" value="Like">
             <input type="submit" name="submit" value="Dislike"> 
