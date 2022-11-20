@@ -37,8 +37,10 @@ def searchGaggle(conn, query):
 def getGaggle(conn, gaggle_name):
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT *
-        FROM gaggle 
+        SELECT a.*, b.username
+        FROM gaggle a
+        LEFT JOIN user b
+        ON (a.author_id = b.user_id)
         WHERE gaggle_name = %s''',
                  [gaggle_name])
     return curs.fetchone()      
@@ -163,3 +165,15 @@ def likeComment(conn, comment_id, user_id, kind):
                 [comment_id, user_id, kind])
     conn.commit()  # need this!   
     return comment_id  
+
+def getMembers(conn, gaggle_name):
+    curs = dbi.cursor(conn)  
+    gaggle_id = getGaggleID(conn, gaggle_name)[0]['gaggle_id']
+    curs.execute('''
+        SELECT username
+        FROM gosling 
+        LEFT JOIN user 
+        USING (user_id)
+        WHERE gaggle_id = %s''',
+                 [gaggle_id])
+    return curs.fetchall()  

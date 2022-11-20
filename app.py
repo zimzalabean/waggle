@@ -100,6 +100,7 @@ def gaggle(gaggle_name):
     conn = dbi.connect() 
     gaggle = waggle.getGaggle(conn, gaggle_name)  
     posts = waggle.getGagglePosts(conn, gaggle_name)
+    print(posts)
     return render_template('group.html', gaggle = gaggle, posts = posts) 
     # posts = waggle.getGagglePosts(conn, gaggle_name)
     # return render_template('gaggle.html', gaggle = gaggle, posts = posts)
@@ -172,6 +173,12 @@ def likeComment(post_id, comment_id):
         #return render_template('test.html', kind = kind) 
         return redirect( url_for('post', post_id = post_id ))
 
+@app.route('/gaggle/members/<gaggle_name>')
+def gaggleMembers(gaggle_name):
+    conn = dbi.connect() 
+    members = waggle.getMembers(conn, gaggle_name)  
+    print(members[0][0])
+    return render_template('groupMembers.html', gaggle_name = gaggle_name, members = members) 
 
 @app.before_first_request
 def init_db():
