@@ -127,8 +127,10 @@ def getGagglePosts(conn, gaggle_name):
 def getPostComments(conn, post_id):
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT *
-        FROM comment
+        SELECT a.*, b.username
+        FROM comment a
+        LEFT JOIN user b
+        ON a.commentor_id = b.user_id
         WHERE parent_comment_id IS NULL 
         AND post_id = %s''',
                  [post_id])

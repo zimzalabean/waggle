@@ -139,30 +139,20 @@ def addPost(gaggle_name, gaggle_id):
 def post(post_id):
     now = datetime.now()
     posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
-    commentor_id = session.get('user_id', '')
+    #commentor_id = session.get('user_id', '')
+    user_id = 3
     conn = dbi.connect() 
     post = waggle.getOnePost(conn, post_id)
     comments = waggle.getPostComments(conn, post_id)
     if request.method == 'GET':
         return render_template('post.html', post = post, comments = comments)
     else:
-        content = request.form['comment_content']  
-        add_comment = waggle.addComment(conn, post_id, content, commentor_id, posted_date)
-        return redirect( url_for('post', post_id = post_id ))
-
-@app.route('/likePost/<post_id>', methods=['GET', 'POST'])
-def likePost(post_id):
-    #user_id = session.get('user_id', '')
-    user_id = 5
-    conn = dbi.connect() 
-    post = waggle.getOnePost(conn, post_id)
-    comments = waggle.getPostComments(conn, post_id)   
-    if request.method == 'GET':  
-        return render_template('post.html', post = post, comments = comments)
-    else:         
         kind = request.form.get('submit')
-        interaction = waggle.likePost(conn, post_id, user_id, kind)
-        #return render_template('test.html', kind = kind) 
+        if kind == 'Comment':
+            content = request.form['comment_content']  
+            add_comment = waggle.addComment(conn, post_id, content, user_id, posted_date)
+        else: 
+            interaction = waggle.likePost(conn, post_id, user_id, kind)    
         return redirect( url_for('post', post_id = post_id ))
     
 @app.route('/likeComment/<post_id>/<comment_id>', methods=['GET', 'POST'])
