@@ -31,7 +31,7 @@ def searchGaggle(conn, query):
     curs.execute('''
         SELECT * from gaggle 
         WHERE gaggle_name LIKE %s''',
-                 ['%'+query+'%']) 
+                 ["%"+query+"%"]) 
     return curs.fetchall()    
 
 def getGaggle(conn, gaggle_name):
@@ -124,3 +124,39 @@ def getGagglePosts(conn, gaggle_name):
         all_posts.append(getOnePost(conn, pid))
     return all_posts
 
+def getPostComments(conn, post_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT *
+        FROM comment
+        WHERE parent_comment_id IS NULL 
+        AND post_id = %s''',
+                 [post_id])
+    return curs.fetchall()      
+
+def addComment(conn, post_id, content, commentor_id, posted_date):
+    curs = dbi.cursor(conn)
+    curs.execute('''
+        INSERT INTO comment(post_id, content, commentor_id, posted_date) 
+        VALUES (%s,%s,%s,%s) ''', 
+                [post_id, content, commentor_id, posted_date])
+    conn.commit()  # need this!   
+    return commentor_id
+  
+def likePost(conn, post_id, user_id, kind):
+    curs = dbi.cursor(conn)
+    curs.execute('''
+        INSERT INTO post_like(post_id, user_id, kind) 
+        VALUES (%s,%s,%s,%s) ''', 
+                [post_id, user_id, kind])
+    conn.commit()  # need this!   
+    return post_id     
+
+def likeComment(conn, comment_id, user_id, kind):
+    curs = dbi.cursor(conn)
+    curs.execute('''
+        INSERT INTO comment_like(post_id, user_id, kind) 
+        VALUES (%s,%s,%s,%s) ''', 
+                [comment_id, user_id, kind])
+    conn.commit()  # need this!   
+    return comment_id  

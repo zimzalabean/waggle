@@ -2,6 +2,7 @@ from flask import (Flask, render_template, make_response, url_for, request,
                    redirect, flash, session, send_from_directory, jsonify)
 from werkzeug.utils import secure_filename
 import bcrypt
+from datetime import datetime
 app = Flask(__name__)
 
 # one or the other of these. Defaults to MySQL (PyMySQL)
@@ -86,10 +87,10 @@ def search():
     conn = dbi.connect()
     query = request.args.get('search-query')
     results = waggle.searchGaggle(conn, query)
+    print(len(results))
     if len(results) == 0:
-        flash('No result found')
-        #should access session to get what page they were querying on and redirect to that page
-        return render_template('main.html')
+        flash(len(results) )
+        return redirect(url_for('homepage'))
     else:
         return render_template('results.html', query = query, results = results)
 
@@ -99,8 +100,22 @@ def gaggle(gaggle_name):
     gaggle = waggle.getGaggle(conn, gaggle_name)  
     posts = waggle.getGagglePosts(conn, gaggle_name)
     return render_template('group.html', gaggle = gaggle, posts = posts) 
-    # posts = waggle.getGagglePosts(conn, gaggle_name)
-    # return render_template('gaggle.html', gaggle = gaggle, posts = posts)
+
+@app.route('/post/<post_id>', methods=['GET', 'POST']) #add hyperlink from group.html to post
+def post(post_id):
+    now = datetime.now()
+    posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
+    commentor_id = session.get('user_id', '')
+    conn = dbi.connect() 
+    post = waggle.getOnePost(conn, post_id)
+    comments = waggle.getPostComments(conn, post_id)
+    if request.method == 'GET':
+        return render_template('post.html', post = post, comments = comments)
+    else:
+        content = request.form['comment_content']
+        print(post_id)
+        add_comment = waggle.addComment(conn, post_id, content, commentor_id, posted_date)
+        return redirect( url_for('post', post_id = post_id ))
 
 @app.route('/user/<username>')
 def user(username):
@@ -108,12 +123,47 @@ def user(username):
     gaggles = waggle.getUserGaggle(conn, username)
     return render_template('user.html', username=username, gaggles=gaggles)
 
+@app.route('/newpost/<gaggle_name>/<gaggle_id>/', methods=["POST"])
+def addPost(gaggle_name, gaggle_id):
+    conn = dbi.connect()
+    content = request.form.get('content')
+    if len(content) == 0:
+        flash('Please enter some content')
+        return redirect(url_for('gaggle', gaggle_name=gaggle_name))
+    else:
+        poster_id = session.get('user_id', '')
+        if poster_id != '':
+            now = datetime.now()
+            posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
+            print('poster_id', poster_id, type(poster_id))
+            print(posted_date, type(posted_date))
+            print('content', content, type(poster_id))
+            print('gaggle_id', gaggle_id, type(poster_id))
+            #check last post_id
+            try:
+                print('trying')
+                curs = dbi.dict_cursor(conn)
+                curs.execute('''INSERT INTO post(gaggle_id, poster_id, content, tag_id, posted_date) VALUES(%s, %s, %s, %s, %s)''',
+                            [gaggle_id, poster_id, content, None, posted_date])
+                conn.commit()
+                print('commited')
+                #curs.execute('select last_insert_id()')
+                #row = curs.fetchone()
+                #print(row)
+                #print('New Post Id: ', row[0])
+            except Exception as e: 
+                print(e)
+                flash('some other error!')
+            return redirect(url_for('gaggle', gaggle_name=gaggle_name))
+        else:
+            flash('You are logged out')
+            return redirect(url_for('login'))
 
 @app.before_first_request
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'mp2_db' 
+    db_to_use = 'ldau_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 
