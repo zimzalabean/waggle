@@ -123,25 +123,14 @@ def addPost(gaggle_name, gaggle_id):
         if poster_id != '':
             now = datetime.now()
             posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
-            print('poster_id', poster_id, type(poster_id))
-            print(posted_date, type(posted_date))
-            print('content', content, type(poster_id))
-            print('gaggle_id', gaggle_id, type(poster_id))
-            #check last post_id
             try:
-                print('trying')
                 curs = dbi.dict_cursor(conn)
                 curs.execute('''INSERT INTO post(gaggle_id, poster_id, content, tag_id, posted_date) VALUES(%s, %s, %s, %s, %s)''',
                             [gaggle_id, poster_id, content, None, posted_date])
                 conn.commit()
-                print('commited')
-                #curs.execute('select last_insert_id()')
-                #row = curs.fetchone()
-                #print(row)
-                #print('New Post Id: ', row[0])
             except Exception as e: 
                 print(e)
-                flash('some other error!')
+                flash('Error:' +e)
             return redirect(url_for('gaggle', gaggle_name=gaggle_name))
         else:
             flash('You are logged out')
