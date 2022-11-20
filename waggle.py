@@ -147,7 +147,7 @@ def likePost(conn, post_id, user_id, kind):
     curs = dbi.cursor(conn)
     curs.execute('''
         INSERT INTO post_like(post_id, user_id, kind) 
-        VALUES (%s,%s,%s,%s) ''', 
+        VALUES (%s,%s,%s) ''', 
                 [post_id, user_id, kind])
     conn.commit()  # need this!   
     return post_id     
@@ -155,8 +155,8 @@ def likePost(conn, post_id, user_id, kind):
 def likeComment(conn, comment_id, user_id, kind):
     curs = dbi.cursor(conn)
     curs.execute('''
-        INSERT INTO comment_like(post_id, user_id, kind) 
-        VALUES (%s,%s,%s,%s) ''', 
+        INSERT INTO comment_like(comment_id, user_id, kind) 
+        VALUES (%s,%s,%s) ''', 
                 [comment_id, user_id, kind])
     conn.commit()  # need this!   
     return comment_id  
