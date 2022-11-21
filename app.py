@@ -222,6 +222,7 @@ def gaggleMembers(gaggle_name):
     members = waggle.getMembers(conn, gaggle_name)  
     return render_template('groupMembers.html', gaggle_name = gaggle_name, members = members) 
 
+<<<<<<< HEAD
 @app.route('/gaggle/join/<gaggle_id>/<gaggle_name>', methods=['GET', 'POST'])
 def joinGaggle(gaggle_id, gaggle_name):
     conn = dbi.connect() 
@@ -244,6 +245,59 @@ def joinGaggle(gaggle_id, gaggle_name):
                 action = waggle.unjoinGaggle(conn, user_id, gaggle_id) 
                 print(action)              
             return redirect(url_for('gaggle', gaggle_name=gaggle_name))  
+=======
+@app.route('/edit_my_page/', methods=['GET', 'POST'])
+def editMyPage():
+    user_id = session.get('user_id', '')
+    if user_id == '':
+        flash('you are not logged in. Please login or join')
+        return redirect(url_for('login'))
+    conn = dbi.connect()
+    user_info = waggle.getUserInfo(conn, user_id)
+    if request.method == 'GET':
+        return render_template('edit_user_info.html', user=user_info)
+    else:
+        new_fn, new_ln, new_cy, new_bio = '', '', '', ''
+        if request.form['first_name'] != '':
+            new_fn = request.form['first_name']
+            curs = dbi.dict_cursor(conn)
+            curs.execute('''
+                update user set first_name = %s  where user_id = %s''',[new_fn,user_id])
+            conn.commit()
+        if request.form['last_name'] != '':
+            new_ln = request.form['first_name']
+            curs = dbi.dict_cursor(conn)
+            curs.execute('''
+                update user set last_name = %s where user_id = %s''',[new_ln,user_id])
+            conn.commit()
+        if request.form['class_year'] != '':
+            new_cy = request.form['class_year']
+            curs = dbi.dict_cursor(conn)
+            curs.execute('''
+                update user set class_year = %s where user_id = %s''',[new_cy,user_id])
+            conn.commit()
+        if request.form['bio_text'] != '':
+            new_bio = request.form['bio_text']
+            curs = dbi.dict_cursor(conn)
+            curs.execute('''
+                update user set bio_text = %s  where user_id = %s''',[new_bio,user_id])
+            conn.commit()
+        flash('Your information was successfully updated')
+        return redirect(url_for('editMyPage'))
+         
+@app.route('/my_gaggles/', methods=['GET', 'POST'])
+def showMyGaggles():
+    #not finished
+    user_id = session.get('user_id', '')
+    if user_id == '':
+        flash('you are not logged in. Please login or join')
+        return redirect(url_for('login'))
+    username=session.get('username', '')
+    conn= dbi.connect()
+    gaggles = waggle.getGagglesOfAuthor(conn, user_id)
+    if request.method=='GET':
+        return render_template('show_my_gaggles.html', username=username, gaggles=gaggles)
+>>>>>>> 147c88d379e27c12fd60d77842b02317da161815
 
 @app.before_first_request
 def init_db():

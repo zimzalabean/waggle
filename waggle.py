@@ -11,10 +11,16 @@ def getUserID(conn, username):
                  [username])
     return curs.fetchone()    
 
+def getUserInfo(conn, user_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT first_name, last_name, class_year, bio_text
+        FROM user
+        WHERE user_id = %s''',
+                 [user_id])
+    return curs.fetchone()      
+
 def getUserGaggle(conn,username):
-    '''Returns a dictionary of actors, with their name, nm (actor id), \
-        and a list of movies they acted in, based in an actor's exact nm.
-    '''
     user_id = getUserID(conn, username)['user_id']
     curs = dbi.dict_cursor(conn)
     curs.execute('''
@@ -45,6 +51,12 @@ def getGaggle(conn, gaggle_name):
                  [gaggle_name])
     return curs.fetchone()      
 
+def getGagglesOfAuthor(conn, user_id):
+    '''returns all gaggles that a user created'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        select * from gaggle where author_id = %s''', [user_id])
+    return curs.fetchall()
 
 def getPosts(conn):
     curs = dbi.dict_cursor(conn)

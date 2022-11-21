@@ -1,41 +1,9 @@
-<!doctype html>
-<html lang='en'>
-<head>
-    <meta charset='utf-8'>
-    <!-- for mobile-friendly pages -->
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name=author content="">
-    <title>{{ page_title }}</title>
-    <link rel='stylesheet' href="{{url_for('static', filename = 'style.css')}}">
-    {% block head_stuff %} {% endblock %}
-</head>
-<body>
+{% extends "super_base.html" %}
 
-{% with messages = get_flashed_messages() %}
-{% if messages %}
-<div id="messages">
-  {% for msg in messages %}
-  <p>{{msg}}</p>
-  {% endfor %}
-</div>
-{% endif %}
-{% endwith %}
-  <form method=GET action="{{url_for('search')}}">
+{% block searchbar %}
+  <form class="search_form" method=GET action="{{url_for('search')}}">
     <label for="search-query">Find gaggle: </label>
     <input id="search-query" name="search-query" value="">
     <input type="submit" name="submit-btn" value="Search">
-  </form>         
-{% block nav %}
-
+  </form>  
 {% endblock %}
-
-{% block main_content %}
-<h1>Welcome!</h1>
-{% endblock %}
-
-  <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
-  {% block end_scripts %}
-  {% endblock %}
-  
-</body>
-</html>
