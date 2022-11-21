@@ -3,7 +3,7 @@
 {% block main_content %}
     {% for member in members %}
     <ul>
-        <li><a href="{{url_for('user', username=member[0])}}">"{{member[0]}}"</a></li>
+        <li><a href="{{url_for('user', username=member.username)}}">"{{member.username}}"</a></li>
     </ul>
     {% endfor %}
 

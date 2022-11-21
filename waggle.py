@@ -142,7 +142,7 @@ def getPostComments(conn, post_id):
     return curs.fetchall()      
 
 def addComment(conn, post_id, content, commentor_id, posted_date):
-    curs = dbi.cursor(conn)
+    curs = dbi.dict_cursor(conn)
     curs.execute('''
         INSERT INTO comment(post_id, content, commentor_id, posted_date) 
         VALUES (%s,%s,%s,%s) ''', 
@@ -151,7 +151,7 @@ def addComment(conn, post_id, content, commentor_id, posted_date):
     return commentor_id
   
 def likePost(conn, post_id, user_id, kind):
-    curs = dbi.cursor(conn)
+    curs = dbi.dict_cursor(conn)
     curs.execute('''
         INSERT INTO post_like(post_id, user_id, kind) 
         VALUES (%s,%s,%s) ''', 
@@ -160,7 +160,7 @@ def likePost(conn, post_id, user_id, kind):
     return post_id     
 
 def likeComment(conn, comment_id, user_id, kind):
-    curs = dbi.cursor(conn)
+    curs = dbi.dict_cursor(conn)
     curs.execute('''
         INSERT INTO comment_like(comment_id, user_id, kind) 
         VALUES (%s,%s,%s) ''', 
@@ -169,7 +169,7 @@ def likeComment(conn, comment_id, user_id, kind):
     return comment_id  
 
 def getMembers(conn, gaggle_name):
-    curs = dbi.cursor(conn)  
+    curs = dbi.dict_cursor(conn)
     gaggle_id = getGaggleID(conn, gaggle_name)[0]['gaggle_id']
     curs.execute('''
         SELECT username
@@ -181,7 +181,7 @@ def getMembers(conn, gaggle_name):
     return curs.fetchall()  
 
 def hasLiked(conn, post_id, user_id):
-    curs = dbi.cursor(conn)  
+    curs = dbi.dict_cursor(conn)  
     curs.execute('''
         SELECT * from post_like 
         WHERE post_id = %s
@@ -190,7 +190,7 @@ def hasLiked(conn, post_id, user_id):
     return curs.fetchall()    
 
 def hasLikedComment(conn, comment_id, user_id):
-    curs = dbi.cursor(conn)  
+    curs = dbi.dict_cursor(conn)  
     curs.execute('''
         SELECT * from comment_like 
         WHERE comment_id = %s
@@ -199,7 +199,7 @@ def hasLikedComment(conn, comment_id, user_id):
     return curs.fetchall()  
 
 def startCommentMetrics(conn, comment_id):
-    curs = dbi.cursor(conn)
+    curs = dbi.dict_cursor(conn)
     curs.execute('''
         SELECT * from comment_like 
         WHERE comment_id = %s''',
@@ -214,7 +214,7 @@ def startCommentMetrics(conn, comment_id):
     return comment_id      
 
 def commentMetrics(conn, comment_id):
-    curs = dbi.cursor(conn)  
+    curs = dbi.dict_cursor(conn)  
     curs.execute('''
         SELECT * from comment_like_count 
         WHERE comment_id = %s''',
@@ -222,7 +222,7 @@ def commentMetrics(conn, comment_id):
     return curs.fetchall()  
 
 def updateCommentMetrics(conn, comment_id, kind):
-    curs = dbi.cursor(conn)  
+    curs = dbi.dict_cursor(conn)  
     if kind == 'Like':
         curs.execute('''
             UPDATE comment_like_count SET num_likes = num_likes + 1 
@@ -237,11 +237,29 @@ def updateCommentMetrics(conn, comment_id, kind):
     return comment_id 
 
 def joinGaggle(conn, user_id, gaggle_id):
-    curs = dbi.cursor(conn)
+    curs = dbi.dict_cursor(conn)
     curs.execute('''
         INSERT INTO gosling(user_id, gaggle_id) 
         VALUES (%s,%s) ''', 
                 [user_id, gaggle_id])
     conn.commit()  # need this!   
-    return gaggle_id 
-    
+    return "Joined "
+
+def unjoinGaggle(conn, user_id, gaggle_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        DELETE FROM gosling
+        WHERE user_id = %s
+        AND gaggle_id = %s''', 
+                [ user_id, gaggle_id])
+    conn.commit()  # need this!   
+    return "Unjoined"
+
+def isGosling(conn, user_id, gaggle_id):    
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        SELECT * from gosling
+        WHERE user_id = %s
+        AND gaggle_id = %s''',
+                 [user_id, gaggle_id])     
+    return curs.fetchall()      

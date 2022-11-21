@@ -48,6 +48,7 @@ def login():
         if hashed2_str == stored:
             flash('successfully logged in as '+username)
             session['username'] = username
+            session['user_id'] = row['user_id']
             session['logged_in'] = True
             return redirect(url_for('homepage'))
         else:
@@ -60,6 +61,7 @@ def logout():
         if 'username' in session:
             username = session['username']
             session.pop('username')
+            session.pop('user_id')
             session.pop('logged_in')
             flash('You are logged out')
             return redirect(url_for('login'))
@@ -73,49 +75,57 @@ def logout():
 @app.route('/')
 def homepage():
     conn = dbi.connect()
-    username = session.get('username', 'ldau')# should change later
-    logged = session.get('logged_in', True)# should change later
+    username = session.get('username', '')
+    logged = session.get('logged_in', False)
     if logged == False:
+        flash('you are not logged in. Please login or join')
         return redirect(url_for('login'))
     else:
         gaggles = waggle.getUserGaggle(conn, username)
         posts_info = waggle.getPosts(conn)
         return render_template('main.html', gaggles = gaggles, username=username, posts=posts_info)
 
+@app.route('/deletePost/<post_id>/<author_id>', methods=['POST'])
+def deletePost(post_id, author_id):
+    username = session.get('username', '')
+    user_id = session.get('user_id', '')
+    logged = session.get('logged_in', False)
+    if logged == False:
+        flash('you are not logged in. Please login or join')
+        return redirect(url_for('login'))
+    if user_id != int(author_id):
+        flash('you are not authorized to delete this post/comment')
+        return redirect(url_for('homepage'))
+    conn = dbi.connect()
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''delete
+                    from post
+                    where post_id = %s''',
+                    [post_id])
+    conn.commit()
+    flash('Deleted post with post_id {pid}'.format(pid=post_id))
+    return redirect(url_for('homepage'))
+
 @app.route('/search/', methods=["GET"])
 def search():
     conn = dbi.connect()
     query = request.args.get('search-query')
     results = waggle.searchGaggle(conn, query)
-    print(len(results))
     if len(results) == 0:
-        flash(len(results) )
+        flash('No result found')
         return redirect(url_for('homepage'))
     else:
-        return render_template('results.html', query = query, results = results)
+        render_template('testform.html', query = query, results = results)  
+
 
 @app.route('/gaggle/<gaggle_name>')
 def gaggle(gaggle_name):
     conn = dbi.connect() 
     gaggle = waggle.getGaggle(conn, gaggle_name)  
     posts = waggle.getGagglePosts(conn, gaggle_name)
-    return render_template('group.html', gaggle = gaggle, posts = posts) 
-
-@app.route('/post/<post_id>', methods=['GET', 'POST']) #add hyperlink from group.html to post
-def post(post_id):
-    now = datetime.now()
-    posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
-    commentor_id = session.get('user_id', '')
-    conn = dbi.connect() 
-    post = waggle.getOnePost(conn, post_id)
-    comments = waggle.getPostComments(conn, post_id)
-    if request.method == 'GET':
-        return render_template('post.html', post = post, comments = comments)
-    else:
-        content = request.form['comment_content']
-        print(post_id)
-        add_comment = waggle.addComment(conn, post_id, content, commentor_id, posted_date)
-        return redirect( url_for('post', post_id = post_id ))
+    return render_template('testGroup.html', gaggle = gaggle, posts = posts) 
+    # posts = waggle.getGagglePosts(conn, gaggle_name)
+    # return render_template('gaggle.html', gaggle = gaggle, posts = posts)
 
 @app.route('/user/<username>')
 def user(username):
@@ -135,29 +145,81 @@ def addPost(gaggle_name, gaggle_id):
         if poster_id != '':
             now = datetime.now()
             posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
-            print('poster_id', poster_id, type(poster_id))
-            print(posted_date, type(posted_date))
-            print('content', content, type(poster_id))
-            print('gaggle_id', gaggle_id, type(poster_id))
-            #check last post_id
             try:
-                print('trying')
                 curs = dbi.dict_cursor(conn)
                 curs.execute('''INSERT INTO post(gaggle_id, poster_id, content, tag_id, posted_date) VALUES(%s, %s, %s, %s, %s)''',
                             [gaggle_id, poster_id, content, None, posted_date])
                 conn.commit()
-                print('commited')
-                #curs.execute('select last_insert_id()')
-                #row = curs.fetchone()
-                #print(row)
-                #print('New Post Id: ', row[0])
             except Exception as e: 
                 print(e)
-                flash('some other error!')
+                flash('Error:' +e)
             return redirect(url_for('gaggle', gaggle_name=gaggle_name))
         else:
             flash('You are logged out')
             return redirect(url_for('login'))
+
+@app.route('/post/<post_id>', methods=['GET', 'POST']) #add hyperlink from group.html to post
+def post(post_id):
+    now = datetime.now()
+    posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
+    user_id = session.get('user_id', '')
+    if user_id == '':
+        flash('You are logged out')
+        return redirect(url_for('login'))      
+    else:   
+        conn = dbi.connect() 
+        post = waggle.getOnePost(conn, post_id)
+        comments = waggle.getPostComments(conn, post_id)
+        if request.method == 'GET':
+            return render_template('post.html', post = post, comments = comments)
+        else:
+            print(request.form)
+            kind = request.form.get('submit')
+            if kind == 'Comment':
+                content = request.form['comment_content']  
+                add_comment = waggle.addComment(conn, post_id, content, user_id, posted_date)
+            else: 
+                hasLiked = waggle.hasLiked(conn, post_id, user_id)
+                if len(hasLiked) == 0:
+                    interaction = waggle.likePost(conn, post_id, user_id, kind)   
+                else:
+                    flash(f"You already {kind}d")     
+            return redirect( url_for('post', post_id = post_id ))
+    
+@app.route('/likeComment/<post_id>/<comment_id>', methods=['GET', 'POST'])
+def likeComment(post_id, comment_id):
+    user_id = session.get('user_id', '')
+    conn = dbi.connect() 
+    post = waggle.getOnePost(conn, post_id)
+    comments = waggle.getPostComments(conn, post_id)    
+    if request.method == 'GET':  
+        return render_template('post.html', post = post, comments = comments) 
+    else:     
+        kind = request.form.get('submit')
+        display = waggle.startCommentMetrics(conn, comment_id)
+        hasLiked = waggle.hasLikedComment(conn, comment_id, user_id)
+        if len(hasLiked) == 0:
+            interaction = waggle.likeComment(conn, comment_id, user_id, kind)
+            update = waggle.updateCommentMetrics(conn, comment_id, kind)
+        else: 
+            flash(f"You already {kind}d")    
+        return redirect( url_for('post', post_id = post_id ))
+
+@app.route('/gaggle/members/<gaggle_name>')
+def gaggleMembers(gaggle_name):
+    conn = dbi.connect() 
+    members = waggle.getMembers(conn, gaggle_name)  
+    return render_template('groupMembers.html', gaggle_name = gaggle_name, members = members) 
+
+@app.route('/gaggle/join/<gaggle_id>/<gaggle_name>', methods=['GET', 'POST'])
+def joinGaggle(gaggle_id, gaggle_name):
+    conn = dbi.connect() 
+    if request.method == 'GET':  
+        return redirect(url_for('gaggle', gaggle_name=gaggle_name))      
+    else: 
+        user_id = session.get('user_id', '')
+        join = waggle.joinGaggle(conn, user_id, gaggle_id)  
+
 
 @app.before_first_request
 def init_db():
@@ -176,4 +238,5 @@ if __name__ == '__main__':
     else:
         port = os.getuid()
     app.debug = True
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
     app.run('0.0.0.0',port)

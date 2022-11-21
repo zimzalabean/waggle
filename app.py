@@ -111,21 +111,32 @@ def search():
     conn = dbi.connect()
     query = request.args.get('search-query')
     results = waggle.searchGaggle(conn, query)
+    print(results)
     if len(results) == 0:
         flash('No result found')
         return redirect(url_for('homepage'))
     else:
-        return redirect(url_for('joinGaggle', query = query))
+        return render_template('testform.html', query = query, results = results)  
 
 
 @app.route('/gaggle/<gaggle_name>')
 def gaggle(gaggle_name):
-    conn = dbi.connect() 
-    gaggle = waggle.getGaggle(conn, gaggle_name)  
-    posts = waggle.getGagglePosts(conn, gaggle_name)
-    return render_template('group.html', gaggle = gaggle, posts = posts) 
-    # posts = waggle.getGagglePosts(conn, gaggle_name)
-    # return render_template('gaggle.html', gaggle = gaggle, posts = posts)
+    user_id = session.get('user_id', '')
+    if user_id == '':
+        flash('You are logged out')
+        return redirect(url_for('login')) 
+    else: 
+        conn = dbi.connect() 
+        gaggle = waggle.getGaggle(conn, gaggle_name)  
+        posts = waggle.getGagglePosts(conn, gaggle_name)
+        gaggle_id = waggle.getGaggleID(conn, gaggle_name)[0]['gaggle_id']
+        isGosling = waggle.isGosling(conn, user_id, gaggle_id)
+        if len(isGosling) == 0:
+            joined = False
+        else:
+            joined = True
+        print(joined)
+        return render_template('group.html', gaggle = gaggle, posts = posts, joined = joined) 
 
 @app.route('/user/<username>')
 def user(username):
@@ -163,25 +174,28 @@ def post(post_id):
     now = datetime.now()
     posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
     user_id = session.get('user_id', '')
-    #user_id = 4
-    conn = dbi.connect() 
-    post = waggle.getOnePost(conn, post_id)
-    comments = waggle.getPostComments(conn, post_id)
-    if request.method == 'GET':
-        return render_template('post.html', post = post, comments = comments)
-    else:
-        print(request.form)
-        kind = request.form.get('submit')
-        if kind == 'Comment':
-            content = request.form['comment_content']  
-            add_comment = waggle.addComment(conn, post_id, content, user_id, posted_date)
-        else: 
-            hasLiked = waggle.hasLiked(conn, post_id, user_id)
-            if len(hasLiked) == 0:
-                interaction = waggle.likePost(conn, post_id, user_id, kind)   
-            else:
-                flash(f"You already {kind}d")     
-        return redirect( url_for('post', post_id = post_id ))
+    if user_id == '':
+        flash('You are logged out')
+        return redirect(url_for('login'))      
+    else:   
+        conn = dbi.connect() 
+        post = waggle.getOnePost(conn, post_id)
+        comments = waggle.getPostComments(conn, post_id)
+        if request.method == 'GET':
+            return render_template('post.html', post = post, comments = comments)
+        else:
+            print(request.form)
+            kind = request.form.get('submit')
+            if kind == 'Comment':
+                content = request.form['comment_content']  
+                add_comment = waggle.addComment(conn, post_id, content, user_id, posted_date)
+            else: 
+                hasLiked = waggle.hasLiked(conn, post_id, user_id)
+                if len(hasLiked) == 0:
+                    interaction = waggle.likePost(conn, post_id, user_id, kind)   
+                else:
+                    flash(f"You already {kind}d")     
+            return redirect( url_for('post', post_id = post_id ))
     
 @app.route('/likeComment/<post_id>/<comment_id>', methods=['GET', 'POST'])
 def likeComment(post_id, comment_id):
@@ -211,18 +225,31 @@ def gaggleMembers(gaggle_name):
 @app.route('/gaggle/join/<gaggle_id>/<gaggle_name>', methods=['GET', 'POST'])
 def joinGaggle(gaggle_id, gaggle_name):
     conn = dbi.connect() 
-    if request.method == 'GET':  
-        return render_template('testform.html', query = query, results = results)        
-    else: 
-        user_id = session.get('user_id', '')
-        join = waggle.joinGaggle(conn, user_id, gaggle_id)  
-        return redirect(url_for('gaggle', gaggle_name=gaggle_name))
+    user_id = session.get('user_id', '')
+    if user_id == '':
+        flash('You are logged out')
+        return redirect(url_for('login')) 
+    else:
+        if request.method == 'GET':
+            return redirect(url_for('gaggle', gaggle_name=gaggle_name))      
+        else:  
+            print(request.form.get('submit'))
+            print("ifelse")
+            if request.form.get('submit') == 'Join':
+                print('joining')
+                action = waggle.joinGaggle(conn, user_id, gaggle_id)
+                print(action)
+            else: 
+                print('unjoining')
+                action = waggle.unjoinGaggle(conn, user_id, gaggle_id) 
+                print(action)              
+            return redirect(url_for('gaggle', gaggle_name=gaggle_name))  
 
 @app.before_first_request
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'mp2_db' 
+    db_to_use = 'ldau_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 

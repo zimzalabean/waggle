@@ -3,17 +3,10 @@
 {% block main_content %}
 <body>
     <p>Gaggles matching {{query}}:</p>
-
         {% for gaggle in results %}
-
         <p> 
-            <form method=post action="{{url_for('joinGaggle', gaggle_id = gaggle.gaggle_id, gaggle_name = gaggle.gaggle_name)}}" >
                 <a href="{{ url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a>
-                <input type="submit" name="submit" value="Join">
-            </form> 
         </p>
-
         {% endfor %}
-
 </body>
 {% endblock %}

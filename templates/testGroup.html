@@ -8,11 +8,7 @@
 
     <div class="join_group">
         <form name="write_post" action="{{url_for('joinGaggle', gaggle_name = gaggle.gaggle_name, gaggle_id = gaggle.gaggle_id)}}" method="POST">
-            {% if joined %}
-            <input type="submit" name = "submit" value="Unjoin">
-            {% else %}
-            <input type="submit" name = "submit" value="Join">
-            {% endif %}
+            <input type="submit" value="Join">
         </form>
     </div>
 
