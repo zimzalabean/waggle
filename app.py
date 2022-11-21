@@ -158,8 +158,8 @@ def addPost(gaggle_name, gaggle_id):
             flash('You are logged out')
             return redirect(url_for('login'))
 
-@app.route('/gaggle/<gaggle_name>/post/<post_id>', methods=['GET', 'POST']) #add hyperlink from group.html to post
-def post(gaggle_name, post_id):
+@app.route('/post/<post_id>', methods=['GET', 'POST']) #add hyperlink from group.html to post
+def post(post_id):
     now = datetime.now()
     posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
     user_id = session.get('user_id', '')
