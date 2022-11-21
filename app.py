@@ -222,7 +222,6 @@ def gaggleMembers(gaggle_name):
     members = waggle.getMembers(conn, gaggle_name)  
     return render_template('groupMembers.html', gaggle_name = gaggle_name, members = members) 
 
-<<<<<<< HEAD
 @app.route('/gaggle/join/<gaggle_id>/<gaggle_name>', methods=['GET', 'POST'])
 def joinGaggle(gaggle_id, gaggle_name):
     conn = dbi.connect() 
@@ -244,8 +243,8 @@ def joinGaggle(gaggle_id, gaggle_name):
                 print('unjoining')
                 action = waggle.unjoinGaggle(conn, user_id, gaggle_id) 
                 print(action)              
-            return redirect(url_for('gaggle', gaggle_name=gaggle_name))  
-=======
+            return redirect(url_for('gaggle', gaggle_name=gaggle_name))
+
 @app.route('/edit_my_page/', methods=['GET', 'POST'])
 def editMyPage():
     user_id = session.get('user_id', '')
@@ -297,13 +296,12 @@ def showMyGaggles():
     gaggles = waggle.getGagglesOfAuthor(conn, user_id)
     if request.method=='GET':
         return render_template('show_my_gaggles.html', username=username, gaggles=gaggles)
->>>>>>> 147c88d379e27c12fd60d77842b02317da161815
 
 @app.before_first_request
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'ldau_db' 
+    db_to_use = 'mp2_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 
