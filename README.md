@@ -1,3 +1,3 @@
 # waggle
 
-Run prepare_db to create the all the necessary tables.
+Run prepare_db to create all the necessary tables.
