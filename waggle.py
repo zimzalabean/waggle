@@ -3,6 +3,7 @@ import cs304dbi as dbi
 # ==========================================================
 # The functions that do most of the work.
 def getUserID(conn, username):
+    '''returns user_id based on username'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         SELECT user_id
@@ -12,6 +13,7 @@ def getUserID(conn, username):
     return curs.fetchone()    
 
 def getUserInfo(conn, user_id):
+    '''returns user information based on user_id'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         SELECT first_name, last_name, class_year, bio_text
@@ -21,6 +23,7 @@ def getUserInfo(conn, user_id):
     return curs.fetchone()      
 
 def getUserGaggle(conn,username):
+    '''returns all gaggles that a user is a member of'''
     user_id = getUserID(conn, username)['user_id']
     curs = dbi.dict_cursor(conn)
     curs.execute('''
@@ -33,6 +36,7 @@ def getUserGaggle(conn,username):
     return curs.fetchall()
 
 def searchGaggle(conn, query):
+    '''returns all gaggles whose names match the query'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         SELECT * from gaggle 
@@ -41,6 +45,7 @@ def searchGaggle(conn, query):
     return curs.fetchall()    
 
 def getGaggle(conn, gaggle_name):
+    '''returns information about a gaggle based on its gaggle_name'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         SELECT a.*, b.username
@@ -52,13 +57,14 @@ def getGaggle(conn, gaggle_name):
     return curs.fetchone()      
 
 def getGagglesOfAuthor(conn, user_id):
-    '''returns all gaggles that a user created'''
+    '''returns all gaggles that a user has created'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         select * from gaggle where author_id = %s''', [user_id])
     return curs.fetchall()
 
 def getPosts(conn):
+    '''returns the latest 20 posts for homepage feed'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         select * 
@@ -74,6 +80,8 @@ def getPosts(conn):
     return all_posts
 
 def getOnePost(conn, post_id):
+    '''returns information about a post based on the post_id and its metrics. 
+    We will optimize and modularize this function in alpha phase'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         select * from post where post_id = %s
@@ -114,6 +122,7 @@ def getOnePost(conn, post_id):
     return post_info
 
 def getGaggleID(conn, gaggle_name):
+    '''returns gaggle_id based on gaggle_name'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         SELECT gaggle_id
@@ -123,6 +132,7 @@ def getGaggleID(conn, gaggle_name):
     return curs.fetchall()  
 
 def getGagglePosts(conn, gaggle_name):
+    '''returns all posts in a gaggle based on gaggle_name sorted by latest'''
     gaggle_id = getGaggleID(conn, gaggle_name)[0]['gaggle_id']
     curs = dbi.dict_cursor(conn)
     curs.execute('''
@@ -139,6 +149,7 @@ def getGagglePosts(conn, gaggle_name):
     return all_posts
 
 def getPostComments(conn, post_id):
+    '''returns all comments on a post based on the post_id'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         SELECT a.*, b.username, c.num_likes, c.num_dislikes
@@ -154,6 +165,7 @@ def getPostComments(conn, post_id):
     return curs.fetchall()      
 
 def addComment(conn, post_id, content, commentor_id, posted_date):
+    '''insert a new comment into the comment table'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         INSERT INTO comment(post_id, content, commentor_id, posted_date) 
@@ -163,6 +175,8 @@ def addComment(conn, post_id, content, commentor_id, posted_date):
     return commentor_id
   
 def likePost(conn, post_id, user_id, kind):
+    '''Record user's like/dislike of a post by 
+    inserting the interaction into the post_like table'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         INSERT INTO post_like(post_id, user_id, kind) 
@@ -172,6 +186,8 @@ def likePost(conn, post_id, user_id, kind):
     return post_id     
 
 def likeComment(conn, comment_id, user_id, kind):
+    '''Record user's like/dislike of a comment by 
+    inserting the interaction into the comment_like table'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         INSERT INTO comment_like(comment_id, user_id, kind) 
@@ -181,6 +197,7 @@ def likeComment(conn, comment_id, user_id, kind):
     return comment_id  
 
 def getMembers(conn, gaggle_name):
+    '''returns all members of a gaggle based on the gaggle_name'''    
     curs = dbi.dict_cursor(conn)
     gaggle_id = getGaggleID(conn, gaggle_name)[0]['gaggle_id']
     curs.execute('''
@@ -193,6 +210,7 @@ def getMembers(conn, gaggle_name):
     return curs.fetchall()  
 
 def hasLiked(conn, post_id, user_id):
+    '''Checks if a user has liked a post'''
     curs = dbi.dict_cursor(conn)  
     curs.execute('''
         SELECT * from post_like 
@@ -202,6 +220,7 @@ def hasLiked(conn, post_id, user_id):
     return curs.fetchall()    
 
 def hasLikedComment(conn, comment_id, user_id):
+    '''Checks if a user has liked a comment'''
     curs = dbi.dict_cursor(conn)  
     curs.execute('''
         SELECT * from comment_like 
@@ -211,6 +230,8 @@ def hasLikedComment(conn, comment_id, user_id):
     return curs.fetchall()  
 
 def startCommentMetrics(conn, comment_id):
+    '''Check if a comment has any like/dislike.
+    Starts a new like/dislike count for a comment if it hasn't existed'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         SELECT * from comment_like 
@@ -226,6 +247,7 @@ def startCommentMetrics(conn, comment_id):
     return comment_id      
 
 def commentMetrics(conn, comment_id):
+    '''Returns number of likes and dislikes of a comment based on a comment_id'''
     curs = dbi.dict_cursor(conn)  
     curs.execute('''
         SELECT * from comment_like_count 
@@ -234,6 +256,7 @@ def commentMetrics(conn, comment_id):
     return curs.fetchall()  
 
 def updateCommentMetrics(conn, comment_id, kind):
+    '''Update number of likes and dislikes of a comment'''
     curs = dbi.dict_cursor(conn)  
     if kind == 'Like':
         curs.execute('''
@@ -249,6 +272,7 @@ def updateCommentMetrics(conn, comment_id, kind):
     return comment_id 
 
 def joinGaggle(conn, user_id, gaggle_id):
+    '''Add a user into a gaggle member list'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         INSERT INTO gosling(user_id, gaggle_id) 
@@ -258,6 +282,7 @@ def joinGaggle(conn, user_id, gaggle_id):
     return "Joined "
 
 def unjoinGaggle(conn, user_id, gaggle_id):
+    '''Remove a user into a gaggle member list'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         DELETE FROM gosling
@@ -267,7 +292,8 @@ def unjoinGaggle(conn, user_id, gaggle_id):
     conn.commit()  # need this!   
     return "Unjoined"
 
-def isGosling(conn, user_id, gaggle_id):    
+def isGosling(conn, user_id, gaggle_id):  
+    '''Check if a user is in a gaggle member list'''  
     curs = dbi.dict_cursor(conn)  
     curs.execute('''
         SELECT * from gosling
