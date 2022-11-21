@@ -25,6 +25,9 @@ app.config['TRAP_BAD_REQUEST_ERRORS'] = True
 
 @app.route('/login/', methods=['GET', 'POST'])
 def login():
+    """
+    Login Page
+    """
     if request.method == 'GET':
         return render_template('login_form.html')
     else:
@@ -74,6 +77,9 @@ def logout():
 
 @app.route('/')
 def homepage():
+    """
+    Mian Page with a feed of all posts and signed in user information
+    """
     conn = dbi.connect()
     username = session.get('username', '')
     logged = session.get('logged_in', False)
@@ -87,6 +93,10 @@ def homepage():
 
 @app.route('/deletePost/<post_id>/<author_id>', methods=['POST'])
 def deletePost(post_id, author_id):
+    """
+    Called when user presses "delete" button on the post. The post gets deleted from the database if 
+    the post was written by the logged in user.
+    """
     username = session.get('username', '')
     user_id = session.get('user_id', '')
     logged = session.get('logged_in', False)
@@ -108,6 +118,10 @@ def deletePost(post_id, author_id):
 
 @app.route('/search/', methods=["GET"])
 def search():
+    """
+    Called when trying to search for a gaggle using the search bar. Returns a page of gaggles 
+    that match the entered gaggle name
+    """
     conn = dbi.connect()
     query = request.args.get('search-query')
     results = waggle.searchGaggle(conn, query)
@@ -121,6 +135,9 @@ def search():
 
 @app.route('/gaggle/<gaggle_name>')
 def gaggle(gaggle_name):
+    """
+    Returns a page for the specific gaggle, with all the posts in that gaggle
+    """
     user_id = session.get('user_id', '')
     if user_id == '':
         flash('You are logged out')
@@ -140,12 +157,18 @@ def gaggle(gaggle_name):
 
 @app.route('/user/<username>')
 def user(username):
+    """
+    Returns a page with information of user with 'username'
+    """
     conn = dbi.connect()
     gaggles = waggle.getUserGaggle(conn, username)
     return render_template('user.html', username=username, gaggles=gaggles)
 
 @app.route('/newpost/<gaggle_name>/<gaggle_id>/', methods=["POST"])
 def addPost(gaggle_name, gaggle_id):
+    """
+    Called when clicking on a 'post' button on a gaggle page. Inserts the post in the database.
+    """
     conn = dbi.connect()
     content = request.form.get('content')
     if len(content) == 0:
@@ -171,6 +194,9 @@ def addPost(gaggle_name, gaggle_id):
 
 @app.route('/post/<post_id>', methods=['GET', 'POST']) #add hyperlink from group.html to post
 def post(post_id):
+    """
+    Returns a page with the post of 'post_id', where a user can comment, like, dislike
+    """
     now = datetime.now()
     posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
     user_id = session.get('user_id', '')
@@ -199,6 +225,9 @@ def post(post_id):
     
 @app.route('/likeComment/<post_id>/<comment_id>', methods=['GET', 'POST'])
 def likeComment(post_id, comment_id):
+    """
+    Called when user clicks on like button on a comment. Inserts a new like to the database
+    """
     user_id = session.get('user_id', '')
     conn = dbi.connect() 
     post = waggle.getOnePost(conn, post_id)
@@ -218,12 +247,20 @@ def likeComment(post_id, comment_id):
 
 @app.route('/gaggle/members/<gaggle_name>')
 def gaggleMembers(gaggle_name):
+    """
+    Returns a page with all members of gaggle 'gaggle_name'
+    """
     conn = dbi.connect() 
     members = waggle.getMembers(conn, gaggle_name)  
     return render_template('groupMembers.html', gaggle_name = gaggle_name, members = members) 
 
 @app.route('/gaggle/join/<gaggle_id>/<gaggle_name>', methods=['GET', 'POST'])
 def joinGaggle(gaggle_id, gaggle_name):
+    """
+    Called when a user clicks on a 'join' button on a gaggle page, this inserts the user
+    into a gosling table in the database, making them a member. If user already joined, then 
+    they will unjoined by clicking the button again.
+    """
     conn = dbi.connect() 
     user_id = session.get('user_id', '')
     if user_id == '':
@@ -247,6 +284,10 @@ def joinGaggle(gaggle_id, gaggle_name):
 
 @app.route('/edit_my_page/', methods=['GET', 'POST'])
 def editMyPage():
+    """
+    Returns a page where a user can change their profile information by updating 
+    the database.
+    """
     user_id = session.get('user_id', '')
     if user_id == '':
         flash('you are not logged in. Please login or join')
@@ -286,6 +327,10 @@ def editMyPage():
          
 @app.route('/my_gaggles/', methods=['GET', 'POST'])
 def showMyGaggles():
+    """
+    Returws a page with all gaggles created by the said user. The user can delete
+    their gaggles and create new ones (to be implemented)
+    """
     #not finished
     user_id = session.get('user_id', '')
     if user_id == '':
@@ -296,6 +341,17 @@ def showMyGaggles():
     gaggles = waggle.getGagglesOfAuthor(conn, user_id)
     if request.method=='GET':
         return render_template('show_my_gaggles.html', username=username, gaggles=gaggles)
+    else:
+        flash('To be implemented')
+        return redirect(url_for('showMyGaggles'))
+
+@app.route('/new_gaggle/', methods=['GET', 'POST'])
+def createGaggle():
+    """
+    To be implemented
+    """
+    flash('To be implemented')
+    return redirect(url_for('showMyGaggles'))
 
 @app.before_first_request
 def init_db():

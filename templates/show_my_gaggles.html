@@ -7,12 +7,12 @@
     <ul>
         {% for gaggle in gaggles %}
         <div class="inputs">
-            <li><a href="{{url_for('gaggle', gaggle_name= gaggle['gaggle_name'])}}">{{gaggle['gaggle_name']}}</a></li>
-            <input type="submit" name="{{gaggle['gaggle_id']}}" value="Delete Gaggle">
+            <li><a href="{{url_for('gaggle', gaggle_name= gaggle['gaggle_name'])}}">{{gaggle['gaggle_name']}}</a> <input type="submit" name="{{gaggle['gaggle_id']}}" value="Delete Gaggle"></li>
+            
         </div>
         {% endfor %}
     </ul>
 </form>
 
-
+<a href="{{url_for('createGaggle')}}">Create a new gaggle</a>
 {% endblock %}
