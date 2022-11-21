@@ -1,0 +1,18 @@
+{% extends "super_base.html" %}
+    
+{% block main_content %}
+<h1>Gaggles created by {{username}}</h1>
+
+<form action="url_for(showMyGaggles)" method="POST">
+    <ul>
+        {% for gaggle in gaggles %}
+        <div class="inputs">
+            <li><a href="{{url_for('gaggle', gaggle_name= gaggle['gaggle_name'])}}">{{gaggle['gaggle_name']}}</a></li>
+            <input type="submit" name="{{gaggle['gaggle_id']}}" value="Delete Gaggle">
+        </div>
+        {% endfor %}
+    </ul>
+</form>
+
+
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "super_base.html" %}
+    
+{% block main_content %}
+
+
+<form class="edit_form" action="{{url_for('editMyPage')}}" method="POST">
+    <div>
+        <div class="inputs">
+            <div>Current First Name: {{user['first_name']}}</div>
+            <label>New First Name: <input name="first_name"></input></label>
+        </div>
+        
+        <div class="inputs">
+            <div>Current Last Name: {{user['last_name']}}</div>
+            <label>New Last Name: <input name="last_name"></input></label>
+        </div>
+        
+        <div class="inputs">
+            <div>Current Class Year: {{user['class_year']}}</div>
+            <label>New Class Year: <input name="class_year"></input></label>
+        </div>
+        
+        <div class="inputs">
+            <div>Current Bio: {{user['bio_text']}}</div>
+            <label>New Bio: <textarea name="bio_text" rows="1" cols="10"></textarea></label>  
+        </div>
+        
+        <div class="inputs"><input type="submit" value="Edit all"></div>
+    </div>
+</form>
+{% endblock %}
