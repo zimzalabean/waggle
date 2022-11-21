@@ -235,4 +235,13 @@ def updateCommentMetrics(conn, comment_id, kind):
                     [comment_id])            
     conn.commit()  
     return comment_id 
+
+def joinGaggle(conn, user_id, gaggle_id):
+    curs = dbi.cursor(conn)
+    curs.execute('''
+        INSERT INTO gosling(user_id, gaggle_id) 
+        VALUES (%s,%s) ''', 
+                [user_id, gaggle_id])
+    conn.commit()  # need this!   
+    return gaggle_id 
     

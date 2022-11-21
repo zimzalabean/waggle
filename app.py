@@ -115,7 +115,8 @@ def search():
         flash('No result found')
         return redirect(url_for('homepage'))
     else:
-        return render_template('testform.html', query = query, results = results)
+        return redirect(url_for('joinGaggle', query = query))
+
 
 @app.route('/gaggle/<gaggle_name>')
 def gaggle(gaggle_name):
@@ -184,8 +185,7 @@ def post(gaggle_name, post_id):
     
 @app.route('/likeComment/<post_id>/<comment_id>', methods=['GET', 'POST'])
 def likeComment(post_id, comment_id):
-    #user_id = session.get('user_id', '')
-    user_id = 5
+    user_id = session.get('user_id', '')
     conn = dbi.connect() 
     post = waggle.getOnePost(conn, post_id)
     comments = waggle.getPostComments(conn, post_id)    
@@ -207,6 +207,16 @@ def gaggleMembers(gaggle_name):
     conn = dbi.connect() 
     members = waggle.getMembers(conn, gaggle_name)  
     return render_template('groupMembers.html', gaggle_name = gaggle_name, members = members) 
+
+@app.route('/gaggle/join/<gaggle_id>/<gaggle_name>', methods=['GET', 'POST'])
+def joinGaggle(gaggle_id, gaggle_name):
+    conn = dbi.connect() 
+    if request.method == 'GET':  
+        return render_template('testform.html', query = query, results = results)        
+    else: 
+        user_id = session.get('user_id', '')
+        join = waggle.joinGaggle(conn, user_id, gaggle_id)  
+        return redirect(url_for('gaggle', gaggle_name=gaggle_name))
 
 @app.before_first_request
 def init_db():
