@@ -4,7 +4,7 @@
     <div class="post" id="{{post['post_id']}}">
         <p>post id: {{post['post_id']}}</p>
         <p>author: <a href="{{url_for('user', username=post['author'])}}">{{post['author']}}</a> gaggle: <a href="{{url_for('gaggle',gaggle_name=post['gaggle'])}}">{{post['gaggle']}}</a></p>
-        <p>content: {{post['content']}}</p>
+        <p>{{post['content']}}</p>
         <p>likes: {{post['likes']}}</p>
         <p>dislikes: {{post['dislikes']}}</p>
         <p>{{post['posted_date']}}</p>  
@@ -19,7 +19,7 @@
         {% for comment in comments %}
         <div class="comment" id="{{comment.comment_id}}">
             <p>author: <a href="{{url_for('user', username=comment.commentor_id)}}">{{comment.username}}</a> </p>
-            <p>content: {{comment.content}}</p>
+            <p>{{comment.content}}</p>
             <p>{{comment.posted_date}}</p>
             <p>Likes: {{comment.num_likes}}</p>
             <p>Dislikes: {{comment.num_dislikes}}</p>

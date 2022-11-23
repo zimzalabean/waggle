@@ -49,11 +49,11 @@ INSERT INTO gaggle
   author_id,
   `description` )
 VALUES
-  ('anime_club', 1, 'We love anime <3'),
-  ('slater_center',2,'A house for International Students at Wellesley College'), 
-  ('target_employee', 3, 'Tips on how to get promoted to manager at Target'), 
-  ('latinx_org', 4, 'For the Latinx community'),
-  ('wellesley_in_prod', 5, 'Wellesley in Production');
+  ('animeclub', 1, 'We love anime <3'),
+  ('slatercenter',2,'A house for International Students at Wellesley College'), 
+  ('target', 3, 'Tips on how to get promoted to manager at Target'), 
+  ('latinxorg', 4, 'For the Latinx community'),
+  ('wellesleyinprod', 5, 'Wellesley in Production');
 
 INSERT INTO post
   (
