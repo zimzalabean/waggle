@@ -168,8 +168,17 @@ def user(username):
     gaggles = waggle.getUserGaggle(conn, username)
     return render_template('user.html', username=username, gaggles=gaggles)
 
+@app.route('/user/<username>/history/')
+def history(username):
+    """
+    Returns the post, comment, and like/dislike history of the user with the given username.
+    """
+    conn = dbi.connect()
+    posts = waggle.getUserPosts(conn, username)
+    return render_template('history.html', username = username, posts = posts)
 
-@app.route('/newpost/<gaggle_name>/<gaggle_id>/', methods=["POST"])
+
+@app.route('/gaggle/<gaggle_name>/newpost/', methods=["POST"])
 def addPost(gaggle_name, gaggle_id):
     """
     Called when user clicks the 'post' button on a Gaggle page. Inserts a new row
@@ -199,7 +208,7 @@ def addPost(gaggle_name, gaggle_id):
             flash('You have been logged out.')
             return redirect(url_for('login'))
 
-@app.route('/post/<post_id>', methods=['GET', 'POST']) #add hyperlink from group.html to post
+@app.route('/gaggle/<gaggle_name>/post/<post_id>/', methods=['GET', 'POST']) #add hyperlink from group.html to post
 def post(post_id):
     """
     Returns the page for the specific post with the given post_id.
@@ -227,7 +236,7 @@ def post(post_id):
                 if len(hasLiked) == 0:
                     interaction = waggle.likePost(conn, post_id, user_id, kind)   
                 else:
-                    flash(f"You have already {kind}d this post.")     
+                    flash("You have already {kind}d this post.")     
             return redirect( url_for('post', post_id = post_id ))
     
 @app.route('/likeComment/<post_id>/<comment_id>', methods=['GET', 'POST'])
@@ -244,7 +253,7 @@ def likeComment(post_id, comment_id):
         return render_template('post.html', post = post, comments = comments) 
     else:     
         kind = request.form.get('submit')
-        display = waggle.startCommentMetrics(conn, comment_id)
+        # display = waggle.startCommentMetrics(conn, comment_id)
         hasLiked = waggle.hasLikedComment(conn, comment_id, user_id)
         if len(hasLiked) == 0:
             interaction = waggle.likeComment(conn, comment_id, user_id, kind)
@@ -253,7 +262,7 @@ def likeComment(post_id, comment_id):
             flash(f"You have already {kind}d this comment.")    
         return redirect( url_for('post', post_id = post_id ))
 
-@app.route('/gaggle/members/<gaggle_name>')
+@app.route('/gaggle/<gaggle_name>/members/')
 def gaggleMembers(gaggle_name):
     """
     Returns a page with list of all members of the Gaggle with the given name.
@@ -262,8 +271,8 @@ def gaggleMembers(gaggle_name):
     members = waggle.getMembers(conn, gaggle_name)  
     return render_template('groupMembers.html', gaggle_name = gaggle_name, members = members) 
 
-@app.route('/gaggle/join/<gaggle_id>/<gaggle_name>', methods=['GET', 'POST'])
-def joinGaggle(gaggle_id, gaggle_name):
+@app.route('/gaggle/<gaggle_name>/join/', methods=['GET', 'POST'])
+def joinGaggle(gaggle_name):
     """
     Called when a user clicks on the 'join' button on a Gaggle page. Inserts a new row
     in the gosling table in the database. If user is already a member, then the
@@ -276,7 +285,7 @@ def joinGaggle(gaggle_id, gaggle_name):
         return redirect(url_for('login')) 
     else:
         if request.method == 'GET':
-            return redirect(url_for('gaggle', gaggle_name=gaggle_name))      
+            return redirect(url_for('gaggle', gaggle_name = gaggle_name))      
         else:  
             print(request.form.get('submit'))
             print("ifelse")
@@ -290,7 +299,7 @@ def joinGaggle(gaggle_id, gaggle_name):
                 print(action)              
             return redirect(url_for('gaggle', gaggle_name=gaggle_name))
 
-@app.route('/edit_my_page/', methods=['GET', 'POST'])
+@app.route('/user/edit/', methods=['GET', 'POST'])
 def editMyPage():
     """
     Returns a page where a user can edit their profile information.
@@ -341,7 +350,7 @@ def editMyPage():
         flash('Your information was successfully updated.')
         return redirect(url_for('editMyPage'))
          
-@app.route('/my_gaggles/', methods=['GET', 'POST'])
+@app.route('/dashboard/', methods=['GET', 'POST'])
 def showMyGaggles():
     """
     Returns a page with list of all Gaggles created by the user. The user can delete
@@ -361,7 +370,7 @@ def showMyGaggles():
         flash('To be implemented')
         return redirect(url_for('showMyGaggles'))
 
-@app.route('/new_gaggle/', methods=['GET', 'POST'])
+@app.route('/dashboard/new/', methods=['GET', 'POST'])
 def createGaggle():
     """
     To be implemented
@@ -372,7 +381,7 @@ def createGaggle():
 @app.before_first_request
 def init_db():
     dbi.cache_cnf()
-    db_to_use = 'waggle_db' 
+    db_to_use = 'ab6_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 
