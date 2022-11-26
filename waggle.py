@@ -183,15 +183,9 @@ def addComment(conn, post_id, parent_comment_id, content, commentor_id, posted_d
     '''insert a new comment into the comment table'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-<<<<<<< HEAD
-        INSERT INTO comment(parent_comment_id, post_id, content, commentor_id, posted_date) 
-        VALUES (%s,%s,%s,%s,%s) ''', 
-                [parent_comment_id, post_id, content, commentor_id, posted_date])
-=======
         INSERT INTO comment(post_id, content, commentor_id, posted_date, likes, dislikes) 
         VALUES (%s,%s,%s,%s,0,0) ''', 
                 [post_id, content, commentor_id, posted_date])
->>>>>>> 620f7d65a42d2abc89201c83004f3ef3891285af
     conn.commit()  # need this!   
     return commentor_id
   
