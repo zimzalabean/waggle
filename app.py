@@ -31,45 +31,46 @@ def login():
     if request.method == 'GET':
         return render_template('login_form.html')
     else:
-        username=request.form['username']
-        passwd=request.form['pass']
+        username = request.form['username']
+        passwd = request.form['pass']
         conn = dbi.connect()
         curs = dbi.dict_cursor(conn)
-        curs.execute('''SELECT user_id,hashed_pass
+        curs.execute('''SELECT user_id, hashed_pass
                         FROM user
                         WHERE username = %s''',
                     [username])
         row = curs.fetchone()
-        if row is None:
-            # Same response as wrong password,
-            # so no information about what went wrong
-            flash('login incorrect. Try again or join')
+        if row is None:     # if username does not exist
+            flash('Login incorrect. Try again or join.')
             return redirect(url_for('login'))
         stored = row['hashed_pass']
         hashed2 = bcrypt.hashpw(passwd.encode('utf-8'),stored.encode('utf-8'))
         hashed2_str = hashed2.decode('utf-8')
         if hashed2_str == stored:
-            flash('successfully logged in as '+username)
+            flash('successfully logged in as ' + username)
             session['username'] = username
             session['user_id'] = row['user_id']
             session['logged_in'] = True
             return redirect(url_for('homepage'))
-        else:
-            flash('login incorrect. Try again or join')
+        else:       # if password is incorrect
+            flash('Login incorrect. Try again or join.')
             return redirect(url_for('login'))
 
 @app.route('/logout/')
 def logout():
+    '''
+    Logout Page
+    '''
     try:
         if 'username' in session:
             username = session['username']
             session.pop('username')
             session.pop('user_id')
             session.pop('logged_in')
-            flash('You are logged out')
+            flash('You have been logged out.')
             return redirect(url_for('login'))
         else:
-            flash('you are not logged in. Please login or join')
+            flash('You are not logged in. Please log in or join.')
             return redirect(url_for('login') )
     except Exception as err:
         flash('some kind of error '+str(err))
@@ -78,33 +79,34 @@ def logout():
 @app.route('/')
 def homepage():
     """
-    Mian Page with a feed of all posts and signed in user information
+    Main page. For now, contains a feed of all posts from all Gaggles.
     """
     conn = dbi.connect()
     username = session.get('username', '')
     logged = session.get('logged_in', False)
     if logged == False:
-        flash('you are not logged in. Please login or join')
+        flash('You are not logged in. Please log in or join.')
         return redirect(url_for('login'))
     else:
         gaggles = waggle.getUserGaggle(conn, username)
         posts_info = waggle.getPosts(conn)
         return render_template('main.html', gaggles = gaggles, username=username, posts=posts_info)
 
+
 @app.route('/deletePost/<post_id>/<author_id>', methods=['POST'])
 def deletePost(post_id, author_id):
     """
-    Called when user presses "delete" button on the post. The post gets deleted from the database if 
+    Called when user presses "delete" button on a post. The post gets deleted from the database if 
     the post was written by the logged in user.
     """
     username = session.get('username', '')
     user_id = session.get('user_id', '')
     logged = session.get('logged_in', False)
     if logged == False:
-        flash('you are not logged in. Please login or join')
+        flash('You are not logged in. Please log in or join')
         return redirect(url_for('login'))
     if user_id != int(author_id):
-        flash('you are not authorized to delete this post/comment')
+        flash('You are not authorized to delete this post/comment.')
         return redirect(url_for('homepage'))
     conn = dbi.connect()
     curs = dbi.dict_cursor(conn)
@@ -116,18 +118,19 @@ def deletePost(post_id, author_id):
     flash('Deleted post with post_id {pid}'.format(pid=post_id))
     return redirect(url_for('homepage'))
 
+
 @app.route('/search/', methods=["GET"])
 def search():
     """
-    Called when trying to search for a gaggle using the search bar. Returns a page of gaggles 
-    that match the entered gaggle name
+    Called when user searches for a Gaggle in the search bar. Returns a page of Gaggles 
+    that have a name matching the keyword search.
     """
     conn = dbi.connect()
     query = request.args.get('search-query')
     results = waggle.searchGaggle(conn, query)
     print(results)
     if len(results) == 0:
-        flash('No result found')
+        flash('No result found.')
         return redirect(url_for('homepage'))
     else:
         return render_template('testform.html', query = query, results = results)  
@@ -136,7 +139,7 @@ def search():
 @app.route('/gaggle/<gaggle_name>')
 def gaggle(gaggle_name):
     """
-    Returns a page for the specific gaggle, with all the posts in that gaggle
+    Returns the page for the Gaggle with the given name. Page displays all posts in that Gaggle.
     """
     user_id = session.get('user_id', '')
     if user_id == '':
@@ -155,24 +158,36 @@ def gaggle(gaggle_name):
         print(joined)
         return render_template('group.html', gaggle = gaggle, posts = posts, joined = joined) 
 
+
 @app.route('/user/<username>')
 def user(username):
     """
-    Returns a page with information of user with 'username'
+    Returns the profile page of the user with the given username.
     """
     conn = dbi.connect()
     gaggles = waggle.getUserGaggle(conn, username)
     return render_template('user.html', username=username, gaggles=gaggles)
 
-@app.route('/newpost/<gaggle_name>/<gaggle_id>/', methods=["POST"])
+@app.route('/user/<username>/history/')
+def history(username):
+    """
+    Returns the post, comment, and like/dislike history of the user with the given username.
+    """
+    conn = dbi.connect()
+    posts = waggle.getUserPosts(conn, username)
+    return render_template('history.html', username = username, posts = posts)
+
+
+@app.route('/gaggle/<gaggle_name>/newpost/', methods=["POST"])
 def addPost(gaggle_name, gaggle_id):
     """
-    Called when clicking on a 'post' button on a gaggle page. Inserts the post in the database.
+    Called when user clicks the 'post' button on a Gaggle page. Inserts a new row
+    in the 'post' table in the database.
     """
     conn = dbi.connect()
     content = request.form.get('content')
     if len(content) == 0:
-        flash('Please enter some content')
+        flash('Please enter some content.')
         return redirect(url_for('gaggle', gaggle_name=gaggle_name))
     else:
         poster_id = session.get('user_id', '')
@@ -186,19 +201,19 @@ def addPost(gaggle_name, gaggle_id):
                 flash('Error:' +e)
             return redirect(url_for('gaggle', gaggle_name=gaggle_name))
         else:
-            flash('You are logged out')
+            flash('You have been logged out.')
             return redirect(url_for('login'))
 
-@app.route('/post/<post_id>', methods=['GET', 'POST']) #add hyperlink from group.html to post
+@app.route('/gaggle/<gaggle_name>/post/<post_id>/', methods=['GET', 'POST']) #add hyperlink from group.html to post
 def post(post_id):
     """
-    Returns a page with the post of 'post_id', where a user can comment, like, dislike
+    Returns the page for the specific post with the given post_id.
     """
     now = datetime.now()
     posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
     user_id = session.get('user_id', '')
     if user_id == '':
-        flash('You are logged out')
+        flash('You have been logged out.')
         return redirect(url_for('login'))      
     else:   
         conn = dbi.connect() 
@@ -218,13 +233,14 @@ def post(post_id):
                 if len(hasLiked) == 0:
                     interaction = waggle.likePost(conn, post_id, user_id, kind)   
                 else:
-                    flash(f"You already {kind}d")     
+                    flash("You have already {kind}d this post.")     
             return redirect( url_for('post', post_id = post_id ))
     
 @app.route('/likeComment/<post_id>/<comment_id>', methods=['GET', 'POST'])
 def likeComment(post_id, comment_id):
     """
-    Called when user clicks on like button on a comment. Inserts a new like to the database
+    Called when user clicks the 'like' button on a comment. Inserts a new row in the
+    comment_like table in the database.
     """
     user_id = session.get('user_id', '')
     conn = dbi.connect() 
@@ -234,39 +250,39 @@ def likeComment(post_id, comment_id):
         return render_template('post.html', post = post, comments = comments) 
     else:     
         kind = request.form.get('submit')
-        display = waggle.startCommentMetrics(conn, comment_id)
+        # display = waggle.startCommentMetrics(conn, comment_id)
         hasLiked = waggle.hasLikedComment(conn, comment_id, user_id)
         if len(hasLiked) == 0:
             interaction = waggle.likeComment(conn, comment_id, user_id, kind)
             update = waggle.updateCommentMetrics(conn, comment_id, kind)
         else: 
-            flash(f"You already {kind}d")    
+            flash(f"You have already {kind}d this comment.")    
         return redirect( url_for('post', post_id = post_id ))
 
-@app.route('/gaggle/members/<gaggle_name>')
+@app.route('/gaggle/<gaggle_name>/members/')
 def gaggleMembers(gaggle_name):
     """
-    Returns a page with all members of gaggle 'gaggle_name'
+    Returns a page with list of all members of the Gaggle with the given name.
     """
     conn = dbi.connect() 
     members = waggle.getMembers(conn, gaggle_name)  
     return render_template('groupMembers.html', gaggle_name = gaggle_name, members = members) 
 
-@app.route('/gaggle/join/<gaggle_id>/<gaggle_name>', methods=['GET', 'POST'])
-def joinGaggle(gaggle_id, gaggle_name):
+@app.route('/gaggle/<gaggle_name>/join/', methods=['GET', 'POST'])
+def joinGaggle(gaggle_name):
     """
-    Called when a user clicks on a 'join' button on a gaggle page, this inserts the user
-    into a gosling table in the database, making them a member. If user already joined, then 
-    they will unjoined by clicking the button again.
+    Called when a user clicks on the 'join' button on a Gaggle page. Inserts a new row
+    in the gosling table in the database. If user is already a member, then the
+    button functions as an 'unjoin'.
     """
     conn = dbi.connect() 
     user_id = session.get('user_id', '')
     if user_id == '':
-        flash('You are logged out')
+        flash('You have been logged out.')
         return redirect(url_for('login')) 
     else:
         if request.method == 'GET':
-            return redirect(url_for('gaggle', gaggle_name=gaggle_name))      
+            return redirect(url_for('gaggle', gaggle_name = gaggle_name))      
         else:  
             print(request.form.get('submit'))
             print("ifelse")
@@ -280,15 +296,15 @@ def joinGaggle(gaggle_id, gaggle_name):
                 print(action)              
             return redirect(url_for('gaggle', gaggle_name=gaggle_name))
 
-@app.route('/edit_my_page/', methods=['GET', 'POST'])
+@app.route('/user/edit/', methods=['GET', 'POST'])
 def editMyPage():
     """
-    Returns a page where a user can change their profile information by updating 
-    the database.
+    Returns a page where a user can edit their profile information.
+    Updates the user table in the database.
     """
     user_id = session.get('user_id', '')
     if user_id == '':
-        flash('you are not logged in. Please login or join')
+        flash('You are not logged in. Please log in or join.')
         return redirect(url_for('login'))
     conn = dbi.connect()
     user_info = waggle.getUserInfo(conn, user_id)
@@ -299,40 +315,48 @@ def editMyPage():
         if request.form['first_name'] != '':
             new_fn = request.form['first_name']
             curs = dbi.dict_cursor(conn)
-            curs.execute('''
-                update user set first_name = %s  where user_id = %s''',[new_fn,user_id])
+            curs.execute('''UPDATE user
+                            SET first_name = %s
+                            WHERE user_id = %s''',
+                        [new_fn,user_id])
             conn.commit()
         if request.form['last_name'] != '':
             new_ln = request.form['first_name']
             curs = dbi.dict_cursor(conn)
-            curs.execute('''
-                update user set last_name = %s where user_id = %s''',[new_ln,user_id])
+            curs.execute('''UPDATE user
+                            SET last_name = %s
+                            WHERE user_id = %s''',
+                        [new_ln,user_id])
             conn.commit()
         if request.form['class_year'] != '':
             new_cy = request.form['class_year']
             curs = dbi.dict_cursor(conn)
-            curs.execute('''
-                update user set class_year = %s where user_id = %s''',[new_cy,user_id])
+            curs.execute('''UPDATE user 
+                            SET class_year = %s
+                            WHERE user_id = %s''',
+                        [new_cy,user_id])
             conn.commit()
         if request.form['bio_text'] != '':
             new_bio = request.form['bio_text']
             curs = dbi.dict_cursor(conn)
-            curs.execute('''
-                update user set bio_text = %s  where user_id = %s''',[new_bio,user_id])
+            curs.execute('''UPDATE user
+                            SET bio_text = %s
+                            WHERE user_id = %s''',
+                        [new_bio,user_id])
             conn.commit()
-        flash('Your information was successfully updated')
+        flash('Your information was successfully updated.')
         return redirect(url_for('editMyPage'))
          
-@app.route('/my_gaggles/', methods=['GET', 'POST'])
+@app.route('/dashboard/', methods=['GET', 'POST'])
 def showMyGaggles():
     """
-    Returws a page with all gaggles created by the said user. The user can delete
-    their gaggles and create new ones (to be implemented)
+    Returns a page with list of all Gaggles created by the user. The user can delete
+    their Gaggles and create new ones (to be implemented).
     """
     #not finished
     user_id = session.get('user_id', '')
     if user_id == '':
-        flash('you are not logged in. Please login or join')
+        flash('You are not logged in. Please log in or join.')
         return redirect(url_for('login'))
     username=session.get('username', '')
     conn= dbi.connect()
@@ -343,7 +367,7 @@ def showMyGaggles():
         flash('To be implemented')
         return redirect(url_for('showMyGaggles'))
 
-@app.route('/new_gaggle/', methods=['GET', 'POST'])
+@app.route('/dashboard/new/', methods=['GET', 'POST'])
 def createGaggle():
     """
     To be implemented

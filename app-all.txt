@@ -1,0 +1,1228 @@
+from flask import (Flask, render_template, make_response, url_for, request,
+                   redirect, flash, session, send_from_directory, jsonify)
+from werkzeug.utils import secure_filename
+import bcrypt
+from datetime import datetime
+app = Flask(__name__)
+
+# one or the other of these. Defaults to MySQL (PyMySQL)
+# change comment characters to switch to SQLite
+
+import cs304dbi as dbi
+# import cs304dbi_sqlite3 as dbi
+import waggle
+import random
+
+app.secret_key = 'your secret here'
+# replace that with a random key
+app.secret_key = ''.join([ random.choice(('ABCDEFGHIJKLMNOPQRSTUVXYZ' +
+                                          'abcdefghijklmnopqrstuvxyz' +
+                                          '0123456789'))
+                           for i in range(20) ])
+
+# This gets us better error messages for certain common request errors
+app.config['TRAP_BAD_REQUEST_ERRORS'] = True
+
+@app.route('/login/', methods=['GET', 'POST'])
+def login():
+    """
+    Login Page
+    """
+    if request.method == 'GET':
+        return render_template('login_form.html')
+    else:
+        username = request.form['username']
+        passwd = request.form['pass']
+        conn = dbi.connect()
+        curs = dbi.dict_cursor(conn)
+        curs.execute('''SELECT user_id, hashed_pass
+                        FROM user
+                        WHERE username = %s''',
+                    [username])
+        row = curs.fetchone()
+        if row is None:     # if username does not exist
+            flash('Login incorrect. Try again or join.')
+            return redirect(url_for('login'))
+        stored = row['hashed_pass']
+        hashed2 = bcrypt.hashpw(passwd.encode('utf-8'),stored.encode('utf-8'))
+        hashed2_str = hashed2.decode('utf-8')
+        if hashed2_str == stored:
+            flash('successfully logged in as ' + username)
+            session['username'] = username
+            session['user_id'] = row['user_id']
+            session['logged_in'] = True
+            return redirect(url_for('homepage'))
+        else:       # if password is incorrect
+            flash('Login incorrect. Try again or join.')
+            return redirect(url_for('login'))
+
+@app.route('/logout/')
+def logout():
+    '''
+    Logout Page
+    '''
+    try:
+        if 'username' in session:
+            username = session['username']
+            session.pop('username')
+            session.pop('user_id')
+            session.pop('logged_in')
+            flash('You have been logged out.')
+            return redirect(url_for('login'))
+        else:
+            flash('You are not logged in. Please log in or join.')
+            return redirect(url_for('login') )
+    except Exception as err:
+        flash('some kind of error '+str(err))
+        return redirect( url_for('login'))
+
+@app.route('/')
+def homepage():
+    """
+    Main page. For now, contains a feed of all posts from all Gaggles.
+    """
+    conn = dbi.connect()
+    username = session.get('username', '')
+    logged = session.get('logged_in', False)
+    if logged == False:
+        flash('You are not logged in. Please log in or join.')
+        return redirect(url_for('login'))
+    else:
+        gaggles = waggle.getUserGaggle(conn, username)
+        posts_info = waggle.getPosts(conn)
+        return render_template('main.html', gaggles = gaggles, username=username, posts=posts_info)
+
+
+@app.route('/deletePost/<post_id>/<author_id>', methods=['POST'])
+def deletePost(post_id, author_id):
+    """
+    Called when user presses "delete" button on a post. The post gets deleted from the database if 
+    the post was written by the logged in user.
+    """
+    username = session.get('username', '')
+    user_id = session.get('user_id', '')
+    logged = session.get('logged_in', False)
+    if logged == False:
+        flash('You are not logged in. Please log in or join')
+        return redirect(url_for('login'))
+    if user_id != int(author_id):
+        flash('You are not authorized to delete this post/comment.')
+        return redirect(url_for('homepage'))
+    conn = dbi.connect()
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''delete
+                    from post
+                    where post_id = %s''',
+                    [post_id])
+    conn.commit()
+    flash('Deleted post with post_id {pid}'.format(pid=post_id))
+    return redirect(url_for('homepage'))
+
+
+@app.route('/search/', methods=["GET"])
+def search():
+    """
+    Called when user searches for a Gaggle in the search bar. Returns a page of Gaggles 
+    that have a name matching the keyword search.
+    """
+    conn = dbi.connect()
+    query = request.args.get('search-query')
+    results = waggle.searchGaggle(conn, query)
+    print(results)
+    if len(results) == 0:
+        flash('No result found.')
+        return redirect(url_for('homepage'))
+    else:
+        return render_template('testform.html', query = query, results = results)  
+
+
+@app.route('/gaggle/<gaggle_name>')
+def gaggle(gaggle_name):
+    """
+    Returns the page for the Gaggle with the given name. Page displays all posts in that Gaggle.
+    """
+    user_id = session.get('user_id', '')
+    if user_id == '':
+        flash('You are logged out')
+        return redirect(url_for('login')) 
+    else: 
+        conn = dbi.connect() 
+        gaggle = waggle.getGaggle(conn, gaggle_name)  
+        posts = waggle.getGagglePosts(conn, gaggle_name)
+        gaggle_id = waggle.getGaggleID(conn, gaggle_name)[0]['gaggle_id']
+        isGosling = waggle.isGosling(conn, user_id, gaggle_id)
+        if len(isGosling) == 0:
+            joined = False
+        else:
+            joined = True
+        print(joined)
+        return render_template('group.html', gaggle = gaggle, posts = posts, joined = joined) 
+
+
+@app.route('/user/<username>')
+def user(username):
+    """
+    Returns the profile page of the user with the given username.
+    """
+    conn = dbi.connect()
+    gaggles = waggle.getUserGaggle(conn, username)
+    return render_template('user.html', username=username, gaggles=gaggles)
+
+
+@app.route('/newpost/<gaggle_name>/<gaggle_id>/', methods=["POST"])
+def addPost(gaggle_name, gaggle_id):
+    """
+    Called when user clicks the 'post' button on a Gaggle page. Inserts a new row
+    in the 'post' table in the database.
+    """
+    conn = dbi.connect()
+    content = request.form.get('content')
+    if len(content) == 0:
+        flash('Please enter some content.')
+        return redirect(url_for('gaggle', gaggle_name=gaggle_name))
+    else:
+        poster_id = session.get('user_id', '')
+        if poster_id != '':
+            now = datetime.now()
+            posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
+            try:
+                curs = dbi.dict_cursor(conn)
+                curs.execute('''INSERT INTO post(gaggle_id, poster_id, content, tag_id, posted_date)
+                                VALUES(%s, %s, %s, %s, %s)''',
+                            [gaggle_id, poster_id, content, None, posted_date])
+                conn.commit()
+            except Exception as e: 
+                print(e)
+                flash('Error:' +e)
+            return redirect(url_for('gaggle', gaggle_name=gaggle_name))
+        else:
+            flash('You have been logged out.')
+            return redirect(url_for('login'))
+
+@app.route('/post/<post_id>', methods=['GET', 'POST']) #add hyperlink from group.html to post
+def post(post_id):
+    """
+    Returns the page for the specific post with the given post_id.
+    """
+    now = datetime.now()
+    posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
+    user_id = session.get('user_id', '')
+    if user_id == '':
+        flash('You have been logged out.')
+        return redirect(url_for('login'))      
+    else:   
+        conn = dbi.connect() 
+        post = waggle.getOnePost(conn, post_id)
+        comments = waggle.getPostComments(conn, post_id)
+        if request.method == 'GET':
+            return render_template('post.html', post = post, comments = comments)
+        else:
+            print(request.form)
+            kind = request.form.get('submit')
+            if kind == 'Comment':
+                content = request.form['comment_content']  
+                add_comment = waggle.addComment(conn, post_id, content, user_id, posted_date)
+            else: 
+                hasLiked = waggle.hasLiked(conn, post_id, user_id)
+                if len(hasLiked) == 0:
+                    interaction = waggle.likePost(conn, post_id, user_id, kind)   
+                else:
+                    flash(f"You have already {kind}d this post.")     
+            return redirect( url_for('post', post_id = post_id ))
+    
+@app.route('/likeComment/<post_id>/<comment_id>', methods=['GET', 'POST'])
+def likeComment(post_id, comment_id):
+    """
+    Called when user clicks the 'like' button on a comment. Inserts a new row in the
+    comment_like table in the database.
+    """
+    user_id = session.get('user_id', '')
+    conn = dbi.connect() 
+    post = waggle.getOnePost(conn, post_id)
+    comments = waggle.getPostComments(conn, post_id)    
+    if request.method == 'GET':  
+        return render_template('post.html', post = post, comments = comments) 
+    else:     
+        kind = request.form.get('submit')
+        display = waggle.startCommentMetrics(conn, comment_id)
+        hasLiked = waggle.hasLikedComment(conn, comment_id, user_id)
+        if len(hasLiked) == 0:
+            interaction = waggle.likeComment(conn, comment_id, user_id, kind)
+            update = waggle.updateCommentMetrics(conn, comment_id, kind)
+        else: 
+            flash(f"You have already {kind}d this comment.")    
+        return redirect( url_for('post', post_id = post_id ))
+
+@app.route('/gaggle/members/<gaggle_name>')
+def gaggleMembers(gaggle_name):
+    """
+    Returns a page with list of all members of the Gaggle with the given name.
+    """
+    conn = dbi.connect() 
+    members = waggle.getMembers(conn, gaggle_name)  
+    return render_template('groupMembers.html', gaggle_name = gaggle_name, members = members) 
+
+@app.route('/gaggle/join/<gaggle_id>/<gaggle_name>', methods=['GET', 'POST'])
+def joinGaggle(gaggle_id, gaggle_name):
+    """
+    Called when a user clicks on the 'join' button on a Gaggle page. Inserts a new row
+    in the gosling table in the database. If user is already a member, then the
+    button functions as an 'unjoin'.
+    """
+    conn = dbi.connect() 
+    user_id = session.get('user_id', '')
+    if user_id == '':
+        flash('You have been logged out.')
+        return redirect(url_for('login')) 
+    else:
+        if request.method == 'GET':
+            return redirect(url_for('gaggle', gaggle_name=gaggle_name))      
+        else:  
+            print(request.form.get('submit'))
+            print("ifelse")
+            if request.form.get('submit') == 'Join':
+                print('joining')
+                action = waggle.joinGaggle(conn, user_id, gaggle_id)
+                print(action)
+            else: 
+                print('unjoining')
+                action = waggle.unjoinGaggle(conn, user_id, gaggle_id) 
+                print(action)              
+            return redirect(url_for('gaggle', gaggle_name=gaggle_name))
+
+@app.route('/edit_my_page/', methods=['GET', 'POST'])
+def editMyPage():
+    """
+    Returns a page where a user can edit their profile information.
+    Updates the user table in the database.
+    """
+    user_id = session.get('user_id', '')
+    if user_id == '':
+        flash('You are not logged in. Please log in or join.')
+        return redirect(url_for('login'))
+    conn = dbi.connect()
+    user_info = waggle.getUserInfo(conn, user_id)
+    if request.method == 'GET':
+        return render_template('edit_user_info.html', user=user_info)
+    else:
+        new_fn, new_ln, new_cy, new_bio = '', '', '', ''
+        if request.form['first_name'] != '':
+            new_fn = request.form['first_name']
+            curs = dbi.dict_cursor(conn)
+            curs.execute('''UPDATE user
+                            SET first_name = %s
+                            WHERE user_id = %s''',
+                        [new_fn,user_id])
+            conn.commit()
+        if request.form['last_name'] != '':
+            new_ln = request.form['first_name']
+            curs = dbi.dict_cursor(conn)
+            curs.execute('''UPDATE user
+                            SET last_name = %s
+                            WHERE user_id = %s''',
+                        [new_ln,user_id])
+            conn.commit()
+        if request.form['class_year'] != '':
+            new_cy = request.form['class_year']
+            curs = dbi.dict_cursor(conn)
+            curs.execute('''UPDATE user 
+                            SET class_year = %s
+                            WHERE user_id = %s''',
+                        [new_cy,user_id])
+            conn.commit()
+        if request.form['bio_text'] != '':
+            new_bio = request.form['bio_text']
+            curs = dbi.dict_cursor(conn)
+            curs.execute('''UPDATE user
+                            SET bio_text = %s
+                            WHERE user_id = %s''',
+                        [new_bio,user_id])
+            conn.commit()
+        flash('Your information was successfully updated.')
+        return redirect(url_for('editMyPage'))
+         
+@app.route('/my_gaggles/', methods=['GET', 'POST'])
+def showMyGaggles():
+    """
+    Returns a page with list of all Gaggles created by the user. The user can delete
+    their Gaggles and create new ones (to be implemented).
+    """
+    #not finished
+    user_id = session.get('user_id', '')
+    if user_id == '':
+        flash('You are not logged in. Please log in or join.')
+        return redirect(url_for('login'))
+    username=session.get('username', '')
+    conn= dbi.connect()
+    gaggles = waggle.getGagglesOfAuthor(conn, user_id)
+    if request.method=='GET':
+        return render_template('show_my_gaggles.html', username=username, gaggles=gaggles)
+    else:
+        flash('To be implemented')
+        return redirect(url_for('showMyGaggles'))
+
+@app.route('/new_gaggle/', methods=['GET', 'POST'])
+def createGaggle():
+    """
+    To be implemented
+    """
+    flash('To be implemented')
+    return redirect(url_for('showMyGaggles'))
+
+@app.before_first_request
+def init_db():
+    dbi.cache_cnf()
+    db_to_use = 'waggle_db' 
+    dbi.use(db_to_use)
+    print('will connect to {}'.format(db_to_use))
+
+if __name__ == '__main__':
+    import sys, os
+    if len(sys.argv) > 1:
+        # arg, if any, is the desired port number
+        port = int(sys.argv[1])
+        assert(port>1024)
+    else:
+        port = os.getuid()
+    app.debug = True
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
+    app.run('0.0.0.0',port)
+import cs304dbi as dbi
+
+# ==========================================================
+# The functions that do most of the work.
+def getUserID(conn, username):
+    '''returns user_id based on username'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT user_id
+        FROM user 
+        WHERE username = %s''',
+                 [username])
+    return curs.fetchone()    
+
+def getUserInfo(conn, user_id):
+    '''returns user information based on user_id'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT first_name, last_name, class_year, bio_text
+        FROM user
+        WHERE user_id = %s''',
+                 [user_id])
+    return curs.fetchone()      
+
+def getUserGaggle(conn,username):
+    '''returns all gaggles that a user is a member of'''
+    user_id = getUserID(conn, username)['user_id']
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT a.gaggle_id, b.gaggle_name 
+        FROM gosling a 
+        LEFT JOIN gaggle b 
+        USING (gaggle_id) 
+        WHERE a.user_id = %s''',
+                 [user_id]) #Get a list of all gaggle
+    return curs.fetchall()
+
+def searchGaggle(conn, query):
+    '''returns all gaggles whose names match the query'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT * from gaggle 
+        WHERE gaggle_name LIKE %s''',
+                 ["%"+query+"%"]) 
+    return curs.fetchall()    
+
+def getGaggle(conn, gaggle_name):
+    '''returns information about a gaggle based on its gaggle_name'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT a.*, b.username
+        FROM gaggle a
+        LEFT JOIN user b
+        ON (a.author_id = b.user_id)
+        WHERE gaggle_name = %s''',
+                 [gaggle_name])
+    return curs.fetchone()      
+
+def getGagglesOfAuthor(conn, user_id):
+    '''returns all gaggles that a user has created'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        select * from gaggle where author_id = %s''', [user_id])
+    return curs.fetchall()
+
+def getPosts(conn):
+    '''returns the latest 20 posts for homepage feed'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        select * 
+        from post 
+        order by posted_date DESC
+        limit 20 
+    ''')
+    posts = curs.fetchall()
+    post_ids = [post['post_id'] for post in posts]
+    all_posts = []
+    for pid in post_ids:
+        all_posts.append(getOnePost(conn, pid))
+    return all_posts
+
+def getOnePost(conn, post_id):
+    '''returns information about a post based on the post_id and its metrics. 
+    We will optimize and modularize this function in alpha phase'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        select * from post where post_id = %s
+    ''', [post_id])
+    post_info = curs.fetchone()
+    curs.execute('''
+        select count(*) as num
+        from post_like
+        where post_id = %s and kind = 'Like'
+        group by user_id
+    ''', [post_id])
+    likes = curs.fetchone()
+    curs.execute('''
+        select count(*) as num
+        from post_like
+        where post_id = %s and kind = 'Dislike'
+        group by user_id
+    ''', [post_id])
+    dislikes = curs.fetchone()
+    curs.execute('''
+        select username from user where user_id = %s
+    ''', [post_info['poster_id']])
+    author = curs.fetchone()
+    curs.execute('''
+        select gaggle_name from gaggle where gaggle_id = %s
+    ''', [post_info['gaggle_id']])
+    gaggle = curs.fetchone()
+    if likes:
+        post_info['likes'] = likes['num']
+    else:
+        post_info['likes'] = 0
+    if dislikes:
+        post_info['dislikes'] = dislikes['num']
+    else:
+        post_info['dislikes'] = 0
+    post_info['author'] = author['username']
+    post_info['gaggle'] = gaggle['gaggle_name']
+    return post_info
+
+def getGaggleID(conn, gaggle_name):
+    '''returns gaggle_id based on gaggle_name'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT gaggle_id
+        FROM gaggle 
+        WHERE gaggle_name = %s''',
+                 [gaggle_name])
+    return curs.fetchall()  
+
+def getGagglePosts(conn, gaggle_name):
+    '''returns all posts in a gaggle based on gaggle_name sorted by latest'''
+    gaggle_id = getGaggleID(conn, gaggle_name)[0]['gaggle_id']
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT *
+        FROM post
+        WHERE gaggle_id = %s
+        order by posted_date DESC''',
+                 [gaggle_id])
+    posts = curs.fetchall()
+    post_ids = [post['post_id'] for post in posts]
+    all_posts = []
+    for pid in post_ids:
+        all_posts.append(getOnePost(conn, pid))
+    return all_posts
+
+def getPostComments(conn, post_id):
+    '''returns all comments on a post based on the post_id'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT a.*, b.username, c.num_likes, c.num_dislikes
+        FROM comment a
+        LEFT JOIN user b
+        ON a.commentor_id = b.user_id
+        LEFT JOIN comment_like_count c
+        ON a.comment_id = c.comment_id
+        WHERE parent_comment_id IS NULL 
+        AND post_id = %s
+        ORDER BY a.posted_date desc''',
+                 [post_id])
+    return curs.fetchall()      
+
+def addComment(conn, post_id, content, commentor_id, posted_date):
+    '''insert a new comment into the comment table'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        INSERT INTO comment(post_id, content, commentor_id, posted_date) 
+        VALUES (%s,%s,%s,%s) ''', 
+                [post_id, content, commentor_id, posted_date])
+    conn.commit()  # need this!   
+    return commentor_id
+  
+def likePost(conn, post_id, user_id, kind):
+    '''Record user's like/dislike of a post by 
+    inserting the interaction into the post_like table'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        INSERT INTO post_like(post_id, user_id, kind) 
+        VALUES (%s,%s,%s) ''', 
+                [post_id, user_id, kind])
+    conn.commit()  # need this!   
+    return post_id     
+
+def likeComment(conn, comment_id, user_id, kind):
+    '''Record user's like/dislike of a comment by 
+    inserting the interaction into the comment_like table'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        INSERT INTO comment_like(comment_id, user_id, kind) 
+        VALUES (%s,%s,%s) ''', 
+                [comment_id, user_id, kind])
+    conn.commit()  # need this!   
+    return comment_id  
+
+def getMembers(conn, gaggle_name):
+    '''returns all members of a gaggle based on the gaggle_name'''    
+    curs = dbi.dict_cursor(conn)
+    gaggle_id = getGaggleID(conn, gaggle_name)[0]['gaggle_id']
+    curs.execute('''
+        SELECT username
+        FROM gosling 
+        LEFT JOIN user 
+        USING (user_id)
+        WHERE gaggle_id = %s''',
+                 [gaggle_id])
+    return curs.fetchall()  
+
+def hasLiked(conn, post_id, user_id):
+    '''Checks if a user has liked a post'''
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        SELECT * from post_like 
+        WHERE post_id = %s
+        AND user_id = %s''',
+                 [post_id, user_id]) 
+    return curs.fetchall()    
+
+def hasLikedComment(conn, comment_id, user_id):
+    '''Checks if a user has liked a comment'''
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        SELECT * from comment_like 
+        WHERE comment_id = %s
+        AND user_id = %s''',
+                 [comment_id, user_id]) 
+    return curs.fetchall()  
+
+def startCommentMetrics(conn, comment_id):
+    '''Check if a comment has any like/dislike.
+    Starts a new like/dislike count for a comment if it hasn't existed'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT * from comment_like 
+        WHERE comment_id = %s''',
+                 [comment_id])     
+    result = curs.fetchall()
+    if len(result) == 0:             
+        curs.execute('''
+            INSERT INTO comment_like_count(comment_id, num_likes, num_dislikes) 
+            VALUES (%s,%s,%s) ''', 
+                    [comment_id, 0, 0])
+        conn.commit()  # need this!   
+    return comment_id      
+
+def commentMetrics(conn, comment_id):
+    '''Returns number of likes and dislikes of a comment based on a comment_id'''
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        SELECT * from comment_like_count 
+        WHERE comment_id = %s''',
+                 [comment_id])     
+    return curs.fetchall()  
+
+def updateCommentMetrics(conn, comment_id, kind):
+    '''Update number of likes and dislikes of a comment'''
+    curs = dbi.dict_cursor(conn)  
+    if kind == 'Like':
+        curs.execute('''
+            UPDATE comment_like_count SET num_likes = num_likes + 1 
+            WHERE comment_id = %s''',
+                    [comment_id]) 
+    else:
+        curs.execute('''
+            UPDATE comment_like_count SET num_dislikes = num_dislikes + 1 
+            WHERE comment_id = %s''',
+                    [comment_id])            
+    conn.commit()  
+    return comment_id 
+
+def joinGaggle(conn, user_id, gaggle_id):
+    '''Add a user into a gaggle member list'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        INSERT INTO gosling(user_id, gaggle_id) 
+        VALUES (%s,%s) ''', 
+                [user_id, gaggle_id])
+    conn.commit()  # need this!   
+    return "Joined "
+
+def unjoinGaggle(conn, user_id, gaggle_id):
+    '''Remove a user into a gaggle member list'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        DELETE FROM gosling
+        WHERE user_id = %s
+        AND gaggle_id = %s''', 
+                [ user_id, gaggle_id])
+    conn.commit()  # need this!   
+    return "Unjoined"
+
+def isGosling(conn, user_id, gaggle_id):  
+    '''Check if a user is in a gaggle member list'''  
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        SELECT * from gosling
+        WHERE user_id = %s
+        AND gaggle_id = %s''',
+                 [user_id, gaggle_id])     
+    return curs.fetchall()      {% extends "super_base.html" %}
+
+{% block searchbar %}
+  <form class="search_form" method=GET action="{{url_for('search')}}">
+    <label for="search-query">Find gaggle: </label>
+    <input id="search-query" name="search-query" value="">
+    <input type="submit" name="submit-btn" value="Search">
+  </form>  
+{% endblock %}{% extends "super_base.html" %}
+    
+{% block main_content %}
+
+
+<form class="edit_form" action="{{url_for('editMyPage')}}" method="POST">
+    <div>
+        <div class="inputs">
+            <div>Current First Name: {{user['first_name']}}</div>
+            <label>New First Name: <input name="first_name"></input></label>
+        </div>
+        
+        <div class="inputs">
+            <div>Current Last Name: {{user['last_name']}}</div>
+            <label>New Last Name: <input name="last_name"></input></label>
+        </div>
+        
+        <div class="inputs">
+            <div>Current Class Year: {{user['class_year']}}</div>
+            <label>New Class Year: <input name="class_year"></input></label>
+        </div>
+        
+        <div class="inputs">
+            <div>Current Bio: {{user['bio_text']}}</div>
+            <label>New Bio: <textarea name="bio_text" rows="1" cols="10"></textarea></label>  
+        </div>
+        
+        <div class="inputs"><input type="submit" value="Update"></div>
+    </div>
+</form>
+{% endblock %}
+{% extends "base.html" %}
+
+{% block main_content %}
+    <p>welcome to {{gaggle.gaggle_name}} </p>
+    <p>created by <a href="{{url_for('user', username=gaggle.username)}}">{{gaggle.username}}</a></p>
+    <p>about:  {{gaggle.description}}</p>
+    <p><a href="{{url_for('gaggleMembers', gaggle_name = gaggle.gaggle_name)}}">View members</a></p>
+
+    <div class="join_group">
+        <form name="write_post" action="{{url_for('joinGaggle', gaggle_name = gaggle.gaggle_name, gaggle_id = gaggle.gaggle_id)}}" method="POST">
+            {% if joined %}
+            <input type="submit" name = "submit" value="Unjoin">
+            {% else %}
+            <input type="submit" name = "submit" value="Join">
+            {% endif %}
+        </form>
+    </div>
+
+    <div class="add_post_form">
+        <form name="write_post" action="{{url_for('addPost', gaggle_name = gaggle.gaggle_name, gaggle_id = gaggle.gaggle_id)}}" method="POST">
+            <textarea name="content" rows="4" cols="50"></textarea>
+            <input type="submit" value="Post">
+        </form>
+    </div>
+    
+    {% for post in posts %}
+    <div class="post" id="{{post['post_id']}}">
+        <p><a href="{{url_for('post', post_id=post.post_id)}}">Post_id: {{post.post_id}}</a>
+        <p>author: <a href="{{url_for('user', username=post['author'])}}">{{post['author']}}</a> gaggle: <a href="{{url_for('gaggle',gaggle_name=post['gaggle'])}}">{{post['gaggle']}}</a></p>
+        <p>{{post['content']}}</p>
+        <p><a href="{{url_for('post', post_id=post.post_id)}}">Comments</a> </p>
+        <p>likes: {{post['likes']}}</p>
+        <p>dislikes: {{post['dislikes']}}</p>
+        <p>{{post['posted_date']}}</p>  
+        <form method="post" action="{{url_for('deletePost', post_id=post['post_id'], author_id=post['poster_id'])}}">
+            <input type="submit" name="delete" value="Delete Post">
+        </form>
+    </div>
+    {% endfor %}
+
+{% endblock %}
+{% extends "super_base.html" %}
+
+{% block main_content %}
+    {% for member in members %}
+    <ul>
+        <li><a href="{{url_for('user', username=member.username)}}">{{member.username}}</a></li>
+    </ul>
+    {% endfor %}
+
+Return to gaggle: <a href="{{url_for('gaggle', gaggle_name = gaggle_name)}}">{{gaggle_name}}</a>    
+{% endblock %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waggle</title>
+    <link rel='stylesheet' href="{{url_for('static', filename = 'style.css')}}">
+</head>
+<body>
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <div id="messages">
+    {% for msg in messages %}
+    <p>{{msg}}</p>
+    {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <div>
+        <p>Login Page</p>
+    
+        <form action="{{url_for('login')}}" method="POST">
+            <p><label>Username: <input type="text" name="username"></input></label></p>
+            <p></p><label>Password: <input type="text" name="pass"></input></label></p>
+            <input type="submit" value="Login">
+        </form>
+    
+    </div>
+</body>
+</html>
+
+
+{% extends "base.html" %}
+    
+{% block main_content %}
+<h1>Hello {{username}}!</h1>
+
+<p>Joined gaggles:</p>
+<ul>
+    {% for gaggle in gaggles %}
+    <li><a href="{{url_for('gaggle', gaggle_name=gaggle['gaggle_name'])}}">{{gaggle['gaggle_name']}}</a></li>
+    {% endfor %}
+</ul>
+
+<p>My feed</p>
+
+{% for post in posts %}
+<div class="post" id="{{post['post_id']}}">
+    <p>post id: {{post['post_id']}}</p>
+    <p>author: <a href="{{url_for('user', username=post['author'])}}">{{post['author']}}</a> gaggle: <a href="{{url_for('gaggle',gaggle_name=post['gaggle'])}}">{{post['gaggle']}}</a></p>
+    <p>content: {{post['content']}}</p>
+    <p>likes: {{post['likes']}}</p>
+    <p>dislikes: {{post['dislikes']}}</p>
+    <p>{{post['posted_date']}}</p>
+</div>
+
+{% endfor %}
+
+{% endblock %}
+{% extends "super_base.html" %}
+
+{% block main_content %}
+    <div class="post" id="{{post['post_id']}}">
+        <p>post id: {{post['post_id']}}</p>
+        <p>author: <a href="{{url_for('user', username=post['author'])}}">{{post['author']}}</a> gaggle: <a href="{{url_for('gaggle',gaggle_name=post['gaggle'])}}">{{post['gaggle']}}</a></p>
+        <p>{{post['content']}}</p>
+        <p>likes: {{post['likes']}}</p>
+        <p>dislikes: {{post['dislikes']}}</p>
+        <p>{{post['posted_date']}}</p>  
+
+        <form method=post action="{{url_for('post', post_id = post.post_id)}}" >
+            <input type="submit" name="submit" value="Like">
+            <input type="submit" name="submit" value="Dislike">        
+            <textarea name="comment_content" rows="4" cols="50"></textarea>
+            <input type="submit" name="submit" value="Comment">
+        </form>
+
+        {% for comment in comments %}
+        <div class="comment" id="{{comment.comment_id}}">
+            <p>author: <a href="{{url_for('user', username=comment.commentor_id)}}">{{comment.username}}</a> </p>
+            <p>{{comment.content}}</p>
+            <p>{{comment.posted_date}}</p>
+            <p>Likes: {{comment.num_likes}}</p>
+            <p>Dislikes: {{comment.num_dislikes}}</p>
+        <form method=post action="{{url_for('likeComment', post_id = post.post_id, comment_id = comment.comment_id)}}" >
+            <input type="submit" name="submit" value="Like">
+            <input type="submit" name="submit" value="Dislike"> 
+        </form> 
+
+        </div>
+        {% endfor %}
+    </div>
+    
+
+
+{% endblock %}
+{% extends "base.html" %}
+
+{% block content %}
+<body>
+    <p>Gaggles matching {{query}}:</p>
+        {% for gaggle in results %}
+        <p> 
+        <form method=post action="{{url_for('joinGaggle', gaggle_id = gaggle.gaggle_id, gaggle_name = gaggle.gaggle_name)}}" >
+            <a href="{{ url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a>
+            <input type="submit" name="submit" value="Join">
+        </form> 
+        </p>
+        {% endfor %}
+</body>
+{% endblock %}{% extends "base.html" %}
+
+{% block content %}
+<body>
+    <p>Gaggles matching {{query}}:</p>
+    <ul>
+        {% for gaggle in results %}
+        <li><a href="{{ url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a></li>
+        {% endfor %}
+    </ul>
+</body>
+{% endblock %}{% extends "super_base.html" %}
+    
+{% block main_content %}
+<h1>Gaggles created by {{username}}</h1>
+
+<form action="url_for(showMyGaggles)" method="POST">
+    <ul>
+        {% for gaggle in gaggles %}
+        <div class="inputs">
+            <li><a href="{{url_for('gaggle', gaggle_name= gaggle['gaggle_name'])}}">{{gaggle['gaggle_name']}}</a> <input type="submit" name="{{gaggle['gaggle_id']}}" value="Delete Gaggle"></li>
+            
+        </div>
+        {% endfor %}
+    </ul>
+</form>
+
+<a href="{{url_for('createGaggle')}}">Create a new gaggle</a>
+{% endblock %}<!doctype html>
+<html lang='en'>
+<head>
+    <meta charset='utf-8'>
+    <!-- for mobile-friendly pages -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name=author content="">
+    <title>{{ page_title }}</title>
+    <link rel='stylesheet' href="{{url_for('static', filename = 'style.css')}}">
+    {% block head_stuff %} {% endblock %}
+</head>
+<body>
+  
+<ul class="menu">
+  <li><a class="active" href="{{url_for('homepage')}}">Home</a></li>
+  <li><a href="{{url_for('editMyPage')}}">Edit My Account</a></li>
+  <li><a href="{{url_for('showMyGaggles')}}">My Gaggles</a></li>
+  <li><a href="{{url_for('logout')}}">Log out</a></li>
+</ul>
+
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+<div id="messages">
+  {% for msg in messages %}
+  <p>{{msg}}</p>
+  {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+{% block searchbar %}
+
+{% endblock %}
+
+
+{% block nav %}
+{% endblock %}
+
+{% block main_content %}
+
+{% endblock %}
+
+  <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+  {% block end_scripts %}
+  {% endblock %}
+  
+</body>
+</html>
+{% extends "base.html" %}
+
+{% block main_content %}
+<body>
+    <p>Gaggles matching {{query}}:</p>
+        {% for gaggle in results %}
+        <p> 
+                <a href="{{ url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a>
+        </p>
+        {% endfor %}
+</body>
+{% endblock %}
+{% extends "base.html" %}
+
+{% block main_content %}
+    <p>welcome to {{gaggle.gaggle_name}} </p>
+    <p>created by <a href="{{url_for('user', username=gaggle.username)}}">{{gaggle.username}}</a></p>
+    <p>about:  {{gaggle.description}}</p>
+    <p><a href="{{url_for('gaggleMembers', gaggle_name = gaggle.gaggle_name)}}">View members</a></p>
+
+    <div class="join_group">
+        <form name="write_post" action="{{url_for('joinGaggle', gaggle_name = gaggle.gaggle_name, gaggle_id = gaggle.gaggle_id)}}" method="POST">
+            <input type="submit" value="Join">
+        </form>
+    </div>
+
+    <div class="add_post_form">
+        <form name="write_post" action="{{url_for('addPost', gaggle_name = gaggle.gaggle_name, gaggle_id = gaggle.gaggle_id)}}" method="POST">
+            <textarea name="content" rows="4" cols="50"></textarea>
+            <input type="submit" value="Post">
+        </form>
+    </div>
+    
+    {% for post in posts %}
+    <div class="post" id="{{post['post_id']}}">
+        <p><a href="{{url_for('post', post_id=post.post_id)}}">Post_id: {{post.post_id}}</a>
+        <p>author: <a href="{{url_for('user', username=post['author'])}}">{{post['author']}}</a> gaggle: <a href="{{url_for('gaggle',gaggle_name=post['gaggle'])}}">{{post['gaggle']}}</a></p>
+        <p>content: {{post['content']}}</p>
+        <p><a href="{{url_for('post', post_id=post.post_id)}}">Comments</a> </p>
+        <p>likes: {{post['likes']}}</p>
+        <p>dislikes: {{post['dislikes']}}</p>
+        <p>{{post['posted_date']}}</p>  
+        <form method="post" action="{{url_for('deletePost', post_id=post['post_id'], author_id=post['poster_id'])}}">
+            <input type="submit" name="delete" value="Delete Post">
+        </form>
+    </div>
+    {% endfor %}
+
+{% endblock %}
+<div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark" style="width: 280px;">
+    <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
+      <span class="fs-4">Sidebar</span>
+    </a>
+    <hr>
+    <ul class="nav nav-pills flex-column mb-auto">
+      <li class="nav-item">
+        <a href="#" class="nav-link active" aria-current="page">Home</a>
+      </li>
+      <li>
+        <a href="#" class="nav-link text-white">Profile</a>
+      </li>
+      <li>
+        <a href="#" class="nav-link text-white">Orders</a>
+      </li>
+      <li>
+        <a href="#" class="nav-link text-white">
+          <svg class="bi me-2" width="16" height="16"><use xlink:href="#grid"/></svg>
+          Products
+        </a>
+      </li>
+      <li>
+        <a href="#" class="nav-link text-white">
+          <svg class="bi me-2" width="16" height="16"><use xlink:href="#people-circle"/></svg>
+          Customers
+        </a>
+      </li>
+    </ul>
+    <hr>
+    <div class="dropdown">
+      <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
+        <img src="https://github.com/mdo.png" alt="" width="32" height="32" class="rounded-circle me-2">
+        <strong>mdo</strong>
+      </a>
+      <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
+        <li><a class="dropdown-item" href="#">New project...</a></li>
+        <li><a class="dropdown-item" href="#">Settings</a></li>
+        <li><a class="dropdown-item" href="#">Profile</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="#">Sign out</a></li>
+      </ul>
+    </div>
+  </div>
+
+<!-- BASIC SIDEBAR HTML -->
+  <!-- Side navigation -->
+<div class="sidenav">
+    <a href="{{url_for('homepage')}}">Home</a>
+    <a href="{{url_for('editMyPage')}}">Profile</a>
+    <a href="{{url_for('showMyGaggles')}}">My Gaggles</a>
+    <a href="{{url_for('logout')}}">Logout</a>
+  </div>
+
+<!-- BASIC SIDEBAR CSS -->
+/* The sidebar menu */
+.sidenav {
+    height: 100%; /* Full-height: remove this if you want "auto" height */
+    width: 160px; /* Set the width of the sidebar */
+    position: fixed; /* Fixed Sidebar (stay in place on scroll) */
+    z-index: 1; /* Stay on top */
+    top: 0; /* Stay at the top */
+    left: 0;
+    background-color: #90baad;
+    overflow-x: hidden; /* Disable horizontal scroll */
+    padding-top: 20px;
+  }
+  
+  /* The navigation menu links */
+  .sidenav a {
+    padding: 6px 8px 6px 16px;
+    text-decoration: none;
+    font-size: 25px;
+    color: black;
+    display: block;
+  }
+  
+  /* When you mouse over the navigation links, change their color */
+  .sidenav a:hover {
+    color: #f1f1f1;
+  }
+  
+  /* Style page content */
+  .main {
+    margin-left: 160px; /* Same as the width of the sidebar */
+    padding: 0px 10px;
+  }
+  
+  /* On smaller screens, where height is less than 450px, change the style of the sidebar (less padding and a smaller font size) */
+  @media screen and (max-height: 450px) {
+    .sidenav {padding-top: 15px;}
+    .sidenav a {font-size: 18px;}
+  }
+
+{% extends "super_base.html" %}
+
+{% block main_content %}
+<div>
+    <p>This is a profile of {{username}}</p>
+
+    <p>Joined Gaggles:</p>
+    <ul>
+        {% for gaggle in gaggles %}
+        <li><a href="{{url_for('gaggle', gaggle_name=gaggle['gaggle_name'])}}">{{gaggle['gaggle_name']}}</a></li>
+        {% endfor %}
+    </ul>
+
+</div>
+{% endblock %}
+/* the --color-header and others are CSS variables, which we access later. 
+*/
+
+HTML {
+    --color-header: #007ea9;  /* color for H1-H6 and others. was deepskyblue but poor contrast. */
+    --color-hilite: #b50000;  /* was red, but this avoids WAVE contrast errors */ 
+    --color-focus: #56B929;
+    --font-family: Verdana;
+    font-family: var(--font-family)
+}
+
+/* For flashed messages; make them stand out using red and italics */
+
+#messages {
+    color: var(--color-hilite);
+    font-style: italic;
+}
+
+.edit_form{
+    margin: 20px;
+}
+
+.search_form{
+    margin-top: 20px;
+}
+
+.inputs{
+    margin-top: 20px;
+}
+
+h1 {
+    font-size: 200%;
+    color: var(--color-header);
+}
+
+h2, h3 {
+    color: var(--color-header);
+}
+    
+
+/* for a simple navbar. Talk to Scott if you want drop-downs. */
+ul.menu {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #333;
+    position: -webkit-sticky; /* Safari */
+    position: sticky;
+    top: 0;
+}
+  
+ul.menu li {
+    float: left;
+}
+
+ul.menu li a {
+    display: block;
+    color: white;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+}
+  
+ul.menu li a:hover {
+    background-color: #111;
+}
+  
+.active {
+    background-color: #4CAF50;
+}
+
+.post{
+    margin: 10px;
+    padding: 10px;
+    border-style: solid;
+    border-width: 2px;
+    width: 700px;
+}
+
+.comment{
+    margin: 10px;
+    padding: 10px;
+    border-style: solid;
+    border-width: 2px;
+    width: 650px;
+}
+.add_post_form{
+    margin: 10px;
+    padding: 10px;
+    border-style: solid;
+    border-width: 2px;
+    border-color: #007ea9;
+    width: 700px;
+}
+
+textarea {
+    margin: 10px;
+    width: 600px;
+    height: 100px;
+}

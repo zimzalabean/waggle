@@ -35,6 +35,23 @@ def getUserGaggle(conn,username):
                  [user_id]) #Get a list of all gaggle
     return curs.fetchall()
 
+def getUserPosts(conn, username):
+    '''returns all of a user's posts sorted by latest'''
+    user_id = getUserID(conn, username)['user_id']
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT *
+        FROM post
+        WHERE poster_id = %s
+        order by posted_date DESC''',
+                 [user_id])
+    posts = curs.fetchall()
+    post_ids = [post['post_id'] for post in posts]
+    all_posts = []
+    for pid in post_ids:
+        all_posts.append(getOnePost(conn, pid))
+    return all_posts
+
 def searchGaggle(conn, query):
     '''returns all gaggles whose names match the query'''
     curs = dbi.dict_cursor(conn)
@@ -152,15 +169,13 @@ def getPostComments(conn, post_id):
     '''returns all comments on a post based on the post_id'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.*, b.username, c.num_likes, c.num_dislikes
+        SELECT a.*, b.username
         FROM comment a
         LEFT JOIN user b
         ON a.commentor_id = b.user_id
-        LEFT JOIN comment_like_count c
-        ON a.comment_id = c.comment_id
         WHERE parent_comment_id IS NULL 
         AND post_id = %s
-        ORDER BY a.posted_date desc''',
+        ORDER BY a.posted_date DESC''',
                  [post_id])
     return curs.fetchall()      
 
@@ -168,9 +183,15 @@ def addComment(conn, post_id, parent_comment_id, content, commentor_id, posted_d
     '''insert a new comment into the comment table'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
+<<<<<<< HEAD
         INSERT INTO comment(parent_comment_id, post_id, content, commentor_id, posted_date) 
         VALUES (%s,%s,%s,%s,%s) ''', 
                 [parent_comment_id, post_id, content, commentor_id, posted_date])
+=======
+        INSERT INTO comment(post_id, content, commentor_id, posted_date, likes, dislikes) 
+        VALUES (%s,%s,%s,%s,0,0) ''', 
+                [post_id, content, commentor_id, posted_date])
+>>>>>>> 620f7d65a42d2abc89201c83004f3ef3891285af
     conn.commit()  # need this!   
     return commentor_id
   
@@ -229,43 +250,45 @@ def hasLikedComment(conn, comment_id, user_id):
                  [comment_id, user_id]) 
     return curs.fetchall()  
 
-def startCommentMetrics(conn, comment_id):
-    '''Check if a comment has any like/dislike.
-    Starts a new like/dislike count for a comment if it hasn't existed'''
-    curs = dbi.dict_cursor(conn)
-    curs.execute('''
-        SELECT * from comment_like 
-        WHERE comment_id = %s''',
-                 [comment_id])     
-    result = curs.fetchall()
-    if len(result) == 0:             
-        curs.execute('''
-            INSERT INTO comment_like_count(comment_id, num_likes, num_dislikes) 
-            VALUES (%s,%s,%s) ''', 
-                    [comment_id, 0, 0])
-        conn.commit()  # need this!   
-    return comment_id      
+# def startCommentMetrics(conn, comment_id):
+#     '''Check if a comment has any like/dislike.
+#     Starts a new like/dislike count for a comment if it hasn't existed'''
+#     curs = dbi.dict_cursor(conn)
+#     curs.execute('''
+#         SELECT * from comment_like 
+#         WHERE comment_id = %s''',
+#                  [comment_id])     
+#     result = curs.fetchall()
+#     if len(result) == 0:             
+#         curs.execute('''
+#             INSERT INTO comment_like_count(comment_id, num_likes, num_dislikes) 
+#             VALUES (%s,%s,%s) ''', 
+#                     [comment_id, 0, 0])
+#         conn.commit()  # need this!   
+#     return comment_id      
 
 def commentMetrics(conn, comment_id):
     '''Returns number of likes and dislikes of a comment based on a comment_id'''
     curs = dbi.dict_cursor(conn)  
     curs.execute('''
-        SELECT * from comment_like_count 
+        SELECT likes, dislikes from comment
         WHERE comment_id = %s''',
                  [comment_id])     
-    return curs.fetchall()  
+    return curs.fetchall()
 
 def updateCommentMetrics(conn, comment_id, kind):
     '''Update number of likes and dislikes of a comment'''
     curs = dbi.dict_cursor(conn)  
     if kind == 'Like':
         curs.execute('''
-            UPDATE comment_like_count SET num_likes = num_likes + 1 
-            WHERE comment_id = %s''',
-                    [comment_id]) 
+            UPDATE comment
+            SET likes = likes + 1
+            WHERE commend_id = %s''',
+                    [comment_id])
     else:
         curs.execute('''
-            UPDATE comment_like_count SET num_dislikes = num_dislikes + 1 
+            UPDATE comment
+            SET dislikes = dislikes + 1 
             WHERE comment_id = %s''',
                     [comment_id])            
     conn.commit()  

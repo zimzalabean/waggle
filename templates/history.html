@@ -1,0 +1,34 @@
+{% extends "super_base.html" %}
+
+{% block main_content %}
+<ul class="menu">
+    <li><a href="{{url_for('history', username = username)}}">All History</a></li>
+    <li><a href="{{url_for('history', username = username)}}">Posts</a></li>
+    <li><a href="{{url_for('history', username = username)}}">Comments</a></li>
+    <li><a href="{{url_for('history', username = username)}}">Likes/Dislikes</a></li>
+  </ul>
+<div>
+    <p>This is the history of {{username}}</p>
+
+    <p>Post History:</p>
+    <ul>
+        {% for post in posts %}
+        <div class="post" id="{{post['post_id']}}">
+            <p><a href="{{url_for('post', post_id=post.post_id)}}">Post_id: {{post.post_id}}</a>
+            <p>author: <a href="{{url_for('user', username=post['author'])}}">{{post['author']}}</a> gaggle: <a href="{{url_for('gaggle',gaggle_name=post['gaggle'])}}">{{post['gaggle']}}</a></p>
+            <p>{{post['content']}}</p>
+            <p><a href="{{url_for('post', post_id=post.post_id)}}">Comments</a> </p>
+            <p>likes: {{post['likes']}}</p>
+            <p>dislikes: {{post['dislikes']}}</p>
+            <p>{{post['posted_date']}}</p>
+            {% if username == post['author'] %}  
+                <form method="post" action="{{url_for('deletePost', post_id=post['post_id'], author_id=post['poster_id'])}}">
+                    <input type="submit" name="delete" value="Delete Post">
+                </form>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </ul>
+
+</div>
+{% endblock %}
