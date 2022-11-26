@@ -453,6 +453,47 @@ def signup():
                 flash('Username already in use, please choose new one')
                 return render_template('signup.html', email = email, password = password, first_name = first_name, last_name = last_name,class_year = class_year,bio_text = bio_text)
 
+@app.route('/invitemod/', methods=['GET', 'POST'])
+def inviteMod():
+        user_id = session.get('user_id', '')
+        if user_id == '':
+            flash('You are logged out')
+            return redirect(url_for('login')) 
+        conn = dbi.connect()     
+        gaggles = waggle.getGagglesOfAuthor(conn, user_id)        
+        if request.method == 'GET':
+            return render_template('invite_mod.html', gaggles = gaggles)
+        else: 
+            invitee_username = request.form.get('invitee_username')
+            gaggle_id = request.form.get('gaggle_id')
+            validInvite = waggle.modInvite(conn, gaggle_id, invitee_username)
+            if validInvite:
+                flash('Invitation sent')
+            else:
+                flash('Invitation already pending')
+            return redirect(url_for('inviteMod'))
+
+def isLoggedIn():
+    user_id = session.get('user_id', '')
+    if user_id == '':
+        flash('You are logged out')
+        return redirect(url_for('login'))   
+    else:
+        return user_id
+
+
+@app.route('/invitation/', methods=['GET', 'POST'])
+def response_invite():
+    user_id = isLoggedIn()
+    conn = dbi.connect() 
+    invitations = waggle.getInvitation(conn, user_id)
+    if request.method == 'GET':
+        return render_template('invitation.html', invitations = invitations)
+    else:
+        response = request.form.get('submit')
+        gaggle_id = request.form.get('gaggle_id')
+        responded =  waggle.responseInvite(conn, gaggle_id, user_id, response)
+        return redirect(url_for('response_invite'))  
 
 @app.before_first_request
 def init_db():

@@ -1,0 +1,26 @@
+{% extends "super_base.html" %}
+
+{% block main_content %}
+
+
+
+    {% for gaggle in gaggles %}
+        <div class = 'gaggleModsInvite'>
+
+            <p>Gaggle: <a href="{{url_for('gaggle',gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a> </p>
+            <p> 
+            <form method=post action="{{url_for('inviteMod')}}" >       
+                <textarea name="invitee_username" rows="4" cols="50"></textarea>
+                <input type="submit" name="submit" value="Invite">
+                <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
+            </form>
+            </p>
+
+        </div>
+
+    {% endfor %}
+    </div>
+    
+
+
+{% endblock %}

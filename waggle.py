@@ -373,3 +373,69 @@ def insertUser(conn, email,hashed_pass,username,first_name,last_name,class_year,
     else:
         valid = False                 
     return valid 
+
+def getInvitees(conn, user_id):
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        SELECT a.gaggle_name, b.*, c.username
+        FROM gaggle a
+        LEFT JOIN 
+        mod_invite b
+        USING (gaggle_id)
+        LEFT JOIN user c
+        ON (b.invitee_id = c.user_id)
+        WHERE a.author_id= %s''',
+                 [user_id]) 
+    return curs.fetchall()
+
+def modInvite(conn, gaggle_id, username):
+    invitee_id = getUserID(conn, username)['user_id']
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        SELECT *
+        FROM mod_invite
+        WHERE gaggle_id = %s
+        AND invitee_id = %s''',
+                 [gaggle_id, invitee_id]) 
+    exists = curs.fetchall()
+    if len(exists) == 0:
+        valid = True
+        accepted = 'Pending'
+        curs.execute('''
+            INSERT INTO mod_invite(gaggle_id, invitee_id, accepted) 
+            VALUES(%s,%s, %s)''',
+                    [gaggle_id, invitee_id, accepted])         
+        conn.commit()  
+    else:
+        valid = False 
+    return valid   
+
+def getInvitation(conn, invitee_id):
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        SELECT a.gaggle_id, b.gaggle_name
+        FROM mod_invite a 
+        LEFT JOIN gaggle b 
+        USING (gaggle_id)
+        WHERE 
+            a.accepted = 'Pending'
+            AND a.invitee_id = %s''',
+                 [invitee_id]) 
+    return curs.fetchall()
+
+def responseInvite(conn, gaggle_id, user_id, response):
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        UPDATE mod_invite
+        SET accepted = %s
+        WHERE gaggle_id = %s
+        AND invitee_id = %s''',
+                [response, gaggle_id, user_id])
+    conn.commit()  
+    if response == 'Yes':
+        curs.execute('''
+            INSERT INTO moderator(gaggle_id, user_id)
+            VALUES (%s, %s)''',
+                        [gaggle_id, user_id]) 
+        conn.commit()  
+    return curs.fetchall()    
