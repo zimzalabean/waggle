@@ -10,12 +10,15 @@
             <p>Gaggle: <a href="{{url_for('gaggle',gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a> </p>
             <p> 
             <form method=post action="{{url_for('inviteMod')}}" >       
-                <textarea name="invitee_username" rows="4" cols="50"></textarea>
+                <textarea name="invitee_username" rows="1" cols="30"></textarea>
                 <input type="submit" name="submit" value="Invite">
                 <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
             </form>
             </p>
 
+            {% for invitee in gaggle.invitees %}
+            <p> Status for {{invitee.username}}: {{invitee.accepted}}</p>
+            {% endfor %}
         </div>
 
     {% endfor %}

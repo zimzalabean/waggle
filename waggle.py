@@ -376,17 +376,18 @@ def insertUser(conn, email,hashed_pass,username,first_name,last_name,class_year,
 
 def getInvitees(conn, user_id):
     curs = dbi.dict_cursor(conn)  
-    curs.execute('''
-        SELECT a.gaggle_name, b.*, c.username
-        FROM gaggle a
-        LEFT JOIN 
-        mod_invite b
-        USING (gaggle_id)
-        LEFT JOIN user c
-        ON (b.invitee_id = c.user_id)
-        WHERE a.author_id= %s''',
-                 [user_id]) 
-    return curs.fetchall()
+    gaggles = getGagglesOfAuthor(conn, user_id)  
+    for gaggle in gaggles:
+        curs.execute('''
+            SELECT b.username, a.accepted 
+            FROM 
+            mod_invite a
+            LEFT JOIN user b
+            ON (a.invitee_id = b.user_id)
+            WHERE a.gaggle_id= %s''',
+                    [gaggle['gaggle_id']]) 
+        gaggle['invitees'] = curs.fetchall()          
+    return gaggles
 
 def modInvite(conn, gaggle_id, username):
     invitee_id = getUserID(conn, username)['user_id']

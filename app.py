@@ -455,12 +455,9 @@ def signup():
 
 @app.route('/invitemod/', methods=['GET', 'POST'])
 def inviteMod():
-        user_id = session.get('user_id', '')
-        if user_id == '':
-            flash('You are logged out')
-            return redirect(url_for('login')) 
+        user_id = isLoggedIn()
         conn = dbi.connect()     
-        gaggles = waggle.getGagglesOfAuthor(conn, user_id)        
+        gaggles = waggle.getInvitees(conn, user_id)     
         if request.method == 'GET':
             return render_template('invite_mod.html', gaggles = gaggles)
         else: 
