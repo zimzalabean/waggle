@@ -164,13 +164,13 @@ def getPostComments(conn, post_id):
                  [post_id])
     return curs.fetchall()      
 
-def addComment(conn, post_id, content, commentor_id, posted_date):
+def addComment(conn, post_id, parent_comment_id, content, commentor_id, posted_date):
     '''insert a new comment into the comment table'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        INSERT INTO comment(post_id, content, commentor_id, posted_date) 
-        VALUES (%s,%s,%s,%s) ''', 
-                [post_id, content, commentor_id, posted_date])
+        INSERT INTO comment(parent_comment_id, post_id, content, commentor_id, posted_date) 
+        VALUES (%s,%s,%s,%s,%s) ''', 
+                [parent_comment_id, post_id, content, commentor_id, posted_date])
     conn.commit()  # need this!   
     return commentor_id
   
@@ -301,3 +301,58 @@ def isGosling(conn, user_id, gaggle_id):
         AND gaggle_id = %s''',
                  [user_id, gaggle_id])     
     return curs.fetchall()      
+
+def addPost(conn, gaggle_id, poster_id, content, tag_id, posted_date ):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        INSERT INTO post(gaggle_id, poster_id, content, tag_id, posted_date, likes, dislikes, flags) 
+        VALUES(%s, %s, %s, %s, %s, 0, 0, 0)''',
+                [gaggle_id, poster_id, content, tag_id, posted_date])
+    conn.commit()
+    return poster_id 
+
+
+def getComment(conn, comment_id):
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        SELECT * 
+        FROM comment
+        WHERE comment_id = %s''',
+                 [comment_id])     
+    return curs.fetchall() 
+
+def getReplies(conn, comment_id):  
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        SELECT * 
+        FROM comment
+        WHERE parent_comment_id = %s''',
+                 [comment_id])     
+    return curs.fetchall()    
+
+def getParentComment(conn , comment_id):
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        SELECT parent_comment_id 
+        FROM comment
+        WHERE comment_id = %s''',
+                 [comment_id]) 
+    return curs.fetchall()
+                   
+def insertUser(conn, email,hashed_pass,username,first_name,last_name,class_year,bio_text,strike):
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        SELECT username
+        FROM user
+        WHERE username = %s''',
+                 [username]) 
+    exist = curs.fetchall()
+    if len(exist) == 0:
+        valid = True    
+        curs.execute("""INSERT INTO user(email,hashed_pass,username,first_name,last_name,class_year,bio_text,strike)
+                    VALUES(%s,%s,%s,%s,%s,%s,%s,%s)""",
+                    [email,hashed_pass,username,first_name,last_name,class_year,bio_text,strike])
+        conn.commit()
+    else:
+        valid = False                 
+    return valid 

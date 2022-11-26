@@ -18,6 +18,7 @@
 
         {% for comment in comments %}
         <div class="comment" id="{{comment.comment_id}}">
+            <p><a href="{{url_for('addReply', comment_id=comment.comment_id)}}">Reply_id: {{comment.comment_id}}</a> </p>
             <p>author: <a href="{{url_for('user', username=comment.commentor_id)}}">{{comment.username}}</a> </p>
             <p>content: {{comment.content}}</p>
             <p>{{comment.posted_date}}</p>

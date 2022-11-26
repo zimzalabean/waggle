@@ -180,10 +180,7 @@ def addPost(gaggle_name, gaggle_id):
             now = datetime.now()
             posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
             try:
-                curs = dbi.dict_cursor(conn)
-                curs.execute('''INSERT INTO post(gaggle_id, poster_id, content, tag_id, posted_date) VALUES(%s, %s, %s, %s, %s)''',
-                            [gaggle_id, poster_id, content, None, posted_date])
-                conn.commit()
+                add = waggle.addPost(gaggle_id, poster_id, content, None, posted_date)
             except Exception as e: 
                 print(e)
                 flash('Error:' +e)
@@ -213,8 +210,9 @@ def post(post_id):
             print(request.form)
             kind = request.form.get('submit')
             if kind == 'Comment':
-                content = request.form['comment_content']  
-                add_comment = waggle.addComment(conn, post_id, content, user_id, posted_date)
+                content = request.form['comment_content'] 
+                parent_comment_id = None 
+                add_comment = waggle.addComment(conn, post_id, parent_comment_id, content, user_id, posted_date)
             else: 
                 hasLiked = waggle.hasLiked(conn, post_id, user_id)
                 if len(hasLiked) == 0:
@@ -353,11 +351,90 @@ def createGaggle():
     flash('To be implemented')
     return redirect(url_for('showMyGaggles'))
 
+def getRepliesThread(comment_id, thread):  
+   #comment_thread is list of comment_id 
+    conn = dbi.connect() 
+    parent_comment = waggle.getParentComment(conn, comment_id)
+    print("current_thread" + str(thread))
+    if len(parent_comment) == 0:
+        return thread 
+    else:
+        parent_comment_id = parent_comment[0]['parent_comment_id'] 
+        thread.append(parent_comment_id)
+        return getRepliesThread(parent_comment_id, thread)
+
+@app.route('/reply/<comment_id>', methods=['GET', 'POST'])
+def addReply(comment_id):
+    """
+    Retrieve parent post
+    Primary comment: 
+        retrieve parent post
+        retrieve child comment 
+        each later you click get id of parent comment 
+        For child comment create a thread list. 
+    Session that records each comment that clicks through     
+    from comment_id, retrieve parent_comment_id
+    append to list
+    until parent_comment_id is null, get:
+        <comment_, parent x 1>
+    """
+    now = datetime.now()
+    posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
+    user_id = session.get('user_id', '')
+    if user_id == '':
+        flash('You are logged out')
+        return redirect(url_for('login'))      
+    else:   
+        conn = dbi.connect() 
+        comment = waggle.getComment(conn, comment_id)[0]
+        post_id = comment['post_id']
+        post = waggle.getOnePost(conn, post_id)
+        parent_comment_id = comment['comment_id']
+        replies = waggle.getReplies(conn, comment_id)
+        thread = [parent_comment_id]
+        chain = getRepliesThread(parent_comment_id, thread)
+        comment_chain_id = [x for x in chain if x is not None][::-1]
+        comment_chain = [waggle.getComment(conn, id)[0] for id in comment_chain_id]
+        if request.method == 'GET':
+            return render_template('reply.html', comment_chain = comment_chain, parent_comment = comment, replies = replies, post = post)
+        else:
+            kind = request.form.get('submit')
+            if kind == 'Reply':
+                content = request.form['comment_content']  
+                add_comment = waggle.addComment(conn, post_id, parent_comment_id, content, user_id, posted_date)
+            return redirect( url_for('addReply', comment_id = comment_id )) 
+
+
+@app.route('/signup/', methods=['GET', 'POST'])
+def signup():
+        if request.method == 'GET':
+            return render_template('signup.html')
+        else: 
+            email = request.form.get('email')
+            username = request.form.get('username')
+            password = request.form.get('password')   
+            first_name = request.form.get('first_name') 
+            last_name = request.form.get('last_name') 
+            class_year = request.form.get('class_year') 
+            bio_text = request.form.get('bio_text') 
+            strike = 0 
+            hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+            hashed_pass = hashed.decode('utf-8')
+            conn = dbi.connect() 
+            valid = waggle.insertUser(conn, email, hashed_pass, username, first_name, last_name, class_year, bio_text, strike)
+            if valid:
+                flash("Signup success")
+                return redirect(url_for('login'))
+            else: 
+                flash('Username already in use, please choose new one')
+                return render_template('signup.html', email = email, password = password, first_name = first_name, last_name = last_name,class_year = class_year,bio_text = bio_text)
+
+
 @app.before_first_request
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'mp2_db' 
+    db_to_use = 'ldau_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 

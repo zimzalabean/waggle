@@ -1,0 +1,72 @@
+{% extends "super_base.html" %}
+
+{% block main_content %}
+
+<div class="post" id="{{post['post_id']}}">
+    <p>post id: {{post['post_id']}}</p>
+    <p>author: <a href="{{url_for('user', username=post['author'])}}">{{post['author']}}</a> gaggle: <a href="{{url_for('gaggle',gaggle_name=post['gaggle'])}}">{{post['gaggle']}}</a></p>
+    <p>content: {{post['content']}}</p>
+    <p>likes: {{post['likes']}}</p>
+    <p>dislikes: {{post['dislikes']}}</p>
+    <p>{{post['posted_date']}}</p>  
+</div>
+
+
+    <div class="comment-thread">
+        <!-- Comment 1 start -->
+        {% for comment in comment_chain %}
+        <div class="comment" id="{{comment.comment_id}}">
+            <a href="{{url_for('addReply', comment_id=comment.comment_id)}}" >{{comment.comment_id}}</a>
+            <a href="#{{comment.comment_id}}" class="comment-border-link">
+                <span class="sr-only">Jump to comment-1</span>
+            </a>
+            <div class="comment-heading">
+                <div class="comment-info">
+                    <a href="{{url_for('user', username=comment.commentor_id)}}" class = "comment-author">{{comment.commentor_id}}</a>
+                    <p class="m-0">
+                        {{comment.posted_date}}
+                    </p>
+                </div>
+            </div>
+            <div class="comment-body">
+                <p>
+                    {{comment.content}}
+                </p>
+            </div>
+        {% endfor %}
+
+                <!-- Reply section-->  
+                <form method=post action="{{url_for('addReply', comment_id = parent_comment.comment_id)}}" >     
+                    <textarea name="comment_content" rows="4" cols="30"></textarea>
+                    <input type="submit" name="submit" value="Reply">
+                </form>
+
+
+            {% for comment in replies %}  
+            <div class="replies">
+                <!-- Comment 2 start -->     
+                <div class="comment" id="{{comment.comment_id}}">
+                    <a href="{{url_for('addReply', comment_id=comment.comment_id)}}" >{{comment.comment_id}}</a>
+                    <div class="comment-heading">
+                        <div class="comment-info">
+                            <a href="{{url_for('user', username=comment.commentor_id)}}" class = "comment-author">{{comment.commentor_id}}</a>
+                            <p class="m-0">
+                                {{comment.posted_date}}
+                            </p>
+                        </div>
+                    </div>
+            
+                    <div class="comment-body">
+                        <p>
+                            {{comment.content}}
+                        </p>      
+                    </div>   
+                </div>       
+                <!-- Comment 2 end -->   
+            </div>
+            {% endfor %}       
+        </div>
+        <!-- Comment 1 end -->
+    </div>
+
+{% endblock %}
