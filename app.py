@@ -492,6 +492,27 @@ def response_invite():
         responded =  waggle.responseInvite(conn, gaggle_id, user_id, response)
         return redirect(url_for('response_invite'))  
 
+@app.route('/searchOther/', methods=["GET"])
+def searchOther():
+    """
+    Called when user searches for a Gaggle in the search bar. Returns a page of Gaggles 
+    that have a name matching the keyword search.
+    """
+    conn = dbi.connect()
+    kind = request.args.get('submit')
+    query = request.args.get('query')
+    if kind == 'Posts':
+        results = waggle.searchPost(conn, query)
+    elif kind == 'Comments':
+        results = waggle.searchComment(conn, query)
+    elif kind == 'People':
+        results = waggle.searchPeople(conn, query)
+    if len(results) == 0:
+        flash('No result found.')
+        return redirect(url_for('homepage'))
+    else:
+        return render_template('testform.html', query = query, results = results, kind = kind)  
+
 @app.before_first_request
 def init_db():
     dbi.cache_cnf()

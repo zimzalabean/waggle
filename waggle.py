@@ -440,3 +440,30 @@ def responseInvite(conn, gaggle_id, user_id, response):
                         [gaggle_id, user_id]) 
         conn.commit()  
     return curs.fetchall()    
+
+def searchPost(conn, query):
+    '''returns all gaggles whose names match the query'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT * from post 
+        WHERE content LIKE %s''',
+                 ["%"+query+"%"]) 
+    return curs.fetchall() 
+
+def searchComment(conn, query):
+    '''returns all gaggles whose names match the query'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT * from comment
+        WHERE content LIKE %s''',
+                 ["%"+query+"%"]) 
+    return curs.fetchall()   
+
+def searchPeople(conn, query):
+    '''returns all gaggles whose names match the query'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT * from user 
+        WHERE username LIKE %s''',
+                 ["%"+query+"%"]) 
+    return curs.fetchall()   

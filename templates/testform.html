@@ -2,11 +2,41 @@
 
 {% block main_content %}
 <body>
-    <p>Gaggles matching {{query}}:</p>
+        <p>
+                <form method=get action="{{url_for('searchOther')}}" >       
+                        <input type="submit" name="submit" value="Gaggles">
+                        <input type="submit" name="submit" value="Posts">
+                        <input type="submit" name="submit" value="Comments">
+                        <input type="submit" name="submit" value="Goslings">
+                        <input type="hidden" name="query" value="{{query}}">
+                </form>
+        </p>
+    <p>Results in {{kind}} matching {{query}}:</p>
+
+    {% if kind == 'Posts' %}
+        {% for post in results %}
+         <p> 
+                <a href="{{ url_for('post', post_id= post.post_id)}}">{{post.post_id}}</a>
+        </p>
+        {% endfor %}  
+    {% elif kind == 'Comments' %}
+        {% for comment in results %}
+         <p> 
+                <a href="{{ url_for('addReply', comment_id = comment.comment_id)}}">{{comment.comment_id}}</a>
+        </p>
+        {% endfor %}          
+    {% elif kind == 'Goslings' %}
+        {% for comment in results %}
+        <p> 
+                <a href="{{url_for('user', username=gaggle.username)}}">{{user.username}}</a>
+        </p>    
+        {% endfor %}   
+    {% else %}
         {% for gaggle in results %}
         <p> 
                 <a href="{{ url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a>
         </p>
-        {% endfor %}
+        {% endfor %}      
+    {% endif %}     
 </body>
 {% endblock %}

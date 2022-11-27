@@ -1,0 +1,21 @@
+{% extends "super_base.html" %}
+
+{% block main_content %}
+    {% for gaggle in invitations %}
+        
+        <div class = 'mods_invitation'>
+            <p> Gaggle: <a href="{{url_for('gaggle',gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a> </p>
+            <p> Accept invitation to become this gaggle's moderator?: 
+                <form method=post action="{{url_for('response_invite')}}" >       
+                    <input type="submit" name="submit" value="Yes">
+                    <input type="submit" name="submit" value="No">
+                    <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}"> 
+                </form>
+            </p>
+        </div>
+    {% endfor %}
+    
+    
+
+
+{% endblock %}
