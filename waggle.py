@@ -319,7 +319,7 @@ def isGosling(conn, user_id, gaggle_id):
                  [user_id, gaggle_id])     
     return curs.fetchall()      
 
-def addPost(conn, gaggle_id, poster_id, content, tag_id, posted_date ):
+def addPost(conn, gaggle_id, poster_id, content, tag_id, posted_date):
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         INSERT INTO post(gaggle_id, poster_id, content, tag_id, posted_date, likes, dislikes, flags) 
