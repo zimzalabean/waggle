@@ -108,13 +108,8 @@ def deletePost(post_id, author_id):
     if user_id != int(author_id):
         flash('You are not authorized to delete this post/comment.')
         return redirect(url_for('homepage'))
-    conn = dbi.connect()
-    curs = dbi.dict_cursor(conn)
-    curs.execute('''delete
-                    from post
-                    where post_id = %s''',
-                    [post_id])
-    conn.commit()
+    conn = dbi.connect()    
+    deleted = waggle.deletePost(conn, post_id)
     flash('Deleted post with post_id {pid}'.format(pid=post_id))
     return redirect(url_for('homepage'))
 

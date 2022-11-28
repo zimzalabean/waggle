@@ -11,6 +11,8 @@
             
         </div>
         {% endfor %}
+        <p> Assign moderators: <a href="{{url_for('inviteMod')}}">Go to moderator assignment dashboard</a> </p> 
+        <p> Someone might need your help: <a href="{{url_for('response_invite')}}"> View moderator invitation lists</a> </p> 
     </ul>
 </form>
 

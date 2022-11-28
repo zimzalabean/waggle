@@ -481,3 +481,12 @@ def searchPeople(conn, query):
         WHERE username LIKE %s''',
                  ["%"+query+"%"]) 
     return curs.fetchall()   
+
+def deletePost(conn, post_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''delete
+                    from post
+                    where post_id = %s''',
+                    [post_id])
+    conn.commit()
+    return post_id
