@@ -234,16 +234,16 @@ def post(post_id):
         if request.method == 'GET':
             return render_template('post.html', post = post, comments = comments)
         else:
-            print(request.form)
             kind = request.form.get('submit')
             if kind == 'Comment':
                 content = request.form['comment_content'] 
                 parent_comment_id = None 
                 add_comment = waggle.addComment(conn, post_id, parent_comment_id, content, user_id, posted_date)
             else: 
-                hasLiked = waggle.hasLiked(conn, post_id, user_id)
-                if len(hasLiked) == 0:
-                    interaction = waggle.likePost(conn, post_id, user_id, kind)   
+                kind = request.form.get('submit')
+                valid = waggle.likePost(conn, post_id, user_id, kind)
+                if valid: 
+                    update = waggle.updatePostMetrics(conn, post_id, kind)
                 else:
                     flash("You have already {kind}d this post.")     
             return redirect( url_for('post', post_id = post_id ))
@@ -262,10 +262,8 @@ def likeComment(post_id, comment_id):
         return render_template('post.html', post = post, comments = comments) 
     else:     
         kind = request.form.get('submit')
-        # display = waggle.startCommentMetrics(conn, comment_id)
-        hasLiked = waggle.hasLikedComment(conn, comment_id, user_id)
-        if len(hasLiked) == 0:
-            interaction = waggle.likeComment(conn, comment_id, user_id, kind)
+        valid = waggle.likeComment(conn, comment_id, user_id, kind)
+        if valid: 
             update = waggle.updateCommentMetrics(conn, comment_id, kind)
         else: 
             flash(f"You have already {kind}d this comment.")    
