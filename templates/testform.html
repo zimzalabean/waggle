@@ -28,7 +28,7 @@
     {% elif kind == 'Goslings' %}
         {% for user in results %}
         <p> 
-             Gosling:   <a href="{{url_for('user', username=gaggle.username)}}">{{user.username}}</a>
+             Gosling:   <a href="{{url_for('user', username=user.username)}}">{{user.username}}</a>
         </p>    
         {% endfor %}   
     {% else %}
