@@ -138,6 +138,17 @@ def getOnePost(conn, post_id):
     post_info['gaggle'] = gaggle['gaggle_name']
     return post_info
 
+def getPost(conn, post_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT *
+        FROM post
+        WHERE post_id = %s''',
+                 [post_id])
+    result = curs.fetchall()               
+    return result[0]
+    
+
 def getGaggleID(conn, gaggle_name):
     '''returns gaggle_id based on gaggle_name'''
     curs = dbi.dict_cursor(conn)

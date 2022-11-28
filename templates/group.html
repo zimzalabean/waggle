@@ -7,12 +7,13 @@
     <p><a href="{{url_for('gaggleMembers', gaggle_name = gaggle.gaggle_name)}}">View members</a></p>
 
     <div class="join_group">
-        <form name="write_post" action="{{url_for('joinGaggle', gaggle_name = gaggle.gaggle_name, gaggle_id = gaggle.gaggle_id)}}" method="POST">
+        <form name="write_post" action="{{url_for('joinGaggle', gaggle_name = gaggle.gaggle_name)}}" method="POST">
             {% if joined %}
             <input type="submit" name = "submit" value="Unjoin">
             {% else %}
             <input type="submit" name = "submit" value="Join">
             {% endif %}
+            <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
         </form>
     </div>
 

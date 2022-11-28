@@ -205,13 +205,17 @@ def addPost():
         return redirect(url_for('gaggle', gaggle_name=gaggle_name))
     else:
         poster_id = session.get('user_id', '')
+        valid = waggle.isGosling(conn, poster_id, gaggle_id)
         if poster_id != '':
-            try:
-                add = waggle.addPost(conn, gaggle_id, poster_id, content, None, posted_date)
-            except Exception as e: 
-                print(e)
-                flash('Error:' +e)
-            return redirect(url_for('gaggle', gaggle_name=gaggle_name))
+            if valid:
+                try:
+                    add = waggle.addPost(conn, gaggle_id, poster_id, content, None, posted_date)
+                except Exception as e: 
+                    print(e)
+                    flash('Error:' +e)
+            else:
+                flash('You must be a gosling of this gaggle to perform this action.')
+            return redirect(url_for('gaggle', gaggle_name=gaggle_name))    
         else:
             flash('You have been logged out.')
             return redirect(url_for('login'))
@@ -229,23 +233,28 @@ def post(post_id):
         return redirect(url_for('login'))      
     else:   
         conn = dbi.connect() 
-        post = waggle.getOnePost(conn, post_id)
+        post = waggle.getPost(conn, post_id)
+        gaggle_id = post['gaggle_id']
         comments = waggle.getPostComments(conn, post_id)
+        valid = waggle.isGosling(conn, user_id, gaggle_id)
         if request.method == 'GET':
             return render_template('post.html', post = post, comments = comments)
         else:
             kind = request.form.get('submit')
-            if kind == 'Comment':
-                content = request.form['comment_content'] 
-                parent_comment_id = None 
-                add_comment = waggle.addComment(conn, post_id, parent_comment_id, content, user_id, posted_date)
+            if valid: 
+                if kind == 'Comment':
+                    content = request.form['comment_content'] 
+                    parent_comment_id = None 
+                    add_comment = waggle.addComment(conn, post_id, parent_comment_id, content, user_id, posted_date)
+                else: 
+                    kind = request.form.get('submit')
+                    valid = waggle.likePost(conn, post_id, user_id, kind)
+                    if valid: 
+                        update = waggle.updatePostMetrics(conn, post_id, kind)
+                    else:
+                        flash("You have already {kind}d this post.")     
             else: 
-                kind = request.form.get('submit')
-                valid = waggle.likePost(conn, post_id, user_id, kind)
-                if valid: 
-                    update = waggle.updatePostMetrics(conn, post_id, kind)
-                else:
-                    flash("You have already {kind}d this post.")     
+                flash("You must be a gosling to perform this action.")                
             return redirect( url_for('post', post_id = post_id ))
     
 @app.route('/likeComment/<post_id>/<comment_id>', methods=['GET', 'POST'])
@@ -294,14 +303,11 @@ def joinGaggle(gaggle_name):
         if request.method == 'GET':
             return redirect(url_for('gaggle', gaggle_name = gaggle_name))      
         else:  
-            print(request.form.get('submit'))
-            print("ifelse")
+            gaggle_id = request.form.get('gaggle_id')
             if request.form.get('submit') == 'Join':
-                print('joining')
                 action = waggle.joinGaggle(conn, user_id, gaggle_id)
                 print(action)
             else: 
-                print('unjoining')
                 action = waggle.unjoinGaggle(conn, user_id, gaggle_id) 
                 print(action)              
             return redirect(url_for('gaggle', gaggle_name=gaggle_name))
