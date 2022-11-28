@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block main_content %}
+    <p>Mod dashboard for {{gaggle_name}} </p>
+
+
+
+    
+    {% for user in users %}
+    <div class="bad_gosling" id="{{user.username}}">
+        <p>User: <a href="{{url_for('user', username=user.username)}}">{{user.username}}</a>
+        <p>Strikes incurred: user.strikes </p> 
+            <form method="post" action="{{url_for('modUserList', gaggle_name = gaggle_name)}}">
+                {% if user.ban_status == 'Yes' %}
+                <input type="submit" name="submit" value="Reinstate">
+                {% else %}
+                <input type="submit" name="submit" value="Ban">
+                {% endif %}
+                <input type="hidden" name="username" value="{{user.username}}">
+                <input type="hidden" name="gaggle_id" value="{{gaggle_id}}">
+            </form>
+    </div>
+    {% endfor %}
+
+{% endblock %}

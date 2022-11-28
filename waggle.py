@@ -490,3 +490,33 @@ def deletePost(conn, post_id):
                     [post_id])
     conn.commit()
     return post_id
+
+def getBadUsers(conn, gaggle_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT * from bad_gosling
+        WHERE gaggle_id = %s''',
+                 [gaggle_id]) 
+    return curs.fetchall()     
+
+def banUser(conn, gaggle_id, username):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        UPDATE bad_gosling
+        SET ban_status = 'Yes'
+        WHERE gaggle_id = %s
+        AND username = %s''',
+                [gaggle_id, username])
+    conn.commit()             
+    return username
+
+def reinstateUser(conn, gaggle_id, username):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        UPDATE bad_gosling
+        SET ban_status = 'No'
+        WHERE gaggle_id = %s
+        AND username = %s''',
+                [gaggle_id, username])
+    conn.commit()             
+    return username

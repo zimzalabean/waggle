@@ -516,6 +516,23 @@ def canDeletePost(post_id, user_id):
     else: 
         return False
 
+@app.route('/<gaggle_name>/mod/users', methods=['GET', 'POST'])
+def modUserList(gaggle_name):
+    user_id = isLoggedIn()
+    conn = dbi.connect() 
+    gaggle_id = waggle.getGaggleID(conn, gaggle_name)[0]['gaggle_id']
+    users = waggle.getBadUsers(conn, gaggle_id)
+    if request.method == 'GET':
+        return render_template('moderator.html', gaggle_name = gaggle_name, gaggle_id = gaggle_id, users = users)
+    else:
+        kind = request.form.get('submit')
+        username = request.form.get('username')
+        if kind == 'Ban':
+            ban = waggle.banUser(conn, gaggle_id, username)
+        else:
+            reinstate = waggle.reinstateUser(conn, gaggle_id, username)    
+        return redirect(url_for('modUserList', gaggle_name = gaggle_name))       
+
 @app.before_first_request
 def init_db():
     dbi.cache_cnf()
