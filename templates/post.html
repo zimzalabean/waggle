@@ -9,6 +9,12 @@
         <p>dislikes: {{post['dislikes']}}</p>
         <p>{{post['posted_date']}}</p>  
 
+        {% if post.canDelete %}
+            <form method="post" action="{{url_for('deletePost', post_id=post['post_id'], author_id=post['poster_id'])}}">
+                <input type="submit" name="delete" value="Delete Post">
+            </form>
+        {% endif %}  
+        
         <form method=post action="{{url_for('post', post_id = post.post_id)}}" >
             <input type="submit" name="submit" value="Like">
             <input type="submit" name="submit" value="Dislike">        

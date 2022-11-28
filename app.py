@@ -159,6 +159,9 @@ def gaggle(gaggle_name):
         conn = dbi.connect() 
         gaggle = waggle.getGaggle(conn, gaggle_name)  
         posts = waggle.getGagglePosts(conn, gaggle_name)
+        for post in posts:
+            post_id = post['post_id']
+            post['canDelete'] = canDeletePost(post_id, user_id)
         gaggle_id = waggle.getGaggleID(conn, gaggle_name)[0]['gaggle_id']
         isGosling = waggle.isGosling(conn, user_id, gaggle_id)
         if len(isGosling) == 0:
@@ -234,6 +237,7 @@ def post(post_id):
     else:   
         conn = dbi.connect() 
         post = waggle.getPost(conn, post_id)
+        post['canDelete'] = canDeletePost(post_id, user_id)
         gaggle_id = post['gaggle_id']
         comments = waggle.getPostComments(conn, post_id)
         valid = waggle.isGosling(conn, user_id, gaggle_id)
@@ -507,6 +511,15 @@ def response_invite():
         gaggle_id = request.form.get('gaggle_id')
         responded =  waggle.responseInvite(conn, gaggle_id, user_id, response)
         return redirect(url_for('response_invite'))  
+
+def canDeletePost(post_id, user_id):
+    conn = dbi.connect() 
+    post = waggle.getPost(conn, post_id)
+    poster_id = post['poster_id']
+    if user_id == poster_id:
+        return True
+    else: 
+        return False
 
 @app.before_first_request
 def init_db():
