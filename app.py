@@ -238,6 +238,7 @@ def post(post_id):
         comments = waggle.getPostComments(conn, post_id)
         valid = waggle.isGosling(conn, user_id, gaggle_id)
         if request.method == 'GET':
+            print(post)
             return render_template('post.html', post = post, comments = comments)
         else:
             kind = request.form.get('submit')
@@ -246,16 +247,15 @@ def post(post_id):
                     content = request.form['comment_content'] 
                     parent_comment_id = None 
                     add_comment = waggle.addComment(conn, post_id, parent_comment_id, content, user_id, posted_date)
-                else: 
-                    kind = request.form.get('submit')
+                else:
                     valid = waggle.likePost(conn, post_id, user_id, kind)
                     if valid: 
-                        update = waggle.updatePostMetrics(conn, post_id, kind)
+                        print("updated")
                     else:
-                        flash("You have already {kind}d this post.")     
+                        flash("You have already {kind}d this post.".format(kind=kind))     
             else: 
                 flash("You must be a gosling to perform this action.")                
-            return redirect( url_for('post', post_id = post_id ))
+            return redirect(url_for('post', post_id = post_id ))
     
 @app.route('/likeComment/<post_id>/<comment_id>', methods=['GET', 'POST'])
 def likeComment(post_id, comment_id):
@@ -273,9 +273,9 @@ def likeComment(post_id, comment_id):
         kind = request.form.get('submit')
         valid = waggle.likeComment(conn, comment_id, user_id, kind)
         if valid: 
-            update = waggle.updateCommentMetrics(conn, comment_id, kind)
+            print('updated comment like/dislike')
         else: 
-            flash(f"You have already {kind}d this comment.")    
+            flash(f"You have already {kind}d this comment.".format(kind=kind))    
         return redirect( url_for('post', post_id = post_id ))
 
 @app.route('/gaggle/<gaggle_name>/members/')

@@ -207,9 +207,8 @@ def likePost(conn, post_id, user_id, kind):
     curs.execute('''
         SELECT * FROM post_like
         WHERE post_id = %s
-        AND user_id = %s
-        and kind = %s ''', 
-                [post_id, user_id, kind])
+        AND user_id = %s''', 
+                [post_id, user_id])
     exists = curs.fetchall()
     if len(exists) == 0:
         valid = True
@@ -217,9 +216,33 @@ def likePost(conn, post_id, user_id, kind):
             INSERT INTO post_like(post_id, user_id, kind) 
             VALUES (%s,%s,%s) ''', 
                     [post_id, user_id, kind])
-        conn.commit()  # need this!   
+        conn.commit()  # need this!
+        updatePostMetrics(conn, post_id, kind)
     else:
-        valid = False
+        print(exists)
+        if exists[0]['kind'] != kind:
+            #if there is a like/dislike already but the user wants to change it to the opposite value
+            valid = True
+            curs.execute('''update post_like
+                        set kind= %s
+                        where post_id=%s and user_id=%s''', [kind, post_id, user_id])
+            if kind == 'Like':
+                #increment like and decrement dislike
+                curs.execute('''
+                    UPDATE post
+                    SET likes = likes + 1, dislikes = dislikes - 1
+                    WHERE post_id = %s''',
+                            [post_id])
+            else:
+                #increment dislike and decrement like
+                curs.execute('''
+                    UPDATE post
+                    SET likes = likes - 1, dislikes = dislikes + 1
+                    WHERE post_id = %s''',
+                            [post_id])
+            conn.commit()
+        else:
+            valid = False
     return valid   
 
 def likeComment(conn, comment_id, user_id, kind):
@@ -229,9 +252,8 @@ def likeComment(conn, comment_id, user_id, kind):
     curs.execute('''
         SELECT * FROM comment_like 
         WHERE comment_id = %s
-        AND user_id = %s
-        and kind = %s ''', 
-                [comment_id, user_id, kind])
+        AND user_id = %s''', 
+                [comment_id, user_id])
     exists = curs.fetchall()
     if len(exists) == 0:
         valid = True
@@ -239,9 +261,31 @@ def likeComment(conn, comment_id, user_id, kind):
             INSERT INTO comment_like(comment_id, user_id, kind) 
             VALUES (%s,%s,%s) ''', 
                     [comment_id, user_id, kind])         
-        conn.commit()  
+        conn.commit()
+        updateCommentMetrics(conn, comment_id, kind)  
     else:
-        valid = False               
+        if exists[0]['kind'] != kind:
+            valid = True
+            curs.execute('''update comment_like
+                        set kind= %s
+                        where comment_id=%s and user_id=%s''', [kind, comment_id, user_id])
+            if kind == 'Like':
+                #increment like and decrement dislike
+                curs.execute('''
+                    UPDATE comment
+                    SET likes = likes + 1, dislikes = dislikes - 1
+                    WHERE comment_id = %s''',
+                            [comment_id])
+            else:
+                #increment dislike and decrement like
+                curs.execute('''
+                    UPDATE comment
+                    SET likes = likes - 1, dislikes = dislikes + 1
+                    WHERE comment_id = %s''',
+                            [comment_id])
+            conn.commit()
+        else:
+            valid = False
     return valid 
 
 def getMembers(conn, gaggle_name):
