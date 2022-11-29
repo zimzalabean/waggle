@@ -89,16 +89,7 @@ def getPosts(conn):
         order by posted_date DESC
         limit 20 
     ''')
-<<<<<<< HEAD
     return curs.fetchall()
-=======
-    posts = curs.fetchall()
-    post_ids = [post['post_id'] for post in posts]
-    all_posts = []
-    for pid in post_ids:
-        all_posts.append(getPost(conn, pid))
-    return all_posts
->>>>>>> 4aac61710e59a46a4017821a38b775f56fd01a2a
 
 def getPost(conn, post_id):
     curs = dbi.dict_cursor(conn)
