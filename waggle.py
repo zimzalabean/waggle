@@ -40,16 +40,20 @@ def getUserPosts(conn, username):
     user_id = getUserID(conn, username)['user_id']
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT *
-        FROM post
+        SELECT a.*, b.username as author, c.gaggle_name as gaggle
+        FROM post a
+        LEFT JOIN user b
+        ON (a.poster_id = b.user_id)
+        LEFT JOIN gaggle c
+        ON (a.gaggle_id = c.gaggle_id)
         WHERE poster_id = %s
         order by posted_date DESC''',
                  [user_id])
-    posts = curs.fetchall()
-    post_ids = [post['post_id'] for post in posts]
-    all_posts = []
-    for pid in post_ids:
-        all_posts.append(getPost(conn, pid))
+    all_posts = curs.fetchall()
+    # post_ids = [post['post_id'] for post in posts]
+    # all_posts = []
+    # for pid in post_ids:
+    #     all_posts.append(getPost(conn, pid))
     return all_posts
 
 def searchGaggle(conn, query):
@@ -108,7 +112,6 @@ def getPost(conn, post_id):
         WHERE a.post_id = %s''',
                  [post_id])
     result = curs.fetchone()
-    print(result)        
     return result
 
 def getGaggleID(conn, gaggle_name):
@@ -126,16 +129,20 @@ def getGagglePosts(conn, gaggle_name):
     gaggle_id = getGaggleID(conn, gaggle_name)[0]['gaggle_id']
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT *
-        FROM post
-        WHERE gaggle_id = %s
+        SELECT a.*, b.username as author, c.gaggle_name as gaggle
+        FROM post a
+        LEFT JOIN user b
+        ON (a.poster_id = b.user_id)
+        LEFT JOIN gaggle c
+        ON (a.gaggle_id = c.gaggle_id)
+        WHERE c.gaggle_id = %s
         order by posted_date DESC''',
                  [gaggle_id])
-    posts = curs.fetchall()
-    post_ids = [post['post_id'] for post in posts]
-    all_posts = []
-    for pid in post_ids:
-        all_posts.append(getPost(conn, pid))
+    all_posts = curs.fetchall()
+    #post_ids = [post['post_id'] for post in posts]
+    #all_posts = []
+    #for pid in post_ids:
+        #all_posts.append(getPost(conn, pid))
     return all_posts
 
 def getPostComments(conn, post_id):
@@ -181,7 +188,6 @@ def likePost(conn, post_id, user_id, kind):
         conn.commit()  # need this!
         updatePostMetrics(conn, post_id, kind)
     else:
-        print(exists)
         if exists[0]['kind'] != kind:
             #if there is a like/dislike already but the user wants to change it to the opposite value
             valid = True
