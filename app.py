@@ -147,6 +147,8 @@ def gaggle(gaggle_name):
     Returns the page for the Gaggle with the given name. Page displays all posts in that Gaggle.
     """
     user_id = session.get('user_id', '')
+    username = session.get('username', '')
+    logged = session.get('logged_in', False)
     if user_id == '':
         flash('You are logged out')
         return redirect(url_for('login')) 
@@ -164,7 +166,7 @@ def gaggle(gaggle_name):
         else:
             joined = True
         print(joined)
-        return render_template('group.html', gaggle = gaggle, posts = posts, joined = joined) 
+        return render_template('group.html', gaggle = gaggle, posts = posts, joined = joined, username=username) 
 
 
 @app.route('/user/<username>')

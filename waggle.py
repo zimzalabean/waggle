@@ -49,7 +49,7 @@ def getUserPosts(conn, username):
     post_ids = [post['post_id'] for post in posts]
     all_posts = []
     for pid in post_ids:
-        all_posts.append(getOnePost(conn, pid))
+        all_posts.append(getPost(conn, pid))
     return all_posts
 
 def searchGaggle(conn, query):
