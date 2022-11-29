@@ -92,18 +92,18 @@ def getPosts(conn):
     return curs.fetchall()
 
 def getPost(conn, post_id):
+    '''Get post and username and gaggle_name based on post_id'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT *
-        FROM post
-        WHERE post_id = %s''',
+        SELECT a.*, b.username, c.gaggle_name
+        FROM post a
+        LEFT JOIN user b
+        ON (a.poster_id = b.user_id)
+        LEFT JOIN gaggle c
+        ON (a.gaggle_id = c.gaggle_id)
+        WHERE a.post_id = %s''',
                  [post_id])
-    result = curs.fetchone()
-    curs.execute('select username from user where user_id=%s', [result['poster_id']])
-    author = curs.fetchone()['username']
-    curs.execute('select gaggle_name from gaggle where gaggle_id=%s', [result['gaggle_id']])
-    gaggle = curs.fetchone()['gaggle_name']
-    result['author'], result['gaggle'] = author, gaggle              
+    result = curs.fetchone()        
     return result
 
 def getGaggleID(conn, gaggle_name):
