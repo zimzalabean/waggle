@@ -160,6 +160,8 @@ def gaggle(gaggle_name):
             post_id = post['post_id']
             post['canDelete'] = canDeletePost(post_id, user_id)
         gaggle_id = waggle.getGaggleID(conn, gaggle_name)[0]['gaggle_id']
+        joined  = waggle.isGosling(conn, user_id, gaggle_id)
+        return render_template('group.html', gaggle = gaggle, posts = posts, joined = joined) 
         isGosling = waggle.isGosling(conn, user_id, gaggle_id)
         if len(isGosling) == 0:
             joined = False
@@ -394,7 +396,7 @@ def createGaggle():
     return redirect(url_for('showMyGaggles'))
 
 def getRepliesThread(comment_id, thread):  
-   #comment_thread is list of comment_id 
+    '''Helper function to get all the parent comment_id of the input comment_id.'''
     conn = dbi.connect() 
     parent_comment = waggle.getParentComment(conn, comment_id)
     print("current_thread" + str(thread))
@@ -408,17 +410,8 @@ def getRepliesThread(comment_id, thread):
 @app.route('/reply/<comment_id>', methods=['GET', 'POST'])
 def addReply(comment_id):
     """
-    Retrieve parent post
-    Primary comment: 
-        retrieve parent post
-        retrieve child comment 
-        each later you click get id of parent comment 
-        For child comment create a thread list. 
-    Session that records each comment that clicks through     
-    from comment_id, retrieve parent_comment_id
-    append to list
-    until parent_comment_id is null, get:
-        <comment_, parent x 1>
+    Show original post and entire conversation thread of the comment you're replying to.
+    Update the parent comment's replies when you reply. 
     """
     now = datetime.now()
     posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
@@ -449,46 +442,50 @@ def addReply(comment_id):
 
 @app.route('/signup/', methods=['GET', 'POST'])
 def signup():
-        if request.method == 'GET':
-            return render_template('signup.html')
+    '''Sign up form '''
+    if request.method == 'GET':
+        return render_template('signup.html')
+    else: 
+        email = request.form.get('email')
+        username = request.form.get('username')
+        password = request.form.get('password')   
+        first_name = request.form.get('first_name') 
+        last_name = request.form.get('last_name') 
+        class_year = request.form.get('class_year') 
+        bio_text = request.form.get('bio_text') 
+        strike = 0 
+        hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        hashed_pass = hashed.decode('utf-8')
+        conn = dbi.connect() 
+        valid = waggle.insertUser(conn, email, hashed_pass, username, first_name, last_name, class_year, bio_text, strike)
+        if valid:
+            flash("Signup success")
+            return redirect(url_for('login'))
         else: 
-            email = request.form.get('email')
-            username = request.form.get('username')
-            password = request.form.get('password')   
-            first_name = request.form.get('first_name') 
-            last_name = request.form.get('last_name') 
-            class_year = request.form.get('class_year') 
-            bio_text = request.form.get('bio_text') 
-            strike = 0 
-            hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-            hashed_pass = hashed.decode('utf-8')
-            conn = dbi.connect() 
-            valid = waggle.insertUser(conn, email, hashed_pass, username, first_name, last_name, class_year, bio_text, strike)
-            if valid:
-                flash("Signup success")
-                return redirect(url_for('login'))
-            else: 
-                flash('Username already in use, please choose new one')
-                return render_template('signup.html', email = email, password = password, first_name = first_name, last_name = last_name,class_year = class_year,bio_text = bio_text)
+            flash('Username already in use, please choose new one')
+            return render_template('signup.html', email = email, password = password, first_name = first_name, last_name = last_name,class_year = class_year,bio_text = bio_text)
 
 @app.route('/invitemod/', methods=['GET', 'POST'])
 def inviteMod():
-        user_id = isLoggedIn()
-        conn = dbi.connect()     
-        gaggles = waggle.getInvitees(conn, user_id)     
-        if request.method == 'GET':
-            return render_template('invite_mod.html', gaggles = gaggles)
-        else: 
-            invitee_username = request.form.get('invitee_username')
-            gaggle_id = request.form.get('gaggle_id')
-            validInvite = waggle.modInvite(conn, gaggle_id, invitee_username)
-            if validInvite:
-                flash('Invitation sent')
-            else:
-                flash('Invitation already pending')
-            return redirect(url_for('inviteMod'))
+    '''Display gaggles you've created with the status of your mod invitation.
+    Let you send mod invitation to users for your specified gaggle.'''
+    user_id = isLoggedIn()
+    conn = dbi.connect()     
+    gaggles = waggle.getInvitees(conn, user_id)     
+    if request.method == 'GET':
+        return render_template('invite_mod.html', gaggles = gaggles)
+    else: 
+        invitee_username = request.form.get('invitee_username')
+        gaggle_id = request.form.get('gaggle_id')
+        validInvite = waggle.modInvite(conn, gaggle_id, invitee_username)
+        if validInvite:
+            flash('Invitation sent')
+        else:
+            flash('Invitation already pending')
+        return redirect(url_for('inviteMod'))
 
 def isLoggedIn():
+    '''Helper function to determine if user is logged in'''
     user_id = session.get('user_id', '')
     if user_id == '':
         flash('You are logged out')
@@ -499,6 +496,7 @@ def isLoggedIn():
 
 @app.route('/invitation/', methods=['GET', 'POST'])
 def response_invite():
+    '''Display invitations to become moderators and let you respond.'''
     user_id = isLoggedIn()
     conn = dbi.connect() 
     invitations = waggle.getInvitation(conn, user_id)
@@ -511,6 +509,10 @@ def response_invite():
         return redirect(url_for('response_invite'))  
 
 def canDeletePost(post_id, user_id):
+    '''
+    Helper function to determine if current user can delete a post.
+    Check if user_id is the author the post_id.
+    '''
     conn = dbi.connect() 
     post = waggle.getPost(conn, post_id)
     poster_id = post['poster_id']
@@ -519,8 +521,22 @@ def canDeletePost(post_id, user_id):
     else: 
         return False
 
+def canIntComment(comment_id, user_id):
+    '''
+    Helper function to determine if current user can interact with the comment.
+    Check if user_id is a member of the group that the comment was made in.
+    '''
+    conn = dbi.connect()
+    gaggle_id = waggle.getCommentGaggle(conn, comment_id)
+    valid = waggle.isGosling(conn, user_id, gaggle_id)
+    return valid
+
 @app.route('/<gaggle_name>/mod/users', methods=['GET', 'POST'])
 def modUserList(gaggle_name):
+    '''
+    Display users who have strikes in group. 
+    Allow you to ban/reinstate their access to the group.
+    '''
     user_id = isLoggedIn()
     conn = dbi.connect() 
     gaggle_id = waggle.getGaggleID(conn, gaggle_name)[0]['gaggle_id']
@@ -540,7 +556,7 @@ def modUserList(gaggle_name):
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'mp2_db' 
+    db_to_use = 'ldau_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 
