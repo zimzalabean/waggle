@@ -93,50 +93,8 @@ def getPosts(conn):
     post_ids = [post['post_id'] for post in posts]
     all_posts = []
     for pid in post_ids:
-        all_posts.append(getOnePost(conn, pid))
+        all_posts.append(getPost(conn, pid))
     return all_posts
-
-def getOnePost(conn, post_id):
-    '''returns information about a post based on the post_id and its metrics. 
-    We will optimize and modularize this function in alpha phase'''
-    curs = dbi.dict_cursor(conn)
-    curs.execute('''
-        select * from post where post_id = %s
-    ''', [post_id])
-    post_info = curs.fetchone()
-    curs.execute('''
-        select count(*) as num
-        from post_like
-        where post_id = %s and kind = 'Like'
-        group by user_id
-    ''', [post_id])
-    likes = curs.fetchone()
-    curs.execute('''
-        select count(*) as num
-        from post_like
-        where post_id = %s and kind = 'Dislike'
-        group by user_id
-    ''', [post_id])
-    dislikes = curs.fetchone()
-    curs.execute('''
-        select username from user where user_id = %s
-    ''', [post_info['poster_id']])
-    author = curs.fetchone()
-    curs.execute('''
-        select gaggle_name from gaggle where gaggle_id = %s
-    ''', [post_info['gaggle_id']])
-    gaggle = curs.fetchone()
-    if likes:
-        post_info['likes'] = likes['num']
-    else:
-        post_info['likes'] = 0
-    if dislikes:
-        post_info['dislikes'] = dislikes['num']
-    else:
-        post_info['dislikes'] = 0
-    post_info['author'] = author['username']
-    post_info['gaggle'] = gaggle['gaggle_name']
-    return post_info
 
 def getPost(conn, post_id):
     curs = dbi.dict_cursor(conn)
@@ -145,9 +103,13 @@ def getPost(conn, post_id):
         FROM post
         WHERE post_id = %s''',
                  [post_id])
-    result = curs.fetchall()               
-    return result[0]
-    
+    result = curs.fetchone()
+    curs.execute('select username from user where user_id=%s', [result['poster_id']])
+    author = curs.fetchone()['username']
+    curs.execute('select gaggle_name from gaggle where gaggle_id=%s', [result['gaggle_id']])
+    gaggle = curs.fetchone()['gaggle_name']
+    result['author'], result['gaggle'] = author, gaggle              
+    return result
 
 def getGaggleID(conn, gaggle_name):
     '''returns gaggle_id based on gaggle_name'''
@@ -173,7 +135,7 @@ def getGagglePosts(conn, gaggle_name):
     post_ids = [post['post_id'] for post in posts]
     all_posts = []
     for pid in post_ids:
-        all_posts.append(getOnePost(conn, pid))
+        all_posts.append(getPost(conn, pid))
     return all_posts
 
 def getPostComments(conn, post_id):

@@ -265,7 +265,7 @@ def likeComment(post_id, comment_id):
     """
     user_id = session.get('user_id', '')
     conn = dbi.connect() 
-    post = waggle.getOnePost(conn, post_id)
+    post = waggle.getPost(conn, post_id)
     comments = waggle.getPostComments(conn, post_id)    
     if request.method == 'GET':  
         return render_template('post.html', post = post, comments = comments) 
@@ -428,7 +428,7 @@ def addReply(comment_id):
         conn = dbi.connect() 
         comment = waggle.getComment(conn, comment_id)[0]
         post_id = comment['post_id']
-        post = waggle.getOnePost(conn, post_id)
+        post = waggle.getPost(conn, post_id)
         parent_comment_id = comment['comment_id']
         replies = waggle.getReplies(conn, comment_id)
         thread = [parent_comment_id]
