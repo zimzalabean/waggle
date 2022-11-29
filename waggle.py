@@ -89,12 +89,7 @@ def getPosts(conn):
         order by posted_date DESC
         limit 20 
     ''')
-    posts = curs.fetchall()
-    post_ids = [post['post_id'] for post in posts]
-    all_posts = []
-    for pid in post_ids:
-        all_posts.append(getOnePost(conn, pid))
-    return all_posts
+    return curs.fetchall()
 
 def getOnePost(conn, post_id):
     '''returns information about a post based on the post_id and its metrics. 
@@ -330,10 +325,17 @@ def isGosling(conn, user_id, gaggle_id):
         SELECT * from gosling
         WHERE user_id = %s
         AND gaggle_id = %s''',
-                 [user_id, gaggle_id])     
-    return curs.fetchall()      
+                 [user_id, gaggle_id])   
+    result = len(curs.fetchall())
+    if result == 0:
+        return False
+    else:
+        return True   
 
 def addPost(conn, gaggle_id, poster_id, content, tag_id, posted_date):
+    '''
+    Add new post into post table.
+    '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         INSERT INTO post(gaggle_id, poster_id, content, tag_id, posted_date, likes, dislikes, flags) 
@@ -344,6 +346,9 @@ def addPost(conn, gaggle_id, poster_id, content, tag_id, posted_date):
 
 
 def getComment(conn, comment_id):
+    '''
+    Retrieve comment info based on its comment_id.
+    '''
     curs = dbi.dict_cursor(conn)  
     curs.execute('''
         SELECT * 
@@ -353,6 +358,9 @@ def getComment(conn, comment_id):
     return curs.fetchall() 
 
 def getReplies(conn, comment_id):  
+    '''
+    Retrieve replies to a comment based on its comment_id. 
+    '''
     curs = dbi.dict_cursor(conn)  
     curs.execute('''
         SELECT * 
@@ -362,6 +370,9 @@ def getReplies(conn, comment_id):
     return curs.fetchall()    
 
 def getParentComment(conn , comment_id):
+    '''
+    Retrieve parent comment of a reply based on its comment_id.
+    '''
     curs = dbi.dict_cursor(conn)  
     curs.execute('''
         SELECT parent_comment_id 
@@ -371,6 +382,9 @@ def getParentComment(conn , comment_id):
     return curs.fetchall()
                    
 def insertUser(conn, email,hashed_pass,username,first_name,last_name,class_year,bio_text,strike):
+    '''
+    Add user information into the user table. 
+    '''
     curs = dbi.dict_cursor(conn)  
     curs.execute('''
         SELECT username
@@ -389,6 +403,9 @@ def insertUser(conn, email,hashed_pass,username,first_name,last_name,class_year,
     return valid 
 
 def getInvitees(conn, user_id):
+    '''
+    Retrieve status of existing mod invitations. 
+    '''
     curs = dbi.dict_cursor(conn)  
     gaggles = getGagglesOfAuthor(conn, user_id)  
     for gaggle in gaggles:
@@ -404,6 +421,9 @@ def getInvitees(conn, user_id):
     return gaggles
 
 def modInvite(conn, gaggle_id, username):
+    '''
+    Add valid username and corresponding gaggle_id into mod_invite table. 
+    '''
     invitee_id = getUserID(conn, username)['user_id']
     curs = dbi.dict_cursor(conn)  
     curs.execute('''
@@ -426,6 +446,9 @@ def modInvite(conn, gaggle_id, username):
     return valid   
 
 def getInvitation(conn, invitee_id):
+    '''
+    Retrieve mod invitations a user received.
+    '''
     curs = dbi.dict_cursor(conn)  
     curs.execute('''
         SELECT a.gaggle_id, b.gaggle_name
@@ -439,6 +462,10 @@ def getInvitation(conn, invitee_id):
     return curs.fetchall()
 
 def responseInvite(conn, gaggle_id, user_id, response):
+    '''
+    Update status of mod invitation response in mod_invite table.
+    Add user_id and approriate gaggle_id into moderator table.
+    '''
     curs = dbi.dict_cursor(conn)  
     curs.execute('''
         UPDATE mod_invite
@@ -456,7 +483,7 @@ def responseInvite(conn, gaggle_id, user_id, response):
     return curs.fetchall()    
 
 def searchPost(conn, query):
-    '''returns all gaggles whose names match the query'''
+    '''returns all posts whose content match the query'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         SELECT * from post 
@@ -465,7 +492,7 @@ def searchPost(conn, query):
     return curs.fetchall() 
 
 def searchComment(conn, query):
-    '''returns all gaggles whose names match the query'''
+    '''returns all comments whose content match the query'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         SELECT * from comment
@@ -474,7 +501,7 @@ def searchComment(conn, query):
     return curs.fetchall()   
 
 def searchPeople(conn, query):
-    '''returns all gaggles whose names match the query'''
+    '''returns all people whose names match the query'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         SELECT * from user 
@@ -483,6 +510,9 @@ def searchPeople(conn, query):
     return curs.fetchall()   
 
 def deletePost(conn, post_id):
+    '''
+    Delete post
+    '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''delete
                     from post
@@ -492,6 +522,9 @@ def deletePost(conn, post_id):
     return post_id
 
 def getBadUsers(conn, gaggle_id):
+    '''
+    Return users who have violation in the group.  
+    '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         SELECT * from bad_gosling
@@ -500,6 +533,9 @@ def getBadUsers(conn, gaggle_id):
     return curs.fetchall()     
 
 def banUser(conn, gaggle_id, username):
+    '''
+    Ban user from accessing the group
+    '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         UPDATE bad_gosling
@@ -511,6 +547,9 @@ def banUser(conn, gaggle_id, username):
     return username
 
 def reinstateUser(conn, gaggle_id, username):
+    '''
+    Reinstate user from accessing the group
+    '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         UPDATE bad_gosling
@@ -520,3 +559,16 @@ def reinstateUser(conn, gaggle_id, username):
                 [gaggle_id, username])
     conn.commit()             
     return username
+
+def getCommentGaggle(conn, comment_id):
+    '''Return gaggle this comment is from'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT b.gaggle_id 
+        FROM comment a
+        LEFT JOIN post b
+        USING (post_id)
+        WHERE a.comment_id = %s''',
+                 [comment_id]) 
+    result = curs.fetchall()  
+    return result[0]['gaggle_id']
