@@ -338,7 +338,7 @@ def addPost(conn, gaggle_id, poster_id, content, tag_id, posted_date):
     curs.execute('''
         INSERT INTO post(gaggle_id, poster_id, content, tag_id, posted_date, likes, dislikes, flags) 
         VALUES(%s, %s, %s, %s, %s, 0, 0, 0)''',
-                [gaggle_id, poster_id, content, tag_id, posted_date])
+        [gaggle_id, poster_id, content, tag_id, posted_date])
     conn.commit()
     return poster_id 
 

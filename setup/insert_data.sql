@@ -73,4 +73,19 @@ VALUES
 --   (4,4,'Like'),
 --   (5,5,'Like');  
 
+INSERT INTO moderator
+  (user_id,
+  gaggle_id)
+VALUES
+  (1,2), 
+  (1,5), 
+  (2,1),
+  (4,1);
 
+INSERT INTO mod_invite
+  (gaggle_id,
+  invitee_id,
+  accepted)
+VALUES
+  (2,4, 'Pending'),
+  (4,2, 'Pending');  

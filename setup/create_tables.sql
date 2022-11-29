@@ -6,6 +6,9 @@ drop table if exists tag;
 drop table if exists gosling;
 drop table if exists gaggle;
 drop table if exists user;
+drop table if exists moderator;
+drop table if exists mod_invite;
+drop table if exists bad_gosling;
 
 CREATE TABLE user (
   user_id int not null auto_increment,
@@ -55,6 +58,7 @@ CREATE TABLE post (
   posted_date datetime,
   likes int,
   dislikes int,
+  flags int,
   primary key (post_id),
   foreign key (tag_id) references tag(tag_id), 
   foreign key (poster_id) references user(user_id),
@@ -70,6 +74,7 @@ CREATE TABLE comment (
     posted_date datetime,
     likes int,
     dislikes int,
+    flags int,
     primary key (comment_id),
     foreign key (post_id) references post(post_id),
     foreign key (commentor_id) references user(user_id),
@@ -91,3 +96,32 @@ CREATE TABLE comment_like (
   foreign key (user_id) references user(user_id),
   foreign key (comment_id) references comment(comment_id)  
 ) ENGINE = InnoDB;
+
+CREATE TABLE moderator (
+  user_id int,
+  gaggle_id int,
+  foreign key (user_id) references user(user_id),
+  foreign key (gaggle_id) references gaggle(gaggle_id)
+) ENGINE = InnoDB;
+
+CREATE TABLE mod_invite (
+  gaggle_id int,
+  invitee_id int,
+  accepted enum('Yes', 'No', 'Pending'),
+  foreign key (gaggle_id) references gaggle(gaggle_id),
+  foreign key (invitee_id) references user(user_id)  
+) ENGINE = InnoDB;
+
+CREATE TABLE bad_gosling (
+  gaggle_id int,
+  username varchar(30), 
+  ban_status enum('Yes','No'),
+  strikes int, 
+  reason varchar(300),
+  mod_id int, 
+  violated_time datetime,
+  kind enum('Post', 'Comment', 'Spam'),
+  remove_id int, 
+  foreign key (gaggle_id) references gaggle(gaggle_id),
+  foreign key (mod_id) references user(user_id)  
+)ENGINE = InnoDB;
