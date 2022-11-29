@@ -84,8 +84,12 @@ def getPosts(conn):
     '''returns the latest 20 posts for homepage feed'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        select * 
-        from post 
+        select a.*, b.username as author, c.gaggle_name as gaggle 
+        from post a
+        left join user b
+        on (a.poster_id = b.user_id)
+        left join gaggle c
+        on (a.gaggle_id = c.gaggle_id)
         order by posted_date DESC
         limit 20 
     ''')
@@ -95,7 +99,7 @@ def getPost(conn, post_id):
     '''Get post and username and gaggle_name based on post_id'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.*, b.username, c.gaggle_name
+        SELECT a.*, b.username as author, c.gaggle_name as gaggle
         FROM post a
         LEFT JOIN user b
         ON (a.poster_id = b.user_id)
@@ -103,7 +107,8 @@ def getPost(conn, post_id):
         ON (a.gaggle_id = c.gaggle_id)
         WHERE a.post_id = %s''',
                  [post_id])
-    result = curs.fetchone()        
+    result = curs.fetchone()
+    print(result)        
     return result
 
 def getGaggleID(conn, gaggle_name):

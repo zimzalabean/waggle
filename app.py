@@ -161,15 +161,7 @@ def gaggle(gaggle_name):
             post['canDelete'] = canDeletePost(post_id, user_id)
         gaggle_id = waggle.getGaggleID(conn, gaggle_name)[0]['gaggle_id']
         joined  = waggle.isGosling(conn, user_id, gaggle_id)
-        return render_template('group.html', gaggle = gaggle, posts = posts, joined = joined) 
-        isGosling = waggle.isGosling(conn, user_id, gaggle_id)
-        if len(isGosling) == 0:
-            joined = False
-        else:
-            joined = True
-        print(joined)
-        return render_template('group.html', gaggle = gaggle, posts = posts, joined = joined, username=username) 
-
+        return render_template('group.html', gaggle = gaggle, posts = posts, joined = joined, username=username)
 
 @app.route('/user/<username>')
 def user(username):
@@ -556,7 +548,7 @@ def modUserList(gaggle_name):
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'ldau_db' 
+    db_to_use = 'mp2_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 
