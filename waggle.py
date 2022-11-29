@@ -89,49 +89,16 @@ def getPosts(conn):
         order by posted_date DESC
         limit 20 
     ''')
+<<<<<<< HEAD
     return curs.fetchall()
-
-def getOnePost(conn, post_id):
-    '''returns information about a post based on the post_id and its metrics. 
-    We will optimize and modularize this function in alpha phase'''
-    curs = dbi.dict_cursor(conn)
-    curs.execute('''
-        select * from post where post_id = %s
-    ''', [post_id])
-    post_info = curs.fetchone()
-    curs.execute('''
-        select count(*) as num
-        from post_like
-        where post_id = %s and kind = 'Like'
-        group by user_id
-    ''', [post_id])
-    likes = curs.fetchone()
-    curs.execute('''
-        select count(*) as num
-        from post_like
-        where post_id = %s and kind = 'Dislike'
-        group by user_id
-    ''', [post_id])
-    dislikes = curs.fetchone()
-    curs.execute('''
-        select username from user where user_id = %s
-    ''', [post_info['poster_id']])
-    author = curs.fetchone()
-    curs.execute('''
-        select gaggle_name from gaggle where gaggle_id = %s
-    ''', [post_info['gaggle_id']])
-    gaggle = curs.fetchone()
-    if likes:
-        post_info['likes'] = likes['num']
-    else:
-        post_info['likes'] = 0
-    if dislikes:
-        post_info['dislikes'] = dislikes['num']
-    else:
-        post_info['dislikes'] = 0
-    post_info['author'] = author['username']
-    post_info['gaggle'] = gaggle['gaggle_name']
-    return post_info
+=======
+    posts = curs.fetchall()
+    post_ids = [post['post_id'] for post in posts]
+    all_posts = []
+    for pid in post_ids:
+        all_posts.append(getPost(conn, pid))
+    return all_posts
+>>>>>>> 4aac61710e59a46a4017821a38b775f56fd01a2a
 
 def getPost(conn, post_id):
     curs = dbi.dict_cursor(conn)
@@ -140,9 +107,13 @@ def getPost(conn, post_id):
         FROM post
         WHERE post_id = %s''',
                  [post_id])
-    result = curs.fetchall()               
-    return result[0]
-    
+    result = curs.fetchone()
+    curs.execute('select username from user where user_id=%s', [result['poster_id']])
+    author = curs.fetchone()['username']
+    curs.execute('select gaggle_name from gaggle where gaggle_id=%s', [result['gaggle_id']])
+    gaggle = curs.fetchone()['gaggle_name']
+    result['author'], result['gaggle'] = author, gaggle              
+    return result
 
 def getGaggleID(conn, gaggle_name):
     '''returns gaggle_id based on gaggle_name'''
@@ -168,7 +139,7 @@ def getGagglePosts(conn, gaggle_name):
     post_ids = [post['post_id'] for post in posts]
     all_posts = []
     for pid in post_ids:
-        all_posts.append(getOnePost(conn, pid))
+        all_posts.append(getPost(conn, pid))
     return all_posts
 
 def getPostComments(conn, post_id):
@@ -202,9 +173,8 @@ def likePost(conn, post_id, user_id, kind):
     curs.execute('''
         SELECT * FROM post_like
         WHERE post_id = %s
-        AND user_id = %s
-        and kind = %s ''', 
-                [post_id, user_id, kind])
+        AND user_id = %s''', 
+                [post_id, user_id])
     exists = curs.fetchall()
     if len(exists) == 0:
         valid = True
@@ -212,9 +182,33 @@ def likePost(conn, post_id, user_id, kind):
             INSERT INTO post_like(post_id, user_id, kind) 
             VALUES (%s,%s,%s) ''', 
                     [post_id, user_id, kind])
-        conn.commit()  # need this!   
+        conn.commit()  # need this!
+        updatePostMetrics(conn, post_id, kind)
     else:
-        valid = False
+        print(exists)
+        if exists[0]['kind'] != kind:
+            #if there is a like/dislike already but the user wants to change it to the opposite value
+            valid = True
+            curs.execute('''update post_like
+                        set kind= %s
+                        where post_id=%s and user_id=%s''', [kind, post_id, user_id])
+            if kind == 'Like':
+                #increment like and decrement dislike
+                curs.execute('''
+                    UPDATE post
+                    SET likes = likes + 1, dislikes = dislikes - 1
+                    WHERE post_id = %s''',
+                            [post_id])
+            else:
+                #increment dislike and decrement like
+                curs.execute('''
+                    UPDATE post
+                    SET likes = likes - 1, dislikes = dislikes + 1
+                    WHERE post_id = %s''',
+                            [post_id])
+            conn.commit()
+        else:
+            valid = False
     return valid   
 
 def likeComment(conn, comment_id, user_id, kind):
@@ -224,9 +218,8 @@ def likeComment(conn, comment_id, user_id, kind):
     curs.execute('''
         SELECT * FROM comment_like 
         WHERE comment_id = %s
-        AND user_id = %s
-        and kind = %s ''', 
-                [comment_id, user_id, kind])
+        AND user_id = %s''', 
+                [comment_id, user_id])
     exists = curs.fetchall()
     if len(exists) == 0:
         valid = True
@@ -234,9 +227,31 @@ def likeComment(conn, comment_id, user_id, kind):
             INSERT INTO comment_like(comment_id, user_id, kind) 
             VALUES (%s,%s,%s) ''', 
                     [comment_id, user_id, kind])         
-        conn.commit()  
+        conn.commit()
+        updateCommentMetrics(conn, comment_id, kind)  
     else:
-        valid = False               
+        if exists[0]['kind'] != kind:
+            valid = True
+            curs.execute('''update comment_like
+                        set kind= %s
+                        where comment_id=%s and user_id=%s''', [kind, comment_id, user_id])
+            if kind == 'Like':
+                #increment like and decrement dislike
+                curs.execute('''
+                    UPDATE comment
+                    SET likes = likes + 1, dislikes = dislikes - 1
+                    WHERE comment_id = %s''',
+                            [comment_id])
+            else:
+                #increment dislike and decrement like
+                curs.execute('''
+                    UPDATE comment
+                    SET likes = likes - 1, dislikes = dislikes + 1
+                    WHERE comment_id = %s''',
+                            [comment_id])
+            conn.commit()
+        else:
+            valid = False
     return valid 
 
 def getMembers(conn, gaggle_name):
