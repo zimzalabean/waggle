@@ -92,7 +92,8 @@ def getPosts(conn):
     return curs.fetchall()
 
 def getPost(conn, post_id):
-    '''Get post and username and gaggle_name based on post_id'''
+    '''Get post and username and gaggle_name based on post_id
+    '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         SELECT a.*, b.username, c.gaggle_name
