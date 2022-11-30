@@ -147,6 +147,8 @@ def gaggle(gaggle_name):
     Returns the page for the Gaggle with the given name. Page displays all posts in that Gaggle.
     """
     user_id = session.get('user_id', '')
+    username = session.get('username', '')
+    logged = session.get('logged_in', False)
     if user_id == '':
         flash('You are logged out')
         return redirect(url_for('login')) 
@@ -159,8 +161,7 @@ def gaggle(gaggle_name):
             post['canDelete'] = canDeletePost(post_id, user_id)
         gaggle_id = waggle.getGaggleID(conn, gaggle_name)[0]['gaggle_id']
         joined  = waggle.isGosling(conn, user_id, gaggle_id)
-        return render_template('group.html', gaggle = gaggle, posts = posts, joined = joined) 
-
+        return render_template('group.html', gaggle = gaggle, posts = posts, joined = joined, username=username)
 
 @app.route('/user/<username>')
 def user(username):
@@ -547,7 +548,7 @@ def modUserList(gaggle_name):
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'ldau_db' 
+    db_to_use = 'mp2_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 
