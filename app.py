@@ -111,7 +111,9 @@ def deletePost(post_id, author_id):
     conn = dbi.connect()    
     deleted = waggle.deletePost(conn, post_id)
     flash('Deleted post with post_id {pid}'.format(pid=post_id))
-    return redirect(url_for('homepage'))
+    #print(request.referrer)
+    #return redirect(url_for('homepage'))
+    return redirect(request.referrer) #redirects back to the referrer page
 
 
 @app.route('/search/', methods=["GET"])
