@@ -93,8 +93,8 @@ def homepage():
         return render_template('main.html', gaggles = gaggles, username=username, posts=posts_info)
 
 
-@app.route('/deletePost/<post_id>/<author_id>', methods=['POST'])
-def deletePost(post_id, author_id):
+@app.route('/deletePost/<post_id>/<author_id>/<gaggle_name>')
+def deletePost(post_id, author_id, gaggle_name):
     """
     Called when user presses "delete" button on a post. The post gets deleted from the database if 
     the post was written by the logged in user.
@@ -113,7 +113,7 @@ def deletePost(post_id, author_id):
     flash('Deleted post with post_id {pid}'.format(pid=post_id))
     #print(request.referrer)
     #return redirect(url_for('homepage'))
-    return redirect(request.referrer) #redirects back to the referrer page
+    return redirect(url_for('gaggle', gaggle_name=gaggle_name)) #redirects back to the gaggle page
 
 
 @app.route('/search/', methods=["GET"])
