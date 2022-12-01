@@ -28,14 +28,14 @@
         <p>likes: {{post['likes']}}</p>
         <p>dislikes: {{post['dislikes']}}</p>
         <p>{{post['posted_date']}}</p>  
-        
+        {% if valid %}        
         <form method=post action="{{url_for('post', post_id = post.post_id)}}" >
             <input type="submit" name="submit" value="Like">
             <input type="submit" name="submit" value="Dislike">        
             <textarea name="comment_content" rows="4" cols="50"></textarea>
             <input type="submit" name="submit" value="Comment">
         </form>
-
+        {% endif %}
         {% for comment in comments %}
         <div class="comment" id="{{comment.comment_id}}">
             <p><a href="{{url_for('addReply', comment_id=comment.comment_id)}}">Reply_id: {{comment.comment_id}}</a> </p>

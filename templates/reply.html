@@ -34,13 +34,13 @@
                 </p>
             </div>
         {% endfor %}
-
+            {% if valid %}
                 <!-- Reply section-->  
                 <form method=post action="{{url_for('addReply', comment_id = parent_comment.comment_id)}}" >     
                     <textarea name="comment_content" rows="4" cols="30"></textarea>
                     <input type="submit" name="submit" value="Reply">
                 </form>
-
+            {% endif%}
 
             {% for comment in replies %}  
             <div class="replies">

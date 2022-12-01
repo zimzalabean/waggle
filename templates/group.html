@@ -17,6 +17,7 @@
         </form>
     </div>
 
+    {% if joined %}
     <div class="add_post_form">
         <form name="write_post" action="{{url_for('addPost')}}" method="POST">
             <textarea name="content" rows="4" cols="50"></textarea>
@@ -25,7 +26,8 @@
             <input type="hidden" name="gaggle_name" value="{{gaggle.gaggle_name}}">
         </form>
     </div>
-
+    {% endif %}
+    
     {% for post in posts %}
     <div class="post" id="{{post['post_id']}}">
         <div class="header">

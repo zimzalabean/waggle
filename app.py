@@ -237,22 +237,19 @@ def post(post_id):
         valid = waggle.isGosling(conn, user_id, gaggle_id)
         if request.method == 'GET':
             print(post)
-            return render_template('post.html', post = post, comments = comments)
+            return render_template('post.html', post = post, comments = comments, valid = valid)
         else:
             kind = request.form.get('submit')
-            if valid: 
-                if kind == 'Comment':
-                    content = request.form['comment_content'] 
-                    parent_comment_id = None 
-                    add_comment = waggle.addComment(conn, post_id, parent_comment_id, content, user_id, posted_date)
+            if kind == 'Comment':
+                content = request.form['comment_content'] 
+                parent_comment_id = None 
+                add_comment = waggle.addComment(conn, post_id, parent_comment_id, content, user_id, posted_date)
+            else:
+                valid = waggle.likePost(conn, post_id, user_id, kind)
+                if valid: 
+                    print("updated")
                 else:
-                    valid = waggle.likePost(conn, post_id, user_id, kind)
-                    if valid: 
-                        print("updated")
-                    else:
-                        flash("You have already {kind}d this post.".format(kind=kind))     
-            else: 
-                flash("You must be a gosling to perform this action.")                
+                    flash("You have already {kind}d this post.".format(kind=kind))                    
             return redirect(url_for('post', post_id = post_id ))
     
 @app.route('/likeComment/<post_id>/<comment_id>', methods=['GET', 'POST'])
@@ -419,13 +416,14 @@ def addReply(comment_id):
         post_id = comment['post_id']
         post = waggle.getPost(conn, post_id)
         parent_comment_id = comment['comment_id']
+        valid = canIntComment(parent_comment_id, user_id)
         replies = waggle.getReplies(conn, comment_id)
         thread = [parent_comment_id]
         chain = getRepliesThread(parent_comment_id, thread)
         comment_chain_id = [x for x in chain if x is not None][::-1]
         comment_chain = [waggle.getComment(conn, id)[0] for id in comment_chain_id]
         if request.method == 'GET':
-            return render_template('reply.html', comment_chain = comment_chain, parent_comment = comment, replies = replies, post = post)
+            return render_template('reply.html', comment_chain = comment_chain, parent_comment = comment, replies = replies, post = post, valid = valid)
         else:
             kind = request.form.get('submit')
             if kind == 'Reply':
