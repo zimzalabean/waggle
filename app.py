@@ -548,6 +548,11 @@ def modUserList(gaggle_name):
 
 @app.route('/flag_post/<post_id>/<author_id>/<gaggle_name>', methods=['GET', 'POST'])
 def flagPost(post_id, author_id, gaggle_name):
+    '''
+    If a user is logged in then the function checks if they already reported this post,
+    if not then it inserts a new flag into a flag_post table and updates
+    flags count for a post in post table.
+    '''
     logged_in = session.get('logged_in', False)
     if logged_in:
         reporter_id = session.get('user_id')
