@@ -1,0 +1,10 @@
+{% extends "super_base.html" %}
+    
+{% block main_content %}
+<p>You are reporting post {{post_id}} of user {{author_id}}</p>
+<p>We want to know why you want to flag this post to provide some information for our moderators. Please provide a reason for your report:</p>
+<form action="{{url_for('flagPost', post_id = post_id, author_id=author_id, gaggle_name=gaggle_name)}}" method="POST">
+    <label>Reason: <textarea name="reason" rows="1" cols="10"></textarea></label>
+    <input type="submit" value="Report">
+</form>
+{% endblock %}

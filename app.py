@@ -93,8 +93,8 @@ def homepage():
         return render_template('main.html', gaggles = gaggles, username=username, posts=posts_info)
 
 
-@app.route('/deletePost/<post_id>/<author_id>', methods=['POST'])
-def deletePost(post_id, author_id):
+@app.route('/deletePost/<post_id>/<author_id>/<gaggle_name>')
+def deletePost(post_id, author_id, gaggle_name):
     """
     Called when user presses "delete" button on a post. The post gets deleted from the database if 
     the post was written by the logged in user.
@@ -113,7 +113,7 @@ def deletePost(post_id, author_id):
     flash('Deleted post with post_id {pid}'.format(pid=post_id))
     #print(request.referrer)
     #return redirect(url_for('homepage'))
-    return redirect(request.referrer) #redirects back to the referrer page
+    return redirect(url_for('gaggle', gaggle_name=gaggle_name)) #redirects back to the gaggle page
 
 
 @app.route('/search/', methods=["GET"])
@@ -544,7 +544,45 @@ def modUserList(gaggle_name):
             ban = waggle.banUser(conn, gaggle_id, username)
         else:
             reinstate = waggle.reinstateUser(conn, gaggle_id, username)    
-        return redirect(url_for('modUserList', gaggle_name = gaggle_name))       
+        return redirect(url_for('modUserList', gaggle_name = gaggle_name))
+
+@app.route('/flag_post/<post_id>/<author_id>/<gaggle_name>', methods=['GET', 'POST'])
+def flagPost(post_id, author_id, gaggle_name):
+    '''
+    If a user is logged in then the function checks if they already reported this post,
+    if not then it inserts a new flag into a flag_post table and updates
+    flags count for a post in post table.
+    '''
+    logged_in = session.get('logged_in', False)
+    if logged_in:
+        reporter_id = session.get('user_id')
+        conn = dbi.connect()
+        curs = dbi.dict_cursor(conn)
+        curs.execute('''SELECT *
+                        FROM flag_post
+                        WHERE post_id = %s and reporter_id = %s''',[post_id, reporter_id])
+        res = curs.fetchone()
+        if request.method == 'GET':
+            if res is not None:
+                flash('You have already reported this post')
+                return redirect(request.referrer)
+            else:
+                return render_template('flag_post.html', post_id=post_id, author_id=author_id, gaggle_name=gaggle_name)
+        else:
+            flagged_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            reason = request.form['reason']
+            print(res)
+            #insert into flag_post table
+            curs.execute('''insert into flag_post (post_id, reporter_id, reason, flagged_date, mod_aprroved)
+                                values (%s,%s,%s,%s,'Pending')''',[post_id, reporter_id,reason,flagged_date])
+            #update post table
+            curs.execute('''update post set flags=flags+1 where post_id=%s''', [post_id])
+            conn.commit()
+            flash('You have successfully reported a post {pid}'.format(pid=post_id))
+            return redirect(url_for('gaggle', gaggle_name=gaggle_name))
+    else:
+        flash('You are not logged in. Please login or join.')
+        return redirect(url_for('login'))
 
 @app.before_first_request
 def init_db():

@@ -1,5 +1,7 @@
 drop table if exists comment_like;
 drop table if exists post_like;
+drop table if exists flag_post;
+drop table if exists flag_comment;
 drop table if exists comment;
 drop table if exists post;
 drop table if exists tag;
@@ -125,3 +127,27 @@ CREATE TABLE bad_gosling (
   foreign key (gaggle_id) references gaggle(gaggle_id),
   foreign key (mod_id) references user(user_id)  
 )ENGINE = InnoDB;
+
+CREATE TABLE flag_post (
+  post_id int,
+  reporter_id int,
+  reason varchar(200),
+  flagged_date datetime,
+  mod_id int,
+  mod_aprroved enum('Yes', 'No', 'Pending'),
+  foreign key (post_id) references post(post_id),
+  foreign key (reporter_id) references user(user_id),
+  foreign key (mod_id) references user(user_id)  
+) ENGINE = InnoDB;
+
+CREATE TABLE flag_comment (
+  comment_id int,
+  reporter_id int,
+  reason varchar(200),
+  flagged_date datetime,
+  mod_id int,
+  mod_aprroved enum('Yes', 'No', 'Pending'),
+  foreign key (comment_id) references comment(comment_id),
+  foreign key (reporter_id) references user(user_id),
+  foreign key (mod_id) references user(user_id)  
+) ENGINE = InnoDB;
