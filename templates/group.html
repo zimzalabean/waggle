@@ -42,7 +42,9 @@
                 {% if post.canDelete %}
                 <a href="{{url_for('deletePost', post_id=post['post_id'], author_id=post['poster_id'], gaggle_name=post['gaggle'])}}">Delete Post</a>
                 {% endif %}
+                {% if not post.canDelete %}
                 <a href="{{url_for('flagPost', post_id = post.post_id, author_id=post.poster_id, gaggle_name=post['gaggle'])}}">Report Post</a>
+                {% endif %}
               </div>
             </div>
         </div>
