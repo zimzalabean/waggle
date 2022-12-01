@@ -544,7 +544,40 @@ def modUserList(gaggle_name):
             ban = waggle.banUser(conn, gaggle_id, username)
         else:
             reinstate = waggle.reinstateUser(conn, gaggle_id, username)    
-        return redirect(url_for('modUserList', gaggle_name = gaggle_name))       
+        return redirect(url_for('modUserList', gaggle_name = gaggle_name))
+
+@app.route('/flag_post/<post_id>/<author_id>/<gaggle_name>', methods=['GET', 'POST'])
+def flagPost(post_id, author_id, gaggle_name):
+    logged_in = session.get('logged_in', False)
+    if logged_in:
+        reporter_id = session.get('user_id')
+        conn = dbi.connect()
+        curs = dbi.dict_cursor(conn)
+        curs.execute('''SELECT *
+                        FROM flag_post
+                        WHERE post_id = %s and reporter_id = %s''',[post_id, reporter_id])
+        res = curs.fetchone()
+        if request.method == 'GET':
+            if res is not None:
+                flash('You have already reported this post')
+                return redirect(request.referrer)
+            else:
+                return render_template('flag_post.html', post_id=post_id, author_id=author_id, gaggle_name=gaggle_name)
+        else:
+            flagged_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            reason = request.form['reason']
+            print(res)
+            #insert into flag_post table
+            curs.execute('''insert into flag_post (post_id, reporter_id, reason, flagged_date, mod_aprroved)
+                                values (%s,%s,%s,%s,'Pending')''',[post_id, reporter_id,reason,flagged_date])
+            #update post table
+            curs.execute('''update post set flags=flags+1 where post_id=%s''', [post_id])
+            conn.commit()
+            flash('You have successfully reported a post {pid}'.format(pid=post_id))
+            return redirect(url_for('gaggle', gaggle_name=gaggle_name))
+    else:
+        flash('You are not logged in. Please login or join.')
+        return redirect(url_for('login'))
 
 @app.before_first_request
 def init_db():
