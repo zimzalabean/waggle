@@ -27,38 +27,12 @@
         </form>
     </div>
     {% endif %}
-    
+
+    {% import "post_template.html" as postComp%}
     {% for post in posts %}
-    <div class="post" id="{{post['post_id']}}">
-        <div class="header">
-            <!-- three dot menu -->
-            <div class="dropdown">
-              <!-- three dots -->
-              <ul class="dropbtn icons btn-right showLeft" onclick="showDropdown('{{post.post_id}}')">
-                <li></li>
-                <li></li>
-                <li></li>
-              </ul>
-              <!-- menu -->
-              <div id="myDropdown_{{post.post_id}}" class="dropdown-content">
-                {% if post.canDelete %}
-                <a href="{{url_for('deletePost', post_id=post['post_id'], author_id=post['poster_id'], gaggle_name=post['gaggle'])}}">Delete Post</a>
-                {% endif %}
-                {% if not post.canDelete %}
-                <a href="{{url_for('flagPost', post_id = post.post_id, author_id=post.poster_id, gaggle_name=post['gaggle'])}}">Report Post</a>
-                {% endif %}
-              </div>
-            </div>
-        </div>
-        <p><a href="{{url_for('post', post_id=post.post_id)}}">Post_id: {{post.post_id}}</a>
-        <p>author: <a href="{{url_for('user', username=post['author'])}}">{{post['author']}}</a> gaggle: <a href="{{url_for('gaggle',gaggle_name=post['gaggle'])}}">{{post['gaggle']}}</a></p>
-        <p>{{post['content']}}</p>
-        <p><a href="{{url_for('post', post_id=post.post_id)}}">Comments</a> </p>
-        <p>likes: {{post['likes']}}</p>
-        <p>dislikes: {{post['dislikes']}}</p>
-        <p>{{post['posted_date']}}</p>    
-    </div>
+        {{postComp.post_temp(post=post)}}
     {% endfor %}
+
     <script>
         function changeLanguage(language) {
             var element = document.getElementById("url");
