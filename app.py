@@ -187,7 +187,11 @@ def history(username):
     Returns the post, comment, and like/dislike history of the user with the given username.
     """
     conn = dbi.connect()
+    user_id = session.get('user_id', '')
     posts = waggle.getUserPosts(conn, username)
+    for post in posts:
+            post_id = post['post_id']
+            post['canDelete'] = canDeletePost(post_id, user_id)
     return render_template('history.html', username = username, posts = posts)
 
 
@@ -243,7 +247,6 @@ def post(post_id):
         comments = waggle.getPostComments(conn, post_id)
         valid = waggle.isGosling(conn, user_id, gaggle_id)
         if request.method == 'GET':
-            print(post)
             return render_template('post.html', post = post, comments = comments, valid = valid)
         else:
             kind = request.form.get('submit')

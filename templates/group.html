@@ -35,6 +35,7 @@
         </form>
     </div>
     {% endif %}
+<<<<<<< HEAD
     
 
     {% block main_sub_content %}
@@ -90,6 +91,32 @@
                         if (openDropdown.classList.contains('show')) {
                             openDropdown.classList.remove('show');
                         }
+=======
+
+    {% import "post_template.html" as postComp%}
+    {% for post in posts %}
+        {{postComp.post_temp(post=post)}}
+    {% endfor %}
+
+    <script>
+        function changeLanguage(language) {
+            var element = document.getElementById("url");
+            element.value = language;
+            element.innerHTML = language;
+        }
+        function showDropdown(pid) {
+            document.getElementById("myDropdown_"+pid).classList.toggle("show");
+        }
+        // Close the dropdown if the user clicks outside of it
+        window.onclick = function(event) {
+            if (!event.target.matches('.dropbtn')) {
+                var dropdowns = document.getElementsByClassName("dropdown-content");
+                var i;
+                for (i = 0; i < dropdowns.length; i++) {
+                    var openDropdown = dropdowns[i];
+                    if (openDropdown.classList.contains('show')) {
+                        openDropdown.classList.remove('show');
+>>>>>>> 1663c72b5a7b03476f60f3af13b355881ac8d520
                     }
                 }
             }

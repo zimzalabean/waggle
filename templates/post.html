@@ -36,21 +36,12 @@
             <input type="submit" name="submit" value="Comment">
         </form>
         {% endif %}
-        {% for comment in comments %}
-        <div class="comment" id="{{comment.comment_id}}">
-            <p><a href="{{url_for('addReply', comment_id=comment.comment_id)}}">Reply_id: {{comment.comment_id}}</a> </p>
-            <p>author: <a href="{{url_for('user', username=comment.commentor_id)}}">{{comment.username}}</a> </p>
-            <p>{{comment.content}}</p>
-            <p>{{comment.posted_date}}</p>
-            <p>Likes: {{comment.likes}}</p>
-            <p>Dislikes: {{comment.dislikes}}</p>
-        <form method=post action="{{url_for('likeComment', post_id = post.post_id, comment_id = comment.comment_id)}}" >
-            <input type="submit" name="submit" value="Like">
-            <input type="submit" name="submit" value="Dislike"> 
-        </form> 
 
-        </div>
+        {% import "comment_template.html" as commentComp%}
+        {% for comment in comments %}
+            {{commentComp.comment_temp(comment=comment, post=post)}}
         {% endfor %}
+        
     </div>
     <script>
         function changeLanguage(language) {
