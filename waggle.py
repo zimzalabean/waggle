@@ -513,8 +513,11 @@ def searchComment(conn, query):
     '''returns all comments whose content match the query'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT * from comment
-        WHERE content LIKE %s''',
+        SELECT a.*, b.gaggle_id
+        FROM comment a
+        LEFT JOIN post b
+        USING (post_id)
+        WHERE a.content LIKE %s''',
                  ["%"+query+"%"]) 
     return curs.fetchall()   
 

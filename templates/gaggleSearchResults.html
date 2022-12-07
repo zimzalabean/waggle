@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block main_content %}
+    <body>
+            <p>
+                    <form method=get action="{{url_for('searchGaggle')}}" >       
+                            <input type="submit" name="submit" value="Posts">
+                            <input type="submit" name="submit" value="Comments">
+                            <input type="hidden" name="query" value="{{query}}">
+                    </form>
+            </p>
+        <p>Results matching {{query}} in {{gaggle_name}}:</p>
+
+        {% if kind == 'Posts' %}
+            {% for post in results %}
+            <p> 
+                {% if post.gaggle_id == {{gaggle_id}} %}
+                Post:   <a href="{{ url_for('post', post_id= post.post_id)}}">{{post.post_id}}</a>
+                {% endif %}
+            </p>
+            {% endfor %}  
+        {% elif kind == 'Comments' %}
+            {% for comment in results %}
+            <p> 
+                {% if comment.gaggle_id == {{gaggle_id}} %}
+                Comment:   <a href="{{ url_for('addReply', comment_id = comment.comment_id)}}">{{comment.comment_id}}</a>
+                {% endif %}
+            </p>
+            {% endfor %}              
+        {% endif %}     
+    </body>
+{% endblock %}

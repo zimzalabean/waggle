@@ -582,6 +582,31 @@ def flagPost(post_id, author_id, gaggle_name):
         flash('You are not logged in. Please login or join.')
         return redirect(url_for('login'))
 
+@app.route('/gaggle/search/', methods=["GET"])
+def searchGaggle():
+    """
+    Called when user searches for a Gaggle in the search bar. Returns a page of Gaggles 
+    that have a name matching the keyword search.
+    """
+    conn = dbi.connect()
+    query = request.args.get('search-query')
+    kind = request.args.get('submit')
+    gaggle_id = request.args.get('gaggle_id')
+    gaggle_name = request.args.get('gaggle_name')
+    if kind is None:
+        results = waggle.searchGaggle(conn, query)     
+    elif kind == 'Posts':
+        query = request.args.get('query')
+        results = waggle.searchPost(conn, query)
+    elif kind == 'Comments':
+        query = request.args.get('query')
+        results = waggle.searchComment(conn, query)
+    else:
+        query = request.args.get('query')
+        results = waggle.searchPost(conn, query)
+    return render_template('gaggleSearchResults.html', query = query, results = results, kind = kind, gaggle_id = gaggle_id, gaggle_name = gaggle_name) 
+
+
 @app.before_first_request
 def init_db():
     dbi.cache_cnf()
