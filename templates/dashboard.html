@@ -1,11 +1,9 @@
 {% extends "super_base.html" %}
 
-{% block main_content %}
-    
-    <p> Gaggle: <a href="{{url_for('gaggle',gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a> </p>    
-    
-    
-    
-
-
+    <ul class="menu">
+        <li><a href="{{url_for('myGaggles')}}">My Gaggles</a></li>
+        <li><a href="{{url_for('modqueue')}}">Moderator QUeue</a></li>
+      </ul>
+      
+{% block main_content %}   
 {% endblock %}
