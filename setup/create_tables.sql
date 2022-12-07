@@ -78,7 +78,10 @@ CREATE TABLE comment (
     dislikes int,
     flags int,
     primary key (comment_id),
-    foreign key (post_id) references post(post_id),
+    INDEX (post_id),
+    foreign key (post_id) references post(post_id)
+      on update no action
+      on delete cascade, 
     foreign key (commentor_id) references user(user_id),
     foreign key (parent_comment_id) references comment(comment_id)
 ) ENGINE = InnoDB;

@@ -590,3 +590,17 @@ def getCommentGaggle(conn, comment_id):
                  [comment_id]) 
     result = curs.fetchall()  
     return result[0]['gaggle_id']
+
+def getGagglesCreated(conn, user_id):
+     curs = dbi.dict_cursor(conn) 
+     curs.execute('select * from gaggle where author_id = %s', [user_id])
+     return curs.fetchall() 
+
+def getGagglesJoined(conn, user_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        select * from gosling inner join gaggle
+        using (gaggle_id)
+        where user_id = %s
+        ''', [user_id])
+    return curs.fetchall()

@@ -1,15 +1,29 @@
-{% extends "super_base.html" %}
+{% extends "base.html" %}
 
 {% block main_content %}
-<div>
-    <p>This is a profile of {{username}}</p>
+<p>This is {{username}}'s profile</p>
 
-    <p>Joined Gaggles:</p>
-    <ul>
-        {% for gaggle in gaggles %}
-        <li><a href="{{url_for('gaggle', gaggle_name=gaggle['gaggle_name'])}}">{{gaggle['gaggle_name']}}</a></li>
-        {% endfor %}
-    </ul>
-
+<p>Creator of the following Gaggles:</p>
+{% for gaggle in gagglesCreated %}
+<div class="gaggle" id="{{gaggle['gaggle_id']}}">
+    <p>Gaggle: {{gaggle.gaggle_name}}</p>
+    <p>Description: {{gaggle.description}}</p>
+    <form method="post" action="{{url_for('deleteGaggle', gaggle_id=gaggle['gaggle_id'])}}">
+        <input type="submit" name="delete" value="Delete Gaggle">
+    </form> 
 </div>
+{% endfor %}
+
+
+<p>Member of the following Gaggles:</p>
+{% for gaggle in gagglesJoined %}
+<div class="gaggle" id="{{gaggle['gaggle_id']}}">
+    <p>Gaggle: {{gaggle.gaggle_name}}</p>
+    <p>Description: {{gaggle.description}}</p>
+    <form method="get" action="{{url_for('gaggle', gaggle_name=gaggle['gaggle_name'])}}">
+        <input type="submit" name="visit" value="View Gaggle Page">
+    </form> 
+</div>
+{% endfor %}
+
 {% endblock %}

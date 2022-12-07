@@ -171,8 +171,15 @@ def user(username):
     Returns the profile page of the user with the given username.
     """
     conn = dbi.connect()
-    gaggles = waggle.getUserGaggle(conn, username)
-    return render_template('user.html', username=username, gaggles=gaggles)
+    user_id = session.get('user_id', '')
+    gagglesCreated = waggle.getGagglesCreated(conn, user_id)
+    gagglesJoined = waggle.getGagglesJoined(conn, user_id)
+    return render_template('user.html', username=username, gagglesCreated=gagglesCreated, gagglesJoined=gagglesJoined)
+
+@app.route('/deleteGaggle/')
+def deleteGaggle():
+    flash('To be implemented')
+    return render_template(url_for('showMyGaggles'))
 
 @app.route('/user/<username>/history/')
 def history(username):
