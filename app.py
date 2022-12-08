@@ -240,7 +240,8 @@ def post(post_id):
     if user_id == '':
         flash('You have been logged out.')
         return redirect(url_for('login'))      
-    else:   
+    else:
+        username = session.get('username')
         conn = dbi.connect() 
         post = waggle.getPost(conn, post_id)
         post['canDelete'] = canDeletePost(post_id, user_id)
@@ -248,7 +249,7 @@ def post(post_id):
         comments = waggle.getPostComments(conn, post_id)
         valid = waggle.isGosling(conn, user_id, gaggle_id)
         if request.method == 'GET':
-            return render_template('post.html', post = post, comments = comments, valid = valid)
+            return render_template('post.html', post = post, comments = comments, valid = valid, username=username)
         else:
             kind = request.form.get('submit')
             if kind == 'Comment':
@@ -272,17 +273,22 @@ def likeComment(post_id, comment_id):
     user_id = session.get('user_id', '')
     conn = dbi.connect() 
     post = waggle.getPost(conn, post_id)
-    comments = waggle.getPostComments(conn, post_id)    
-    if request.method == 'GET':  
-        return render_template('post.html', post = post, comments = comments) 
-    else:     
-        kind = request.form.get('submit')
-        valid = waggle.likeComment(conn, comment_id, user_id, kind)
-        if valid: 
-            print('updated comment like/dislike')
-        else: 
-            flash(f"You have already {kind}d this comment.".format(kind=kind))    
-        return redirect( url_for('post', post_id = post_id ))
+    comments = waggle.getPostComments(conn, post_id)  
+    if user_id != '':  
+        if request.method == 'GET': 
+            username = session.get('username')
+            return render_template('post.html', post = post, comments = comments, username=username) 
+        else:     
+            kind = request.form.get('submit')
+            valid = waggle.likeComment(conn, comment_id, user_id, kind)
+            if valid: 
+                print('updated comment like/dislike')
+            else: 
+                flash(f"You have already {kind}d this comment.".format(kind=kind))    
+            return redirect(url_for('post', post_id = post_id ))
+    else:
+        flash(f"You are not logged in")
+        return redirect(url_for('index'))
 
 @app.route('/gaggle/<gaggle_name>/members/')
 def gaggleMembers(gaggle_name):
@@ -291,7 +297,8 @@ def gaggleMembers(gaggle_name):
     """
     conn = dbi.connect() 
     members = waggle.getMembers(conn, gaggle_name)  
-    return render_template('groupMembers.html', gaggle_name = gaggle_name, members = members) 
+    username = session.get('username')
+    return render_template('groupMembers.html', gaggle_name = gaggle_name, members = members, username=username) 
 
 @app.route('/gaggle/<gaggle_name>/join/', methods=['GET', 'POST'])
 def joinGaggle(gaggle_name):
@@ -328,10 +335,11 @@ def editMyPage():
     if user_id == '':
         flash('You are not logged in. Please log in or join.')
         return redirect(url_for('login'))
+    username = session.get('username')
     conn = dbi.connect()
     user_info = waggle.getUserInfo(conn, user_id)
     if request.method == 'GET':
-        return render_template('edit_user_info.html', user=user_info)
+        return render_template('edit_user_info.html', user=user_info, username=username)
     else:
         new_fn, new_ln, new_cy, new_bio = '', '', '', ''
         if request.form['first_name'] != '':
@@ -380,7 +388,8 @@ def dashboard():
     gaggle = gaggles[0]
     gaggle_id = gaggle['gaggle_id']
     invitees = waggle.getInvitees(conn, gaggle_id)
-    return render_template('gaggleDashboard.html', gaggles = gaggles, gaggle = gaggle, invitees = invitees)
+    username = session.get('username')
+    return render_template('gaggleDashboard.html', gaggles = gaggles, gaggle = gaggle, invitees = invitees, username=username)
 
 def getRepliesThread(comment_id, thread):  
     '''Helper function to get all the parent comment_id of the input comment_id.'''
@@ -407,6 +416,7 @@ def addReply(comment_id):
         flash('You are logged out')
         return redirect(url_for('login'))      
     else:   
+        username = session.get('username')
         conn = dbi.connect() 
         comment = waggle.getComment(conn, comment_id)[0]
         post_id = comment['post_id']
@@ -419,7 +429,7 @@ def addReply(comment_id):
         comment_chain_id = [x for x in chain if x is not None][::-1]
         comment_chain = [waggle.getComment(conn, id)[0] for id in comment_chain_id]
         if request.method == 'GET':
-            return render_template('reply.html', comment_chain = comment_chain, parent_comment = comment, replies = replies, post = post, valid = valid)
+            return render_template('reply.html', comment_chain = comment_chain, parent_comment = comment, replies = replies, post = post, valid = valid, username=username)
         else:
             kind = request.form.get('submit')
             if kind == 'Reply':
@@ -458,10 +468,11 @@ def inviteMod():
     '''Display gaggles you've created with the status of your mod invitation.
     Let you send mod invitation to users for your specified gaggle.'''
     user_id = isLoggedIn()
+    username = session.get('username')
     conn = dbi.connect()     
     gaggles = waggle.getInvitees(conn, user_id)     
     if request.method == 'GET':
-        return render_template('invite_mod.html', gaggles = gaggles)
+        return render_template('invite_mod.html', gaggles = gaggles, username=username)
     else: 
         invitee_username = request.form.get('invitee_username')
         gaggle_id = request.form.get('gaggle_id')
@@ -544,16 +555,17 @@ def modUserList(gaggle_name):
 def modqueue():
     logged_in = session.get('logged_in', False)
     if logged_in != False:
+        username = session.get('username')
         user_id = session.get('user_id')
         gaggle_id = 'None'
         conn = dbi.connect()
         gaggles = waggle.getMyModGaggles(conn, user_id)
         if request.method == 'GET':
-            return render_template('modqueue.html', gaggles=gaggles, gaggle_id=gaggle_id, flagged = [])
+            return render_template('modqueue.html', gaggles=gaggles, gaggle_id=gaggle_id, flagged = [], username=username)
         else:
             gaggle_id = request.form.get('chosen_gaggle')
             flagged = waggle.get_flagged_posts(conn, gaggle_id)
-            return render_template('modqueue.html', gaggles=gaggles, gaggle_id=gaggle_id, flagged = flagged)
+            return render_template('modqueue.html', gaggles=gaggles, gaggle_id=gaggle_id, flagged = flagged, username=username)
     else:
         flash('You are not logged in. Please login or join.')
         return redirect(url_for('login'))
@@ -593,6 +605,7 @@ def flagPost(post_id, author_id, gaggle_name):
     '''
     logged_in = session.get('logged_in', False)
     if logged_in:
+        username = session.get('username')
         reporter_id = session.get('user_id')
         conn = dbi.connect()
         curs = dbi.dict_cursor(conn)
@@ -605,7 +618,7 @@ def flagPost(post_id, author_id, gaggle_name):
                 flash('You have already reported this post')
                 return redirect(request.referrer)
             else:
-                return render_template('flag_post.html', post_id=post_id, author_id=author_id, gaggle_name=gaggle_name)
+                return render_template('flag_post.html', post_id=post_id, author_id=author_id, gaggle_name=gaggle_name, username=username)
         else:
             flagged_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             reason = request.form['reason']
@@ -653,6 +666,7 @@ def createGaggle():
     '''
     user_id = isLoggedIn()
     conn = dbi.connect() 
+    username = session.get('username')
     if request.method == 'GET':
         return render_template('dashboard.html')
     else:
@@ -720,7 +734,7 @@ def deleteGaggle(gaggle_id):
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'ldau_db' 
+    db_to_use = 'mp2_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 
