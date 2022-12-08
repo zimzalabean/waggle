@@ -176,10 +176,6 @@ def user(username):
     gagglesJoined = waggle.getGagglesJoined(conn, user_id)
     return render_template('user.html', username=username, gagglesCreated=gagglesCreated, gagglesJoined=gagglesJoined)
 
-@app.route('/deleteGaggle/')
-def deleteGaggle():
-    flash('To be implemented')
-    return render_template(url_for('showMyGaggles'))
 
 @app.route('/user/<username>/history/')
 def history(username):
@@ -702,7 +698,7 @@ def myGaggle(gaggle_name):
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'mp2_db' 
+    db_to_use = 'ldau_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 
