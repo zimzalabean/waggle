@@ -628,3 +628,56 @@ def createGagge(conn, user_id, gaggle_name, description):
     else:
         valid = False
     return valid
+def getMyModGaggles(conn, user_id):
+    '''
+    Gets gaggles of which user_id is a mod of
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        select a.gaggle_id, b.gaggle_name 
+        from moderator a
+        left join gaggle b using (gaggle_id)
+        where user_id = %s
+        ''', [user_id])
+    return curs.fetchall()
+
+def get_flagged_posts(conn, gaggle_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        select a.*, b.content, c.username, c.user_id
+        from flag_post a
+        left join post b using (post_id)
+        left join user c on a.reporter_id = c.user_id
+        where b.gaggle_id = %s
+        ''', [gaggle_id])
+    return curs.fetchall()
+
+def increment_flag(conn, post_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        update post
+        set flags = flags+1
+        where post_id = %s
+    ''', [post_id])
+    conn.commit()
+
+def increment_strikes(conn, user_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        select strike
+        from user
+        where user_id = %s
+    ''', [user_id])
+    curr_strikes = curs.fetchone()['strike']
+    res = ''
+    if curr_strikes < 2:
+        res = 'strike'
+    else:
+        res = 'ban'
+    curs.execute('''
+        update user
+        set strike = strike+1
+        where user_id = %s
+    ''', [user_id])
+    conn.commit()
+    return res

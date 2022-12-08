@@ -539,6 +539,50 @@ def modUserList(gaggle_name):
             reinstate = waggle.reinstateUser(conn, gaggle_id, username)    
         return redirect(url_for('modUserList', gaggle_name = gaggle_name))
 
+@app.route('/modqueue/', methods=['GET', 'POST'])
+def modqueue():
+    logged_in = session.get('logged_in', False)
+    if logged_in != False:
+        user_id = session.get('user_id')
+        gaggle_id = 'None'
+        conn = dbi.connect()
+        gaggles = waggle.getMyModGaggles(conn, user_id)
+        if request.method == 'GET':
+            return render_template('modqueue.html', gaggles=gaggles, gaggle_id=gaggle_id, flagged = [])
+        else:
+            gaggle_id = request.form.get('chosen_gaggle')
+            flagged = waggle.get_flagged_posts(conn, gaggle_id)
+            return render_template('modqueue.html', gaggles=gaggles, gaggle_id=gaggle_id, flagged = flagged)
+    else:
+        flash('You are not logged in. Please login or join.')
+        return redirect(url_for('login'))
+
+@app.route('/modapprove/<post_id>/<reported_user_id>', methods=['POST'])
+def modapprove(post_id, reported_user_id):
+    approval = request.form.get('submit')
+    conn = dbi.connect()
+    if approval == 'Yes':
+        curs = dbi.dict_cursor(conn)
+        curs.execute('''
+            update flag_post
+            set mod_aprroved = 'Yes'
+            where post_id = %s and reporter_id = %s
+        ''', [post_id, reported_user_id])
+        conn.commit()
+        waggle.increment_flag(conn, post_id)
+        res = waggle.increment_strikes(conn, reported_user_id)
+        if res == 'ban':
+            flash('user needs to get banned')
+    else:
+        curs = dbi.dict_cursor(conn)
+        curs.execute('''
+            update flag_post
+            set mod_aprroved = 'No'
+            where post_id = %s and reporter_id = %s
+        ''', [post_id, reported_user_id])
+        conn.commit()
+    return redirect(url_for('modqueue'))
+
 @app.route('/flag_post/<post_id>/<author_id>/<gaggle_name>', methods=['GET', 'POST'])
 def flagPost(post_id, author_id, gaggle_name):
     '''
@@ -569,7 +613,7 @@ def flagPost(post_id, author_id, gaggle_name):
             curs.execute('''insert into flag_post (post_id, reporter_id, reason, flagged_date, mod_aprroved)
                                 values (%s,%s,%s,%s,'Pending')''',[post_id, reporter_id,reason,flagged_date])
             #update post table
-            curs.execute('''update post set flags=flags+1 where post_id=%s''', [post_id])
+            #curs.execute('''update post set flags=flags+1 where post_id=%s''', [post_id])
             conn.commit()
             flash('You have successfully reported a post {pid}'.format(pid=post_id))
             return redirect(url_for('gaggle', gaggle_name=gaggle_name))
@@ -658,7 +702,7 @@ def myGaggle(gaggle_name):
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'ldau_db' 
+    db_to_use = 'mp2_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 
