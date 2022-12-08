@@ -593,7 +593,7 @@ def getCommentGaggle(conn, comment_id):
 
 def getGagglesCreated(conn, user_id):
      curs = dbi.dict_cursor(conn) 
-     curs.execute('select * from gaggle where author_id = %s', [user_id])
+     curs.execute('''select * from gaggle where author_id = %s''', [user_id])
      return curs.fetchall() 
 
 def getGagglesJoined(conn, user_id):
@@ -681,3 +681,11 @@ def increment_strikes(conn, user_id):
     ''', [user_id])
     conn.commit()
     return res
+
+def deleteGaggle(conn, gaggle_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        DELETE FROM 
+        gaggle
+        WHERE gaggle_id = %s''', [gaggle_id])
+    conn.commit()    

@@ -3,12 +3,23 @@
 {% block main_content %}
 <p>This is {{username}}'s profile</p>
 
-    <form name="create_gaggle" action="{{url_for('createGaggle')}}" method="POST">
-        <textarea name="gaggle_name" rows="1" cols="30"></textarea>
-        <textarea name="description" rows="1" cols="30"></textarea>
-        <input type="submit" name = "submit" value="Create">
-    </form>  
 
+{% if isPersonal %}
+<div class = create_gaggle> 
+    <form name="create_gaggle" action="{{url_for('createGaggle')}}" method="POST">
+        <p> Create new gaggle</p>
+        <p> Gaggle name</p>
+        <p> 
+            <textarea name="gaggle_name" rows="1" cols="30"></textarea>
+        </p>
+        <p> Gaggle description </p>
+        <p>
+            <textarea name="description" rows="1" cols="30"></textarea>
+            <input type="submit" name = "submit" value="Create">
+        </p>
+    </form>  
+</div>
+{% endif %}
 
 <p>Creator of the following Gaggles:</p>
 {% for gaggle in gagglesCreated %}

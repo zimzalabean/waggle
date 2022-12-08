@@ -172,9 +172,14 @@ def user(username):
     """
     conn = dbi.connect()
     user_id = session.get('user_id', '')
-    gagglesCreated = waggle.getGagglesCreated(conn, user_id)
-    gagglesJoined = waggle.getGagglesJoined(conn, user_id)
-    return render_template('user.html', username=username, gagglesCreated=gagglesCreated, gagglesJoined=gagglesJoined)
+    uid = waggle.getUserID(conn, username)['user_id']
+    gagglesCreated = waggle.getGagglesCreated(conn, uid)
+    gagglesJoined = waggle.getGagglesJoined(conn, uid)
+    if user_id == uid:
+        isPersonal = True
+    else:
+        isPersonal = False
+    return render_template('user.html', username=username, gagglesCreated=gagglesCreated, gagglesJoined=gagglesJoined, isPersonal = isPersonal)
 
 
 @app.route('/user/<username>/history/')
@@ -691,8 +696,25 @@ def myGaggle(gaggle_name):
                 flash('Invitation sent')
             else:
                 flash('Invitation already pending')
-        return redirect(url_for('myGaggle', gaggle_name = gaggle_name))        
-                    
+        return redirect(url_for('myGaggle', gaggle_name = gaggle_name)) 
+
+@app.route('/delete/<gaggle_id>', methods=['GET', 'POST'])
+def deleteGaggle(gaggle_id):
+    '''
+    Create gaggle.
+    '''
+    user_id = isLoggedIn()
+    username = session.get('username',)
+    conn = dbi.connect() 
+    gagglesCreated = waggle.getGagglesCreated(conn, user_id)
+    gagglesJoined = waggle.getGagglesJoined(conn, user_id)
+    isPersonal = True
+    if request.method == 'GET':
+        return render_template('user.html', username=username, gagglesCreated=gagglesCreated, gagglesJoined=gagglesJoined, isPersonal = isPersonal)
+    else:
+        delete = waggle.deleteGaggle(conn, gaggle_id)
+        return redirect(url_for('user', username = username))
+
 
 @app.before_first_request
 def init_db():
