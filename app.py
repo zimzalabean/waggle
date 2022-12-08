@@ -700,7 +700,7 @@ def myGaggle(gaggle_name):
 
 @app.route('/delete/<gaggle_id>', methods=['GET', 'POST'])
 def deleteGaggle(gaggle_id):
-    '''
+    '''cd 
     Create gaggle.
     '''
     user_id = isLoggedIn()
