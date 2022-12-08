@@ -10,11 +10,11 @@
         <option value="{{gaggle.gaggle_id}}">{{gaggle.gaggle_name}}</option>
         {%endfor%}
     </select>
-    <input type="submit" value="Choose">
+    <input type="submit" value="Change">
 </form>
 
 {% if gaggle_id != None %}
-    <table>
+    <table id="modqueue">
         <tr>
             <th>Post id</th>
             <th>Post Content</th>
@@ -33,16 +33,17 @@
                     <td>{{flag.reason}}</td>
                     <td>{{flag.flagged_date}}</td>
                     <td>{{flag.mod_aprroved}}</td>
-                    {%if flag.mod_aprroved == 'Pending' %}
-                        <td>
+                    
+                    <td>
+                        {%if flag.mod_aprroved == 'Pending' %}
                             <form method="POST" action="{{url_for('modapprove', post_id=flag.post_id, reported_user_id=flag.user_id)}}">
                                 <input type="submit" name="submit" value="Yes">
                                 <input type="submit" name="submit" value="No">
                             </form>
-                        </td>
-                    {%else%}
-                        <td>Done</td>
-                    {% endif %}
+                        {%else%}
+                            Done
+                        {% endif %}
+                    </td>
                 </tr>
             </div>
         {%endfor%}
