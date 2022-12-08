@@ -249,22 +249,25 @@ textarea {
     display: block;
 }
 
-#modqueue {
+/* Modqueue.html */
+
+.modqueue {
+    margin: 20px;
     font-family: Arial, Helvetica, sans-serif;
     border-collapse: collapse;
-    width: 100%;
+    width: 900px;
   }
   
-#modqueue td, #modqueue th {
+.modqueue td, .modqueue th {
     border: 1px solid #ddd;
     padding: 8px;
 }
   
-#modqueue tr:nth-child(even){background-color: #f2f2f2;}
+.modqueue tr:nth-child(even){background-color: #f2f2f2;}
   
-#modqueue tr:hover {background-color: #ddd;}
+.modqueue tr:hover {background-color: #ddd;}
   
-#modqueue th {
+.modqueue th {
     padding-top: 12px;
     padding-bottom: 12px;
     text-align: left;

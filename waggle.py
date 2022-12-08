@@ -649,6 +649,7 @@ def get_flagged_posts(conn, gaggle_id):
         left join post b using (post_id)
         left join user c on a.reporter_id = c.user_id
         where b.gaggle_id = %s
+        order by a.flagged_date desc
         ''', [gaggle_id])
     return curs.fetchall()
 
