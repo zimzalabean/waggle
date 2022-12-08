@@ -420,23 +420,20 @@ def insertUser(conn, email,hashed_pass,username,first_name,last_name,class_year,
         valid = False                 
     return valid 
 
-def getInvitees(conn, user_id):
+def getInvitees(conn, gaggle_id):
     '''
-    Retrieve status of existing mod invitations. 
+    Retrieve status of existing mod invitations for a gaggle based on its id. 
     '''
     curs = dbi.dict_cursor(conn)  
-    gaggles = getGagglesOfAuthor(conn, user_id)  
-    for gaggle in gaggles:
-        curs.execute('''
-            SELECT b.username, a.accepted 
-            FROM 
-            mod_invite a
-            LEFT JOIN user b
-            ON (a.invitee_id = b.user_id)
-            WHERE a.gaggle_id= %s''',
-                    [gaggle['gaggle_id']]) 
-        gaggle['invitees'] = curs.fetchall()          
-    return gaggles
+    curs.execute('''
+        SELECT b.username, a.accepted 
+        FROM 
+        mod_invite a
+        LEFT JOIN user b
+        ON (a.invitee_id = b.user_id)
+        WHERE a.gaggle_id= %s''',
+                [gaggle_id])  
+    return curs.fetchall()
 
 def modInvite(conn, gaggle_id, username):
     '''
@@ -600,10 +597,34 @@ def getGagglesCreated(conn, user_id):
      return curs.fetchall() 
 
 def getGagglesJoined(conn, user_id):
-    curs = dbi.dict_cursor(conn)
+    curs = dbi.dict_cursor(conn)     
     curs.execute('''
         select * from gosling inner join gaggle
         using (gaggle_id)
         where user_id = %s
         ''', [user_id])
     return curs.fetchall()
+
+def updateBio(conn, gaggle_id, new_group_bio):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        UPDATE gaggle
+        SET description = %s
+        WHERE gaggle_id = %s''',
+                [new_group_bio, gaggle_id])
+    conn.commit()
+    return gaggle_id 
+
+def createGagge(conn, user_id, gaggle_name, description):
+    curs = dbi.dict_cursor(conn)
+    result = getGaggle(conn, gaggle_name)
+    if len(result) == 0:
+        valid = True
+        curs.execute('''
+            INSERT INTO gaggle(gaggle_name, author_id, description)
+            VALUES(%s,%s,%s)''',
+                    [gaggle_name, user_id, description])
+        conn.commit()
+    else:
+        valid = False
+    return valid

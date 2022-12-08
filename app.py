@@ -368,33 +368,18 @@ def editMyPage():
         flash('Your information was successfully updated.')
         return redirect(url_for('editMyPage'))
          
-@app.route('/dashboard/', methods=['GET', 'POST'])
-def showMyGaggles():
+@app.route('/dashboard/', methods=['GET'])
+def dashboard():
     """
-    Returns a page with list of all Gaggles created by the user. The user can delete
-    their Gaggles and create new ones (to be implemented).
+    Show dashboard where you can choose to edit information about groups you've created or moderate your gaggles.
     """
-    #not finished
-    user_id = session.get('user_id', '')
-    if user_id == '':
-        flash('You are not logged in. Please log in or join.')
-        return redirect(url_for('login'))
-    username=session.get('username', '')
-    conn= dbi.connect()
-    gaggles = waggle.getGagglesOfAuthor(conn, user_id)
-    if request.method=='GET':
-        return render_template('show_my_gaggles.html', username=username, gaggles=gaggles)
-    else:
-        flash('To be implemented')
-        return redirect(url_for('showMyGaggles'))
-
-@app.route('/dashboard/new/', methods=['GET', 'POST'])
-def createGaggle():
-    """
-    To be implemented
-    """
-    flash('To be implemented')
-    return redirect(url_for('showMyGaggles'))
+    user_id = isLoggedIn()
+    conn = dbi.connect() 
+    gaggles = waggle.getGagglesCreated(conn, user_id)
+    gaggle = gaggles[0]
+    gaggle_id = gaggle['gaggle_id']
+    invitees = waggle.getInvitees(conn, gaggle_id)
+    return render_template('gaggleDashboard.html', gaggles = gaggles, gaggle = gaggle, invitees = invitees)
 
 def getRepliesThread(comment_id, thread):  
     '''Helper function to get all the parent comment_id of the input comment_id.'''
@@ -616,6 +601,58 @@ def searchGaggle():
         results = waggle.searchPost(conn, query)
     return render_template('gaggleSearchResults.html', query = query, results = results, kind = kind, gaggle_id = gaggle_id, gaggle_name = gaggle_name) 
 
+@app.route('/creator/', methods=['GET', 'POST'])
+def createGaggle():
+    '''
+    Create gaggle.
+    '''
+    user_id = isLoggedIn()
+    conn = dbi.connect() 
+    if request.method == 'GET':
+        return render_template('dashboard.html')
+    else:
+        gaggle_name = request.form.get('gaggle_name')           
+        description = request.form.get('description') 
+        if len(gaggle_name) > 0: 
+            valid = waggle.updateBio(conn, user_id, gaggle_name, description)
+            if valid:
+                return redirect(url_for('gaggle', gaggle_name = gaggle_name))  
+            else:
+                flash("gaggle name already existed")
+                return redirect(url_for('createGaggle'))
+        else:
+            flash('gaggle name cannot be empty')
+            return redirect(url_for('createGaggle'))
+
+@app.route('/creator/<gaggle_name>', methods=['GET', 'POST'])
+def myGaggle(gaggle_name):
+    '''
+    Show gaggles you've created, toggle to change gaggle. Default view is first gaggle. 
+    '''
+    user_id = isLoggedIn()
+    conn = dbi.connect() 
+    gaggles = waggle.getGagglesCreated(conn, user_id)
+    gaggle_id = waggle.getGaggleID(conn, gaggle_name)[0]['gaggle_id']
+    invitees = waggle.getInvitees(conn, gaggle_id)
+    gaggle = waggle.getGaggle(conn, gaggle_name)
+    if request.method == 'GET':
+        return render_template('gaggleDashboard.html', gaggles = gaggles, gaggle = gaggle, invitees = invitees)
+    else:
+        kind = request.form.get('submit')
+        if kind == 'Change':
+            gaggle_name = request.form.get('new_gaggle_name')           
+        elif kind == 'Update':
+            new_group_bio = request.form.get('content') 
+            updated = waggle.updateBio(conn, gaggle_id, new_group_bio)
+        else:
+            invitee_username = request.form.get('invitee_username')
+            validInvite = waggle.modInvite(conn, gaggle_id, invitee_username)
+            if validInvite:
+                flash('Invitation sent')
+            else:
+                flash('Invitation already pending')
+        return redirect(url_for('myGaggle', gaggle_name = gaggle_name))        
+                    
 
 @app.before_first_request
 def init_db():
