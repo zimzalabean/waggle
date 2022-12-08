@@ -1,9 +1,15 @@
 {% extends "super_base.html" %}
 
-    <ul class="menu">
-        <li><a href="{{url_for('myGaggles')}}">My Gaggles</a></li>
-        <li><a href="{{url_for('modqueue')}}">Moderator QUeue</a></li>
-      </ul>
-      
-{% block main_content %}   
+          
+{% block main_content %}
+
+  <ul class="menu">
+    <li><a href="{{url_for('myGaggle', gaggle_name = gaggle_name)}}">My Gaggles</a></li>
+    <li><a href="{{url_for('modqueue')}}">Moderator Queue</a></li>
+  </ul>
+
+  {% block sub_content %}
+
+  {% endblock %}
+
 {% endblock %}

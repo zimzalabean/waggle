@@ -1,0 +1,54 @@
+{% extends "dashboard.html" %}
+
+
+
+
+{% block sub_content %}  
+
+
+
+        <form name="update_gaggle" action="{{url_for('myGaggle', gaggle_name = gaggle.gaggle_name)}}" method="POST">
+            <div class="drop_down">
+
+                <label for="gaggles">Selected gaggle:</label>
+                    <select name="new_gaggle_name" id="{{gaggle.gaggle_id}}">
+                        {% for gaggle in gaggles %}
+                            <option value="{{gaggle.gaggle_name}}">{{gaggle.gaggle_name}}</option>
+                        {% endfor %}
+                    </select>
+                <input type="submit" name = "submit" value="Change">
+
+            </div>
+
+            <br><br>
+                <h1>Displaying creator view for {{gaggle.gaggle_name}}</h1>
+
+            <p> Update bio here: </p>
+
+            <div class = "update_group">
+                <textarea name="content" rows="4" cols="50"></textarea>
+                <input type="submit" name = 'submit' value="Update">
+            </div>
+
+            <br><br>
+            <p> Send mod invitation: </p>
+
+            <div class = "mod_invite">
+                <textarea name="invitee_username" rows="1" cols="30"></textarea>
+                <input type="submit" name="submit" value="Invite">                    
+            </div>
+
+        </form>
+
+        <p> Your invitation response: </p>
+
+        {% for invitee in invitees %}
+            <p> Status for {{invitee.username}}: {{invitee.accepted}}</p>
+        {% endfor %}
+
+
+
+
+{% endblock %}
+        
+        

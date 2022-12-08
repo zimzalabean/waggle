@@ -16,7 +16,7 @@
             </form>
             </p>
 
-            {% for invitee in gaggle.invitees %}
+            {% for invitee in invitees %}
             <p> Status for {{invitee.username}}: {{invitee.accepted}}</p>
             {% endfor %}
         </div>

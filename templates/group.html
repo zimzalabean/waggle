@@ -7,7 +7,7 @@
     <p><a href="{{url_for('gaggleMembers', gaggle_name = gaggle.gaggle_name)}}">View members</a></p>
 
     <div class="join_group">
-        <form name="write_post" action="{{url_for('joinGaggle', gaggle_name = gaggle.gaggle_name)}}" method="POST">
+        <form name="join_group" action="{{url_for('joinGaggle', gaggle_name = gaggle.gaggle_name)}}" method="POST">
             {% if joined %}
             <input type="submit" name = "submit" value="Unjoin">
             {% else %}
@@ -35,63 +35,6 @@
         </form>
     </div>
     {% endif %}
-<<<<<<< HEAD
-    
-
-    {% block main_sub_content %}
-
-        {% for post in posts %}
-        <div class="post" id="{{post['post_id']}}">
-            <div class="header">
-                <!-- three dot menu -->
-                <div class="dropdown">
-                <!-- three dots -->
-                <ul class="dropbtn icons btn-right showLeft" onclick="showDropdown('{{post.post_id}}')">
-                    <li></li>
-                    <li></li>
-                    <li></li>
-                </ul>
-                <!-- menu -->
-                <div id="myDropdown_{{post.post_id}}" class="dropdown-content">
-                    {% if post.canDelete %}
-                    <a href="{{url_for('deletePost', post_id=post['post_id'], author_id=post['poster_id'], gaggle_name=post['gaggle'])}}">Delete Post</a>
-                    {% endif %}
-                    {% if not post.canDelete %}
-                    <a href="{{url_for('flagPost', post_id = post.post_id, author_id=post.poster_id, gaggle_name=post['gaggle'])}}">Report Post</a>
-                    {% endif %}
-                </div>
-                </div>
-            </div>
-            <p><a href="{{url_for('post', post_id=post.post_id)}}">Post_id: {{post.post_id}}</a>
-            <p>author: <a href="{{url_for('user', username=post['author'])}}">{{post['author']}}</a> gaggle: <a href="{{url_for('gaggle',gaggle_name=post['gaggle'])}}">{{post['gaggle']}}</a></p>
-            <p>{{post['content']}}</p>
-            <p><a href="{{url_for('post', post_id=post.post_id)}}">Comments</a> </p>
-            <p>likes: {{post['likes']}}</p>
-            <p>dislikes: {{post['dislikes']}}</p>
-            <p>{{post['posted_date']}}</p>    
-        </div>
-        {% endfor %}
-
-        <script>
-            function changeLanguage(language) {
-                var element = document.getElementById("url");
-                element.value = language;
-                element.innerHTML = language;
-            }
-            function showDropdown(pid) {
-                document.getElementById("myDropdown_"+pid).classList.toggle("show");
-            }
-            // Close the dropdown if the user clicks outside of it
-            window.onclick = function(event) {
-                if (!event.target.matches('.dropbtn')) {
-                    var dropdowns = document.getElementsByClassName("dropdown-content");
-                    var i;
-                    for (i = 0; i < dropdowns.length; i++) {
-                        var openDropdown = dropdowns[i];
-                        if (openDropdown.classList.contains('show')) {
-                            openDropdown.classList.remove('show');
-                        }
-=======
 
     {% import "post_template.html" as postComp%}
     {% for post in posts %}
@@ -116,12 +59,11 @@
                     var openDropdown = dropdowns[i];
                     if (openDropdown.classList.contains('show')) {
                         openDropdown.classList.remove('show');
->>>>>>> 1663c72b5a7b03476f60f3af13b355881ac8d520
                     }
                 }
             }
+        }
         </script>
 
-    {% endblock %}
 
 {% endblock %}
