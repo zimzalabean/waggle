@@ -1,27 +1,25 @@
-{% extends "base.html" %}
+{% extends "baseTemplate.html" %}
     
 {% block main_content %}
-<h1>Hello {{username}}!</h1>
+    <p>Joined gaggles:</p>
+        <ul>
+            {% for gaggle in gaggles %}
+            <li><a href="{{url_for('gaggle', gaggle_name=gaggle['gaggle_name'])}}">{{gaggle['gaggle_name']}}</a></li>
+            {% endfor %}
+        </ul>
 
-<p>Joined gaggles:</p>
-<ul>
-    {% for gaggle in gaggles %}
-    <li><a href="{{url_for('gaggle', gaggle_name=gaggle['gaggle_name'])}}">{{gaggle['gaggle_name']}}</a></li>
+    <p>My feed</p>
+
+    {% for post in posts %}
+    <div class="post" id="{{post['post_id']}}">
+        <p>post id: {{post['post_id']}}</p>
+        <p>author: <a href="{{url_for('user', username=post['author'])}}">{{post['author']}}</a> gaggle: <a href="{{url_for('gaggle',gaggle_name=post['gaggle'])}}">{{post['gaggle']}}</a></p>
+        <p>content: {{post['content']}}</p>
+        <p>likes: {{post['likes']}}</p>
+        <p>dislikes: {{post['dislikes']}}</p>
+        <p>{{post['posted_date']}}</p>
+    </div>
+
     {% endfor %}
-</ul>
-
-<p>My feed</p>
-
-{% for post in posts %}
-<div class="post" id="{{post['post_id']}}">
-    <p>post id: {{post['post_id']}}</p>
-    <p>author: <a href="{{url_for('user', username=post['author'])}}">{{post['author']}}</a> gaggle: <a href="{{url_for('gaggle',gaggle_name=post['gaggle'])}}">{{post['gaggle']}}</a></p>
-    <p>content: {{post['content']}}</p>
-    <p>likes: {{post['likes']}}</p>
-    <p>dislikes: {{post['dislikes']}}</p>
-    <p>{{post['posted_date']}}</p>
-</div>
-
-{% endfor %}
 
 {% endblock %}
