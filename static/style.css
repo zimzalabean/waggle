@@ -91,7 +91,9 @@ textarea {
     margin: 10px;
     width: 600px;
     height: 100px;
+    font-family: 'Nunito Sans', sans-serif;
 }
+
 .comment-thread {
     width: 700px;
     max-width: 100%;
@@ -112,28 +114,49 @@ textarea {
     overflow: hidden;
 }
 
+button:hover {
+    color: rgba(102, 99, 155, 0.3);
+}
+
 /* Comment */
 
 .comment {
     position: relative;
-    margin: 20px auto;
+    padding: 0 20px;
+    padding-left: 20px;
+    padding-right: 20px;
+    font-family: 'Nunito Sans', sans-serif;
+    border-bottom:  1px solid rgb(137, 137, 137);
 }
+
+
 .comment-heading {
     display: flex;
     align-items: center;
     height: 50px;
-    font-size: 14px;
+    font-size: 10px;
 }
 
-.comment-info {
+.comment-info{
+    padding: 0 20px;
+    padding-left: 20px;
+    padding-right: 20px;  
+}
+
+.posted-date {
     color: rgba(0, 0, 0, 0.5);
     margin-left: 10px;
+    font-size: 10px;
 }
 .comment-author {
     color: rgba(0, 0, 0, 0.85);
+    margin-left: 10px;
+    height: 10px;
     font-weight: bold;
     text-decoration: none;
 }
+
+
 .comment-author:hover {
     text-decoration: underline;
 }
@@ -148,7 +171,7 @@ textarea {
     position: absolute;
     top: 50px;
     left: 0;
-    width: 12px;
+    width: 8px;
     height: calc(100% - 50px);
     border-left: 4px solid transparent;
     border-right: 4px solid transparent;
@@ -160,7 +183,14 @@ textarea {
 }
 .comment-body {
     padding: 0 20px;
+    padding-left: 20px;
+    padding-right: 20px;
+    font-size: 16px;
+}
+.comment-metric {
+    padding: 0 20px;
     padding-left: 28px;
+    font-size: 16px;
 }
 .replies {
     margin-left: 28px;
@@ -271,3 +301,6 @@ textarea {
     background-color: #04AA6D;
     color: white;
 }
+
+/* comment metric */
+

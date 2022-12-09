@@ -37,7 +37,7 @@
         </form>
         {% endif %}
 
-        {% import "comment_template.html" as commentComp%}
+        {% import "commentTemplateJS.html" as commentComp%}
         {% for comment in comments %}
             {{commentComp.comment_temp(comment=comment, post=post)}}
         {% endfor %}

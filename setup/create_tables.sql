@@ -61,6 +61,7 @@ CREATE TABLE post (
   likes int,
   dislikes int,
   flags int,
+  replies int, 
   primary key (post_id),
   foreign key (tag_id) references tag(tag_id), 
   foreign key (poster_id) references user(user_id),
@@ -77,6 +78,7 @@ CREATE TABLE comment (
     likes int,
     dislikes int,
     flags int,
+    replies int, 
     primary key (comment_id),
     INDEX (post_id),
     foreign key (post_id) references post(post_id)
