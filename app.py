@@ -90,7 +90,7 @@ def homepage():
     else:
         gaggles = waggle.getUserGaggle(conn, username)
         posts_info = waggle.getPosts(conn)
-        return render_template('main.html', gaggles = gaggles, username=username, posts=posts_info)
+        return render_template('main.html', title = "My Feed", gaggles = gaggles, username=username, posts=posts_info)
 
 
 @app.route('/deletePost/<post_id>/<author_id>/<gaggle_name>')
@@ -179,7 +179,7 @@ def user(username):
         isPersonal = True
     else:
         isPersonal = False
-    return render_template('user.html', username=username, gagglesCreated=gagglesCreated, gagglesJoined=gagglesJoined, isPersonal = isPersonal)
+    return render_template('user.html', title = "Profile", username=username, gagglesCreated=gagglesCreated, gagglesJoined=gagglesJoined, isPersonal = isPersonal)
 
 
 @app.route('/user/<username>/history/')
@@ -390,7 +390,7 @@ def dashboard():
     gaggle_id = gaggle['gaggle_id']
     invitees = waggle.getInvitees(conn, gaggle_id)
     username = session.get('username')
-    return render_template('gaggleDashboard.html', gaggles = gaggles, gaggle = gaggle, invitees = invitees, username=username)
+    return render_template('gaggleDashboard.html', title = "Dashboard", gaggles = gaggles, gaggle = gaggle, invitees = invitees, username=username)
 
 def getRepliesThread(comment_id, thread):  
     '''Helper function to get all the parent comment_id of the input comment_id.'''

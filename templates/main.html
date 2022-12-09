@@ -11,7 +11,7 @@
     <p>My feed</p>
 
     {% for post in posts %}
-    <div class="post" id="{{post['post_id']}}">
+    <div class="post-main" id="{{post['post_id']}}">
         <p>post id: {{post['post_id']}}</p>
         <p>author: <a href="{{url_for('user', username=post['author'])}}">{{post['author']}}</a> gaggle: <a href="{{url_for('gaggle',gaggle_name=post['gaggle'])}}">{{post['gaggle']}}</a></p>
         <p>content: {{post['content']}}</p>

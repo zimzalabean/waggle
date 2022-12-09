@@ -8,110 +8,133 @@
     
     <!----======== CSS ======== -->
     <link rel='stylesheet' href="{{url_for('static', filename = 'style.css')}}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <!----===== Boxicons CSS ===== -->
     <link href='https://unpkg.com/boxicons@2.1.1/css/boxicons.min.css' rel='stylesheet'>
+    <!----===== Bootstrap CSS ===== -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
     
     <!--<title>Dashboard Sidebar Menu</title>--> 
 </head>
 <body>
-    <nav class="sidebar close">
-        <header>
-            <div class="image-text">
-                <span class="image">
-                    <!--<img src="logo.png" alt="">-->
-                </span>
+    <div class="container-fluid">
+        <div class="row">
 
-                <div class="text logo-text">
-                    <span class="name">Waggle</span>
-                    <span class="username">{{username}}</span>
-                </div>
-            </div>
+        <!--<title>Dashboard Sidebar Menu</title>--> 
+          <div class="col-sm-3"> 
+                <nav class="sidebar close">
+                    <header>
+                        <div class="image-text">
+                            <span class="image">
+                                <!--<img src="logo.png" alt="">-->
+                            </span>
 
-            <i class='bx bx-chevron-right toggle'></i>
-        </header>
+                            <div class="text logo-text">
+                                <span class="name">Waggle</span>
+                                <span class="username">{{username}}</span>
+                            </div>
+                        </div>
 
-        <div class="menu-bar">
-            <div class="menu">
-                <ul class="menu-links">
-                    <li class="nav-link">
-                        <a href="{{url_for('homepage')}}">
-                            <i class='bx bx-home-alt icon' ></i>
-                            <span class="text nav-text">Home</span>
-                        </a>
-                    </li>
+                        <i class='bx bx-chevron-right toggle'></i>
+                    </header>
 
-                    <li class="nav-link">
-                      <a href="{{url_for('user', username = username)}}">
-                          <i class='bx bx-user-circle icon' ></i>
-                          <span class="text nav-text">Profile</span>
-                      </a>
-                  </li>
-                    <li class="nav-link">
-                        <a href="{{url_for('dashboard')}}">
-                            <i class='bx bx-bar-chart-alt-2 icon' ></i>
-                            <span class="text nav-text">Dashboard</span>
-                        </a>
-                    </li>
+                    <div class="menu-bar">
+                        <div class="menu">
+                            <ul class="menu-links">
+                                <li class="nav-link">
+                                    <a href="{{url_for('homepage')}}">
+                                        <i class='bx bx-home-alt icon' ></i>
+                                        <span class="text nav-text">Home</span>
+                                    </a>
+                                </li>
 
-                    <li class="nav-link">
-                        <a href="#">
-                            <i class='bx bx-bell icon'></i>
-                            <span class="text nav-text">Notifications</span>
-                        </a>
-                    </li>
+                                <li class="nav-link">
+                                <a href="{{url_for('user', username = username)}}">
+                                    <i class='bx bx-user-circle icon' ></i>
+                                    <span class="text nav-text">Profile</span>
+                                </a>
+                            </li>
+                                <li class="nav-link">
+                                    <a href="{{url_for('dashboard')}}">
+                                        <i class='bx bx-bar-chart-alt-2 icon' ></i>
+                                        <span class="text nav-text">Dashboard</span>
+                                    </a>
+                                </li>
+
+                                <li class="nav-link">
+                                    <a href="#">
+                                        <i class='bx bx-bell icon'></i>
+                                        <span class="text nav-text">Notifications</span>
+                                    </a>
+                                </li>
 
 
-                    <li class="nav-link">
-                        <a href="#">
-                            <i class='bx bx-heart icon' ></i>
-                            <span class="text nav-text">Explore</span>
-                        </a>
-                    </li>
+                                <li class="nav-link">
+                                    <a href="#">
+                                        <i class='bx bx-heart icon' ></i>
+                                        <span class="text nav-text">Explore</span>
+                                    </a>
+                                </li>
 
-                </ul>
-            </div>
+                            </ul>
+                        </div>
 
-            <div class="bottom-content">
-                <li class="">
-                    <a href="{{url_for('logout')}}">
-                        <i class='bx bx-log-out icon' ></i>
-                        <span class="text nav-text">Logout</span>
-                    </a>
-                </li>
+                        <div class="bottom-content">
+                            <li class="">
+                                <a href="{{url_for('logout')}}">
+                                    <i class='bx bx-log-out icon' ></i>
+                                    <span class="text nav-text">Logout</span>
+                                </a>
+                            </li>
 
-                <li class="mode">
-                    <div class="sun-moon">
-                        <i class='bx bx-moon icon moon'></i>
-                        <i class='bx bx-sun icon sun'></i>
+                            <li class="mode">
+                                <div class="sun-moon">
+                                    <i class='bx bx-moon icon moon'></i>
+                                    <i class='bx bx-sun icon sun'></i>
+                                </div>
+                                <span class="mode-text text">Dark mode</span>
+
+                                <div class="toggle-switch">
+                                    <span class="switch"></span>
+                                </div>
+                            </li>
+                            
+                        </div>
                     </div>
-                    <span class="mode-text text">Dark mode</span>
 
-                    <div class="toggle-switch">
-                        <span class="switch"></span>
-                    </div>
-                </li>
-                
-            </div>
-        </div>
-
-    </nav>
-
-      <form method=GET action="{{url_for('search')}}">
-        <label for="search-query"> </label>
-        <i class='bx bx-search'></i>
-        <input class = 'input-search' type="text" name="search-query" placeholder="Search Waggle" /> 
-      </form>  
-
-
-
-    <div class="main-content">
-      {% block main_content %}
-      {% endblock %} 
+                </nav>
+         </div>
+  <!--main body section--> 
+    <div class="col-sm-6" style="border-right: solid #695CFE 1px;">  
+        <div class = 'title'>
+          {{title}}                      
+        </div>>  
+        <div class="main-content">
+            {% block main_content %}
+            {% endblock %} 
+        </div>    
     </div>
 
+  <!--right bar--> 
+    <div class="col-sm-3" >
+        <form method=GET action="{{url_for('search')}}">
+                <label for="search-query"> </label>
+                <input class = 'input-search' type="text" name="search-query" placeholder="Search Waggle" /> 
+          </form>      
+    </div>
+    </div>
+  </div>
+
+
+
+
     <script>
-        const body = document.querySelector('body'),
+      const body = document.querySelector('body'),
       sidebar = body.querySelector('nav'),
       toggle = body.querySelector(".toggle"),
       searchBtn = body.querySelector(".search-box"),
