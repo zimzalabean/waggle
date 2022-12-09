@@ -2,19 +2,23 @@
       
 {% block sub_content %}
 
-<p>Mod Queue for gaggle:</p>
-<form method="POST" action="{{url_for('modqueue')}}">
-    <select name="chosen_gaggle">
-        <option value="">Options</option>
-        {%for gaggle in gaggles%}
-        <option value="{{gaggle.gaggle_id}}">{{gaggle.gaggle_name}}</option>
-        {%endfor%}
-    </select>
-    <input type="submit" value="Change">
-</form>
+<div>
+    <form method="POST" action="{{url_for('modqueue')}}">
+        <label>Mod Queue for gaggle:</label>
+        <select name="chosen_gaggle">
+            <option value="">gaggle</option>
+            {%for gaggle in gaggles%}
+            <option value="{{gaggle.gaggle_id}}">{{gaggle.gaggle_name}}</option>
+            {%endfor%}
+        </select>
+        <input type="submit" value="Change">
+    </form>
+</div>
 
 {% if gaggle_id != None %}
-    <table id="modqueue">
+
+<p>Pending Flag Requests:</p>
+    <table class="modqueue">
         <tr>
             <th>Post id</th>
             <th>Post Content</th>
@@ -24,7 +28,7 @@
             <th>Mod approved<th>
             <th>Flag</th>
         </tr>
-        {% for flag in flagged %}
+        {% for flag in pending %}
             <div class="flag">
                 <tr>
                     <td><a href="{{url_for('post', post_id=flag.post_id)}}">{{flag.post_id}}</a></td>
@@ -33,21 +37,41 @@
                     <td>{{flag.reason}}</td>
                     <td>{{flag.flagged_date}}</td>
                     <td>{{flag.mod_aprroved}}</td>
-                    
                     <td>
-                        {%if flag.mod_aprroved == 'Pending' %}
-                            <form method="POST" action="{{url_for('modapprove', post_id=flag.post_id, reported_user_id=flag.user_id)}}">
-                                <input type="submit" name="submit" value="Yes">
-                                <input type="submit" name="submit" value="No">
-                            </form>
-                        {%else%}
-                            Done
-                        {% endif %}
+                        <form method="POST" action="{{url_for('modapprove', post_id=flag.post_id, reported_user_id=flag.user_id)}}">
+                            <input type="submit" name="submit" value="Yes">
+                            <input type="submit" name="submit" value="No">
+                        </form>
                     </td>
                 </tr>
             </div>
         {%endfor%}
        
+    </table>
+
+
+<p>Reviewed Flag Requests:</p>
+    <table class="modqueue">
+        <tr>
+            <th>Post id</th>
+            <th>Post Content</th>
+            <th>Reporter</th>
+            <th>Reason</th>
+            <th>Flagged date</th>
+            <th>Mod approved<th>
+        </tr>
+        {% for flag in approved %}
+            <div class="flag">
+                <tr>
+                    <td><a href="{{url_for('post', post_id=flag.post_id)}}">{{flag.post_id}}</a></td>
+                    <td>{{flag.content}}</td>
+                    <td><a href="{{url_for('user', username=flag.reporter_id)}}">{{flag.username}}</a></td>
+                    <td>{{flag.reason}}</td>
+                    <td>{{flag.flagged_date}}</td>
+                    <td>{{flag.mod_aprroved}}</td>
+                </tr>
+            </div>
+        {%endfor%}
     </table>
 
 {%endif%}

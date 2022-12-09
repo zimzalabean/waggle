@@ -562,11 +562,17 @@ def modqueue():
         conn = dbi.connect()
         gaggles = waggle.getMyModGaggles(conn, user_id)
         if request.method == 'GET':
-            return render_template('modqueue.html', gaggles=gaggles, gaggle_id=gaggle_id, flagged = [], username=username)
+            return render_template('modqueue.html', gaggles=gaggles, gaggle_id=gaggle_id, pending = [], approved = [], username=username)
         else:
             gaggle_id = request.form.get('chosen_gaggle')
             flagged = waggle.get_flagged_posts(conn, gaggle_id)
-            return render_template('modqueue.html', gaggles=gaggles, gaggle_id=gaggle_id, flagged = flagged, username=username)
+            pending, approved = [], []
+            for flag in flagged:
+                if flag['mod_aprroved']=='Pending':
+                    pending.append(flag)
+                else:
+                    approved.append(flag)
+            return render_template('modqueue.html', gaggles=gaggles, gaggle_id=gaggle_id, pending = pending, approved = approved, username=username)
     else:
         flash('You are not logged in. Please login or join.')
         return redirect(url_for('login'))
