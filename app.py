@@ -139,8 +139,6 @@ def homepage():
 
 ####_____Post Functions_____#### 
 
-####_____Post Functions_____#### 
-
 @app.route('/deletePost/<post_id>/<author_id>/<gaggle_name>')
 def deletePost(post_id, author_id, gaggle_name):
     """
@@ -371,6 +369,7 @@ def canIntComment(comment_id, user_id):
 
 
 ####_____User Profile Functions_____#### 
+
 @app.route('/user/edit/', methods=['GET', 'POST'])
 def editMyPage():
     """
@@ -752,7 +751,7 @@ def dashboard():
     user_id = isLoggedIn()
     conn = dbi.connect() 
     gaggles = waggle.getGagglesCreated(conn, user_id)
-    gaggle = gaggles[0]
+    gaggle = gaggles[0] 
     gaggle_id = gaggle['gaggle_id']
     invitees = waggle.getInvitees(conn, gaggle_id)
     username = session.get('username')
