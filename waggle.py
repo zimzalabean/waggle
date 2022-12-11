@@ -690,3 +690,27 @@ def deleteGaggle(conn, gaggle_id):
         gaggle
         WHERE gaggle_id = %s''', [gaggle_id])
     conn.commit()    
+
+def getProfilePic(conn, user_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT filename FROM picfile 
+        WHERE user_id = %s''',
+        [user_id])
+    return curs.fetchone()
+
+def insertProfilePic(conn, user_id, filename):
+    curs = dbi.dict_cursor(conn)
+    curs.execute(
+                '''insert into picfile(user_id,filename) values (%s,%s)
+                   on duplicate key update filename = %s''',
+                [user_id, filename, filename])
+    conn.commit()
+
+def deactivateAccount(conn, user_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        DELETE FROM 
+        user
+        WHERE user_id = %s''', [user_id])
+    conn.commit()   
