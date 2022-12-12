@@ -164,10 +164,25 @@ def addComment(conn, post_id, parent_comment_id, content, commentor_id, posted_d
     '''insert a new comment into the comment table'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        INSERT INTO comment(post_id, parent_comment_id, content, commentor_id, posted_date, likes, dislikes, flags) 
-        VALUES (%s,%s,%s,%s,%s,0,0,0) ''', 
+        INSERT INTO comment(post_id, parent_comment_id, content, commentor_id, posted_date, likes, dislikes, flags, replies) 
+        VALUES (%s,%s,%s,%s,%s,0,0,0,0) ''', 
                 [post_id, parent_comment_id, content, commentor_id, posted_date])
     conn.commit()  # need this!   
+    #if this is a reply to a post
+    if parent_comment_id is None:
+        curs.execute('''
+            UPDATE post
+            SET replies = replies + 1
+            WHERE post_id = %s''',
+                    [post_id])
+    #else it is a reply to a comment                
+    else:
+        curs.execute('''
+            UPDATE comment
+            SET replies = replies + 1
+            WHERE comment_id = %s''',
+                    [parent_comment_id])                        
+    conn.commit()         
     return commentor_id
   
 def likePost(conn, post_id, user_id, kind):
@@ -254,7 +269,7 @@ def likeComment(conn, comment_id, user_id, kind):
                             [comment_id])
             conn.commit()
         else:
-            valid = False
+            valid = False    
     return valid 
 
 def getMembers(conn, gaggle_name):
@@ -270,14 +285,6 @@ def getMembers(conn, gaggle_name):
                  [gaggle_id])
     return curs.fetchall()  
      
-def commentMetrics(conn, comment_id):
-    '''Returns number of likes and dislikes of a comment based on a comment_id'''
-    curs = dbi.dict_cursor(conn)  
-    curs.execute('''
-        SELECT likes, dislikes from comment
-        WHERE comment_id = %s''',
-                 [comment_id])     
-    return curs.fetchall()
 
 def updateCommentMetrics(conn, comment_id, kind):
     '''Update number of likes and dislikes of a comment'''
@@ -294,8 +301,14 @@ def updateCommentMetrics(conn, comment_id, kind):
             SET dislikes = dislikes + 1 
             WHERE comment_id = %s''',
                     [comment_id])            
-    conn.commit()  
-    return comment_id 
+    conn.commit() 
+    curs.execute('''
+        SELECT comment_id, likes, dislikes 
+        FROM comment
+        WHERE comment_id = %s''',
+                [comment_id])   
+    result = curs.fetchone()
+    return result
 
 def updatePostMetrics(conn, post_id, kind):
     '''Update number of likes and dislikes of a comment'''
@@ -356,8 +369,8 @@ def addPost(conn, gaggle_id, poster_id, content, tag_id, posted_date):
     '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        INSERT INTO post(gaggle_id, poster_id, content, tag_id, posted_date, likes, dislikes, flags) 
-        VALUES(%s, %s, %s, %s, %s, 0, 0, 0)''',
+        INSERT INTO post(gaggle_id, poster_id, content, tag_id, posted_date, likes, dislikes, flags, replies) 
+        VALUES(%s, %s, %s, %s, %s, 0, 0, 0, 0)''',
         [gaggle_id, poster_id, content, tag_id, posted_date])
     conn.commit()
     return poster_id 
@@ -369,11 +382,13 @@ def getComment(conn, comment_id):
     '''
     curs = dbi.dict_cursor(conn)  
     curs.execute('''
-        SELECT * 
-        FROM comment
+        SELECT a.*, b.username 
+        FROM comment a
+        LEFT JOIN user b
+        ON a.commentor_id = b.user_id
         WHERE comment_id = %s''',
                  [comment_id])     
-    return curs.fetchall() 
+    return curs.fetchone() 
 
 def getReplies(conn, comment_id):  
     '''
@@ -381,9 +396,12 @@ def getReplies(conn, comment_id):
     '''
     curs = dbi.dict_cursor(conn)  
     curs.execute('''
-        SELECT * 
-        FROM comment
-        WHERE parent_comment_id = %s''',
+        SELECT a.*, b.username 
+        FROM comment a
+        LEFT JOIN user b
+        ON a.commentor_id = b.user_id
+        WHERE parent_comment_id = %s
+        ORDER BY posted_date desc''',
                  [comment_id])     
     return curs.fetchall()    
 
@@ -498,6 +516,7 @@ def responseInvite(conn, gaggle_id, user_id, response):
     return curs.fetchall()    
 
 def searchPost(conn, query):
+    print(query)
     '''returns all posts whose content match the query'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
@@ -582,7 +601,7 @@ def getCommentGaggle(conn, comment_id):
     '''Return gaggle this comment is from'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT b.gaggle_id 
+        SELECT b.gaggle_id
         FROM comment a
         LEFT JOIN post b
         USING (post_id)
@@ -690,3 +709,24 @@ def deleteGaggle(conn, gaggle_id):
         gaggle
         WHERE gaggle_id = %s''', [gaggle_id])
     conn.commit()    
+
+
+def getCommentMetric(conn, comment_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT comment_id, dislikes, likes 
+        FROM comment
+        WHERE comment_id = %s''', 
+                [comment_id])   
+    result = curs.fetchone()  
+    return result
+
+def getPostMetric(conn, post_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT post_id, dislikes, likes 
+        FROM post
+        WHERE post_id = %s''', 
+                [post_id])   
+    result = curs.fetchone()  
+    return result   

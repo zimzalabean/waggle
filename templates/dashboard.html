@@ -2,11 +2,15 @@
 
           
 {% block main_content %}
+<div class="container">
+  <nav>
+    <ul>
+      <li><a href="{{url_for('dashboard')}}">My Gaggle</a></li>
+      <li><a href="{{url_for('modqueue')}}">Moderator Queue</a></li>
+    </ul>
+  </nav>
+</div>
 
-  <ul class="menu">
-    <li><a href="{{url_for('dashboard')}}">My Gaggles</a></li>
-    <li><a href="{{url_for('modqueue')}}">Moderator Queue</a></li>
-  </ul>
 
   {% block sub_content %}
 

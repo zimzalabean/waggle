@@ -1,48 +1,18 @@
-{% extends "super_base.html" %}
+{% extends "baseTemplate.html" %}
 
 {% block main_content %}
-    <div class="post" id="{{post['post_id']}}">
-        <div class="header">
-            <!-- three dot menu -->
-            <div class="dropdown">
-              <!-- three dots -->
-              <ul class="dropbtn icons btn-right showLeft" onclick="showDropdown('{{post.post_id}}')">
-                <li></li>
-                <li></li>
-                <li></li>
-              </ul>
-              <!-- menu -->
-              <div id="myDropdown_{{post.post_id}}" class="dropdown-content">
-                {% if post.canDelete %}
-                <a href="{{url_for('deletePost', post_id=post['post_id'], author_id=post['poster_id'], gaggle_name=post['gaggle'])}}">Delete Post</a>
-                {% endif %}
-                {% if not post.canDelete %}
-                <a href="{{url_for('flagPost', post_id = post.post_id, author_id=post.poster_id, gaggle_name=post['gaggle'])}}">Report Post</a>
-                {% endif %}
-              </div>
-            </div>
-        </div>
-        <p>post id: {{post['post_id']}}</p>
-        <p>author: <a href="{{url_for('user', username=post['author'])}}">{{post['author']}}</a> gaggle: <a href="{{url_for('gaggle',gaggle_name=post['gaggle'])}}">{{post['gaggle']}}</a></p>
-        <p>{{post['content']}}</p>
-        <p>likes: {{post['likes']}}</p>
-        <p>dislikes: {{post['dislikes']}}</p>
-        <p>{{post['posted_date']}}</p>  
-        {% if valid %}        
-        <form method=post action="{{url_for('post', post_id = post.post_id)}}" >
-            <input type="submit" name="submit" value="Like">
-            <input type="submit" name="submit" value="Dislike">        
-            <textarea name="comment_content" rows="4" cols="50"></textarea>
-            <input type="submit" name="submit" value="Comment">
-        </form>
-        {% endif %}
+    <div class = 'PostView'></div>
+    {% import "postTemplateJS.html" as postComp%}
+        {{postComp.post_temp(post=post)}}
 
+
+    <div class = 'cmt-thread'>
         {% import "commentTemplateJS.html" as commentComp%}
         {% for comment in comments %}
             {{commentComp.comment_temp(comment=comment, post=post)}}
         {% endfor %}
-        
     </div>
+
     <script>
         function changeLanguage(language) {
             var element = document.getElementById("url");

@@ -12,6 +12,7 @@ import cs304dbi as dbi
 # import cs304dbi_sqlite3 as dbi
 import waggle
 import random
+import json
 
 app.secret_key = 'your secret here'
 # replace that with a random key
@@ -90,6 +91,8 @@ def homepage():
     else:
         gaggles = waggle.getUserGaggle(conn, username)
         posts_info = waggle.getPosts(conn)
+        for post in posts_info:
+            post['canDelete'] = True
         return render_template('main.html', title = "My Feed", gaggles = gaggles, username=username, posts=posts_info)
 
 
@@ -125,6 +128,7 @@ def search():
     conn = dbi.connect()
     query = request.args.get('search-query')
     kind = request.args.get('submit')
+    print("query from running the app.py")
     print(query)
     if kind is None:
         results = waggle.searchGaggle(conn, query)     
@@ -140,7 +144,7 @@ def search():
     else:
         query = request.args.get('query')
         results = waggle.searchGaggle(conn, query)
-    return render_template('testform.html', query = query, results = results, kind = kind) 
+    return render_template('testform.html', title = 'Search Results', query = query, results = results, kind = kind) 
 
 
 @app.route('/gaggle/<gaggle_name>')
@@ -163,7 +167,7 @@ def gaggle(gaggle_name):
             post['canDelete'] = canDeletePost(post_id, user_id)
         gaggle_id = waggle.getGaggleID(conn, gaggle_name)[0]['gaggle_id']
         joined  = waggle.isGosling(conn, user_id, gaggle_id)
-        return render_template('group.html', gaggle = gaggle, posts = posts, joined = joined, username=username)
+        return render_template('group.html', title = "g/"+gaggle_name, gaggle = gaggle, posts = posts, joined = joined, username=username)
 
 @app.route('/user/<username>')
 def user(username):
@@ -249,7 +253,7 @@ def post(post_id):
         comments = waggle.getPostComments(conn, post_id)
         valid = waggle.isGosling(conn, user_id, gaggle_id)
         if request.method == 'GET':
-            return render_template('post.html', post = post, comments = comments, valid = valid, username=username)
+            return render_template('post.html', title = 'Post', post = post, comments = comments, valid = valid, username=username)
         else:
             kind = request.form.get('submit')
             if kind == 'Comment':
@@ -264,32 +268,70 @@ def post(post_id):
                     flash("You have already {kind}d this post.".format(kind=kind))                    
             return redirect(url_for('post', post_id = post_id ))
     
-@app.route('/likeComment/<post_id>/<comment_id>', methods=['GET', 'POST'])
-def likeComment(post_id, comment_id):
+# @app.route('/likeComment/<post_id>/<comment_id>', methods=['GET', 'POST'])
+# def likeComment(post_id, comment_id):
+#     """
+#     Called when user clicks the 'like' button on a comment. Inserts a new row in the
+#     comment_like table in the database.
+#     """
+#     user_id = session.get('user_id', '')
+#     conn = dbi.connect() 
+#     post = waggle.getPost(conn, post_id)
+#     comments = waggle.getPostComments(conn, post_id)  
+#     if user_id != '':  
+#         if request.method == 'GET': 
+#             username = session.get('username')
+#             return render_template('post.html', post = post, comments = comments, username=username) 
+#         else:     
+#             kind = request.form.get('submit')
+#             print(kind)
+#             valid = waggle.likeComment(conn, comment_id, user_id, kind)
+#             if valid: 
+#                 print('updated comment like/dislike')
+#             else: 
+#                 flash(f"You have already {kind}d this comment.".format(kind=kind))    
+#             return redirect(url_for('post', post_id = post_id ))
+#     else:
+#         flash(f"You are not logged in")
+#         return redirect(url_for('index'))
+
+# tryin ajax here if fail comment out
+
+@app.route('/likeComment/', methods=['POST'])
+def likeComment():
     """
     Called when user clicks the 'like' button on a comment. Inserts a new row in the
     comment_like table in the database.
     """
-    user_id = session.get('user_id', '')
-    conn = dbi.connect() 
-    post = waggle.getPost(conn, post_id)
-    comments = waggle.getPostComments(conn, post_id)  
-    if user_id != '':  
-        if request.method == 'GET': 
-            username = session.get('username')
-            return render_template('post.html', post = post, comments = comments, username=username) 
-        else:     
-            kind = request.form.get('submit')
-            print(kind)
-            valid = waggle.likeComment(conn, comment_id, user_id, kind)
-            if valid: 
-                print('updated comment like/dislike')
-            else: 
-                flash(f"You have already {kind}d this comment.".format(kind=kind))    
-            return redirect(url_for('post', post_id = post_id ))
-    else:
-        flash(f"You are not logged in")
-        return redirect(url_for('index'))
+    user_id = isLoggedIn()
+    conn = dbi.connect()  
+    if request.method == 'POST': 
+        data = request.get_json()
+        kind = data['kind']
+        comment_id = data['comment_id']
+        # print(kind)
+        # print(comment_id)
+        # print('this is data')
+        # print(data)
+        valid = waggle.likeComment(conn, comment_id, user_id, kind)
+        metric = waggle.getCommentMetric(conn, comment_id)
+        return jsonify(metric)
+
+@app.route('/likePost/', methods=['POST'])
+def likePost():
+    """
+    Called when user clicks the 'like' button on a comment. Inserts a new row in the
+    comment_like table in the database.
+    """
+    user_id = isLoggedIn()
+    conn = dbi.connect()  
+    if request.method == 'POST': 
+        data = request.get_json()
+        kind = data['kind']
+        post_id = data['post_id']
+        valid = waggle.likePost(conn, post_id, user_id, kind)
+        metric = waggle.getPostMetric(conn, post_id)
+        return jsonify(metric)
 
 @app.route('/gaggle/<gaggle_name>/members/')
 def gaggleMembers(gaggle_name):
@@ -393,7 +435,7 @@ def dashboard():
     return render_template('gaggleDashboard.html', title = "Dashboard", gaggles = gaggles, gaggle = gaggle, invitees = invitees, username=username)
 
 def getRepliesThread(comment_id, thread):  
-    '''Helper function to get all the parent comment_id of the input comment_id.'''
+    '''Helper function to get all the previous comment_id of the input comment_id.'''
     conn = dbi.connect() 
     parent_comment = waggle.getParentComment(conn, comment_id)
     print("current_thread" + str(thread))
@@ -419,18 +461,26 @@ def addReply(comment_id):
     else:   
         username = session.get('username')
         conn = dbi.connect() 
-        comment = waggle.getComment(conn, comment_id)[0]
+        comment = waggle.getComment(conn, comment_id)
         post_id = comment['post_id']
         post = waggle.getPost(conn, post_id)
         parent_comment_id = comment['comment_id']
-        valid = canIntComment(parent_comment_id, user_id)
-        replies = waggle.getReplies(conn, comment_id)
-        thread = [parent_comment_id]
-        chain = getRepliesThread(parent_comment_id, thread)
-        comment_chain_id = [x for x in chain if x is not None][::-1]
-        comment_chain = [waggle.getComment(conn, id)[0] for id in comment_chain_id]
+        valid = canIntComment(parent_comment_id, user_id) #user can interact with comment
+        replies = waggle.getReplies(conn, comment_id) #get replies to this comment
+        previous_comment = waggle.getParentComment(conn, comment_id) #check if there is a previous reply
+        comment_chain = []
+        if len(previous_comment) != 0: #start retrieving previous replies in this conversation
+            thread = [parent_comment_id] 
+            chain = getRepliesThread(parent_comment_id, thread)
+            comment_chain_id = [x for x in chain if x is not None][::-1][:-1] #excluding current comment
+            print(comment_chain_id)
+            print('this comment')
+            print(comment)
+            comment_chain = [waggle.getComment(conn, id) for id in comment_chain_id]    
+            for comment in comment_chain:
+                comment['isThread'] = True
         if request.method == 'GET':
-            return render_template('reply.html', comment_chain = comment_chain, parent_comment = comment, replies = replies, post = post, valid = valid, username=username)
+            return render_template('reply.html', title = 'Comment', comment_chain = comment_chain, parent_comment = comment, replies = replies, post = post, valid = valid, username=username)
         else:
             kind = request.form.get('submit')
             if kind == 'Reply':
@@ -663,7 +713,7 @@ def searchGaggle():
         results = waggle.searchComment(conn, query)
     else:
         query = request.args.get('query')
-        results = waggle.searchPost(conn, query)
+        results = waggle.searchPost(conn, query) 
     return render_template('gaggleSearchResults.html', query = query, results = results, kind = kind, gaggle_id = gaggle_id, gaggle_name = gaggle_name) 
 
 @app.route('/creator/', methods=['GET', 'POST'])

@@ -1,66 +1,43 @@
-{% extends "base.html" %}
+{% extends "baseTemplate.html" %}
 
 {% block main_content %}
-    <p>welcome to {{gaggle.gaggle_name}} </p>
-    <p>created by <a href="{{url_for('user', username=gaggle.username)}}">{{gaggle.username}}</a></p>
-    <p>about:  {{gaggle.description}}</p>
-    <p><a href="{{url_for('gaggleMembers', gaggle_name = gaggle.gaggle_name)}}">View members</a></p>
 
-    <div class="join_group">
-        <form name="join_group" action="{{url_for('joinGaggle', gaggle_name = gaggle.gaggle_name)}}" method="POST">
-            {% if joined %}
-            <input type="submit" name = "submit" value="Unjoin">
-            {% else %}
-            <input type="submit" name = "submit" value="Join">
-            {% endif %}
-            <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
-        </form>
-    </div>
-
-    <form class="search_form_gaggle" method=GET action="{{url_for('searchGaggle')}}">
-        <label for="search-query">Find within gaggle: </label>
-        <input id="search-query" name="search-query" value="">
-        <input type="submit" name="submit-btn" value="Search">
-        <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
-        <input type="hidden" name="gaggle_name" value="{{gaggle.gaggle_name}}">
-    </form>  
 
     {% if joined %}
-    <div class="add_post_form">
+    <!-- <div class="add_post_form"> -->
         <form name="write_post" action="{{url_for('addPost')}}" method="POST">
-            <textarea name="content" rows="4" cols="50"></textarea>
-            <input type="submit" value="Post">
+            <textarea name="content" class = 'write-text' placeholder="Something to share with the class?"></textarea>
+            <input type="submit" class = 'search-filter' value="Post">
             <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
             <input type="hidden" name="gaggle_name" value="{{gaggle.gaggle_name}}">
         </form>
-    </div>
+    <!-- </div> -->
     {% endif %}
 
-    {% import "post_template.html" as postComp%}
+    {% import "postTemplateJS.html" as postComp%}
     {% for post in posts %}
         {{postComp.post_temp(post=post)}}
     {% endfor %}
 
-    <script>
-        function changeLanguage(language) {
-            var element = document.getElementById("url");
-            element.value = language;
-            element.innerHTML = language;
-        }
-        function showDropdown(pid) {
-            document.getElementById("myDropdown_"+pid).classList.toggle("show");
-        }
-        // Close the dropdown if the user clicks outside of it
-        window.onclick = function(event) {
-            if (!event.target.matches('.dropbtn')) {
-                var dropdowns = document.getElementsByClassName("dropdown-content");
-                var i;
-                for (i = 0; i < dropdowns.length; i++) {
-                    var openDropdown = dropdowns[i];
-                    if (openDropdown.classList.contains('show')) {
-                        openDropdown.classList.remove('show');
-                    }
-                }
-            }}
-        </script>
+
 {% endblock %}
+
+{% block right_content %}
+<p>welcome to {{gaggle.gaggle_name}} </p>
+<p>created by <a href="{{url_for('user', username=gaggle.username)}}">{{gaggle.username}}</a></p>
+<p>about:  {{gaggle.description}}</p>
+<p><a href="{{url_for('gaggleMembers', gaggle_name = gaggle.gaggle_name)}}">View members</a></p>
+
+<div class="join_group">
+    <form name="join_group" action="{{url_for('joinGaggle', gaggle_name = gaggle.gaggle_name)}}" method="POST">
+        {% if joined %}
+        <input type="submit" class = 'search-filter' name = "submit" value="Unjoin">
+        {% else %}
+        <input type="submit" class = 'search-filter' name = "submit" value="Join">
+        {% endif %}
+        <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
+    </form>
+</div>
+
+
+{% endblock %} 

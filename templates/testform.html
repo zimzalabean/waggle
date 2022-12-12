@@ -1,42 +1,47 @@
 {% extends "base.html" %}
 
 {% block main_content %}
+
 <body>
-        <p>
+    <div class = 'search-kind'>
                 <form method=get action="{{url_for('search')}}" >       
-                        <input type="submit" name="submit" value="Gaggles">
-                        <input type="submit" name="submit" value="Posts">
-                        <input type="submit" name="submit" value="Comments">
-                        <input type="submit" name="submit" value="Goslings">
+                        <button type="submit" class = 'search-filter' name="submit" value="Gaggles">GAGGLES</button>
+                        <button type="submit" class = 'search-filter' name="submit" value="Posts">POSTS</button>
+                        <button type="submit" class = 'search-filter' name="submit" value="Comments">COMMENTS</button>
+                        <button type="submit" class = 'search-filter' name="submit" value="Goslings">GOSLINGS</button>
                         <input type="hidden" name="query" value="{{query}}">
                 </form>
-        </p>
-    <p>Results matching {{query}}:</p>
+    </div>
+
+    <div class = 'search-result'>  
+    Results matching {{query}}:
 
     {% if kind == 'Posts' %}
-        {% for post in results %}
-         <p> 
-             Post:   <a href="{{ url_for('post', post_id= post.post_id)}}">{{post.post_id}}</a>
-        </p>
-        {% endfor %}  
+        {% import "postTemplateJS.html" as postComp%}
+        {% for post in posts %}
+            {{postComp.post_temp(post=post)}}
+        {% endfor %} 
+
     {% elif kind == 'Comments' %}
-        {% for comment in results %}
-         <p> 
-             Comment:   <a href="{{ url_for('addReply', comment_id = comment.comment_id)}}">{{comment.comment_id}}</a>
-        </p>
-        {% endfor %}          
+    {% import "commentTemplateJS.html" as commentComp%}
+        {% for comment in comments %}
+            {{commentComp.comment_temp(comment=comment, post=post)}}
+        {% endfor %}       
+
     {% elif kind == 'Goslings' %}
         {% for user in results %}
         <p> 
              Gosling:   <a href="{{url_for('user', username=user.username)}}">{{user.username}}</a>
         </p>    
-        {% endfor %}   
+        {% endfor %}  
+
     {% else %}
         {% for gaggle in results %}
         <p> 
             Gaggle:    <a href="{{ url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a>
         </p>
         {% endfor %}      
-    {% endif %}     
+    {% endif %}
+    </div>       
 </body>
 {% endblock %}
