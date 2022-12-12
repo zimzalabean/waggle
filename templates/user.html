@@ -9,10 +9,6 @@
     <p>{{userInformation.bio_text}}</p>
 </div>
 
-<form action="{{url_for('editMyPage')}}">
-    <button type="submit">Edit Profile</button>
-</form> 
-
 <p>Creator of the following Gaggles:</p>
 {% for gaggle in gagglesCreated %}
 <div class="gaggle" id="{{gaggle['gaggle_id']}}">
@@ -42,6 +38,12 @@
 
 
 {% if isPersonal %}
+<form action="{{url_for('editMyPage')}}">
+    <button type="submit">Edit Profile</button>
+</form> 
+<form action="{{url_for('deactivateAccount')}}">
+    <button type="submit">Deactivate Account</button>
+</form> 
 <div class = "create_gaggle"> 
     <form name="create_gaggle" action="{{url_for('createGaggle')}}" method="POST">
         <p> Create new gaggle</p>
@@ -56,8 +58,10 @@
         </p>
     </form>  
 </div>
+{% else %}
+<form action="{{url_for('blockUser', username=username)}}">
+    <button type="submit">Block User</button>
+</form> 
 {% endif %}
-
-
 
 {% endblock %}

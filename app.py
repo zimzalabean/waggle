@@ -457,12 +457,27 @@ def user(username):
     uid = waggle.getUserID(conn, username)['user_id']
     gagglesCreated = waggle.getGagglesCreated(conn, uid)
     gagglesJoined = waggle.getGagglesJoined(conn, uid)
-    userInfo = waggle.getUserInfo(conn, uid) #changed the user_id to uid
+    userInfo = waggle.getUserInfo(conn, uid)
+    isPersonal = False
     if user_id == uid:
-        isPersonal = True
-    else:
-        isPersonal = False
+        return redirect(url_for('profile'))
+    else: 
+        return render_template('user.html', username=username, gagglesCreated=gagglesCreated, gagglesJoined=gagglesJoined, isPersonal = isPersonal, userInformation=userInfo, user_id=uid)
+
+@app.route('/profile/')
+def profile():
+    """
+    Returns the profile page of the user logged in
+    """
+    conn = dbi.connect()
+    username = session.get('username', '')
+    uid = session.get('user_id', '')
+    gagglesCreated = waggle.getGagglesCreated(conn, uid)
+    gagglesJoined = waggle.getGagglesJoined(conn, uid)
+    userInfo = waggle.getUserInfo(conn, uid) 
+    isPersonal = True
     return render_template('user.html', username=username, gagglesCreated=gagglesCreated, gagglesJoined=gagglesJoined, isPersonal = isPersonal, userInformation=userInfo, user_id=uid)
+
 
 @app.route('/pic/<user_id>')
 def profilePic(user_id):
@@ -470,20 +485,25 @@ def profilePic(user_id):
     profilePic = waggle.getProfilePic(conn, user_id)
     return send_from_directory(app.config['UPLOADS'],profilePic['filename'])
 
-# @app.route('/deactivate/<user_id>')
-# def deactivateAccount(user_id): # TODO: working progress- heidi 
-#     conn = dbi.connect()
-#     try:
-#         if 'username' in session:
-#             username = session['username']
-#             session.pop('username')
-#             session.pop('user_id')
-#             session.pop('logged_in')
-#             deleted = waggle.deactivateAccount(conn, gaggle_id)
-#             return redirect(url_for('login'))
-#     except Exception as err:
-#         flash('some kind of error '+str(err))
-#         return redirect( url_for('login'))
+@app.route('/blockUser/<username>', methods=["POST"])
+def blockUser(username):
+    pass
+
+@app.route('/deactivate/')
+def deactivateAccount(): 
+    conn = dbi.connect()
+    try:
+        uid = session['user_id']
+        deleted = waggle.deactivateAccount(conn, uid)
+        if 'username' in session:
+            username = session['username']
+            session.pop('username')
+            session.pop('user_id')
+            session.pop('logged_in')
+            return redirect(url_for('login'))
+    except Exception as err:
+        flash('some kind of error '+str(err))
+        return redirect( url_for('login'))
 
 
 ####_____Gaggle Functions_____#### 
