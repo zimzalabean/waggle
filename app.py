@@ -396,7 +396,7 @@ def editMyPage():
                         [new_fn,user_id])
             conn.commit()
         if request.form['last_name'] != '':
-            new_ln = request.form['first_name']
+            new_ln = request.form['last_name']
             curs = dbi.dict_cursor(conn)
             curs.execute('''UPDATE user
                             SET last_name = %s
@@ -640,7 +640,7 @@ def createGaggle():
             flash('gaggle name cannot be empty')
             return redirect(url_for('createGaggle'))
 
-@app.route('/unjoinGaggle/<username>/<gaggle_id>/<gaggle_name>')
+@app.route('/unjoinGaggle/<username>/<gaggle_id>/<gaggle_name>', methods=['POST'])
 def unJoinGaggle(username,gaggle_id, gaggle_name):
     conn = dbi.connect()
     user_id = session.get('user_id', '')

@@ -1,166 +1,118 @@
 <!DOCTYPE html>
-  <!-- Coding by CodingLab | www.codinglabweb.com -->
-<html lang="en">
-<head>
+<!-- Created by CodingLab |www.youtube.com/CodingLabYT-->
+<html lang="en" dir="ltr">
+  <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <!----======== CSS ======== -->
-    <link rel='stylesheet' href="{{url_for('static', filename = 'style.css')}}">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!----===== Boxicons CSS ===== -->
-    <link href='https://unpkg.com/boxicons@2.1.1/css/boxicons.min.css' rel='stylesheet'>
-    <!----===== Bootstrap CSS ===== -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
-    
-    <!--<title>Dashboard Sidebar Menu</title>--> 
-</head>
-<body>
-    <div class="container-fluid">
-        <div class="row">
-
-        <!--<title>Dashboard Sidebar Menu</title>--> 
-          <div class="col-sm-3"> 
-                <nav class="sidebar close">
-                    <header>
-                        <div class="image-text">
-                            <span class="image">
-                                <!--<img src="logo.png" alt="">-->
-                            </span>
-
-                            <div class="text logo-text">
-                                <span class="name">Waggle</span>
-                                <span class="username">{{username}}</span>
-                            </div>
-                        </div>
-
-                        <i class='bx bx-chevron-right toggle'></i>
-                    </header>
-
-                    <div class="menu-bar">
-                        <div class="menu">
-                            <ul class="menu-links">
-                                <li class="nav-link">
-                                    <a href="{{url_for('homepage')}}">
-                                        <i class='bx bx-home-alt icon' ></i>
-                                        <span class="text nav-text">Home</span>
-                                    </a>
-                                </li>
-
-                                <li class="nav-link">
-                                <a href="{{url_for('user', username = username)}}">
-                                    <i class='bx bx-user-circle icon' ></i>
-                                    <span class="text nav-text">Profile</span>
-                                </a>
-                            </li>
-                                <li class="nav-link">
-                                    <a href="{{url_for('dashboard')}}">
-                                        <i class='bx bx-bar-chart-alt-2 icon' ></i>
-                                        <span class="text nav-text">Dashboard</span>
-                                    </a>
-                                </li>
-
-                                <li class="nav-link">
-                                    <a href="#">
-                                        <i class='bx bx-bell icon'></i>
-                                        <span class="text nav-text">Notifications</span>
-                                    </a>
-                                </li>
-
-
-                                <li class="nav-link">
-                                    <a href="#">
-                                        <i class='bx bx-heart icon' ></i>
-                                        <span class="text nav-text">Explore</span>
-                                    </a>
-                                </li>
-
-                            </ul>
-                        </div>
-
-                        <div class="bottom-content">
-                            <li class="">
-                                <a href="{{url_for('logout')}}">
-                                    <i class='bx bx-log-out icon' ></i>
-                                    <span class="text nav-text">Logout</span>
-                                </a>
-                            </li>
-
-                            <li class="mode">
-                                <div class="sun-moon">
-                                    <i class='bx bx-moon icon moon'></i>
-                                    <i class='bx bx-sun icon sun'></i>
-                                </div>
-                                <span class="mode-text text">Dark mode</span>
-
-                                <div class="toggle-switch">
-                                    <span class="switch"></span>
-                                </div>
-                            </li>
-                            
-                        </div>
-                    </div>
-
-                </nav>
-         </div>
-  <!--main body section--> 
-    <div class="col-sm-6" style="border-right: solid #695CFE 1px;">  
-        <div class = 'title'>
-          {{title}}                      
-        </div>>  
-        <div class="main-content">
-            {% block main_content %}
-            {% endblock %} 
-        </div>    
+    <!--<title> Drop Down Sidebar Menu | CodingLab </title>-->
+    <link rel="stylesheet" href="{{url_for('static', filename = 'style.css')}}">
+    <!-- Boxiocns CDN Link -->
+    <link href='https://unpkg.com/boxicons@2.0.7/css/boxicons.min.css' rel='stylesheet'>
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   </head>
+   <body>
+    <div class="sidebar close">
+      <div class="logo-details">
+        <i class='bx bxl-c-plus-plus'></i>
+        <span class="logo_name">Waggle</span>
+      </div>
+      <ul class="nav-links">
+        <li>
+          <a href="{{url_for('homepage')}}">
+            <i class='bx bx-home-alt' ></i>
+            <span class="link_name">Home</span>
+          </a>
+          <ul class="sub-menu blank">
+            <li><a class="link_name" href="{{url_for('homepage')}}">Home</a></li>
+          </ul>
+        </li>
+        <li>
+        <li>
+          <a href="{{url_for('dashboard')}}">
+            <i class='bx bx-grid-alt' ></i>
+            <span class="link_name">Dashboard</span>
+          </a>
+          <ul class="sub-menu blank">
+            <li><a class="link_name" href="{{url_for('dashboard')}}">Dashboard</a></li>
+          </ul>
+        </li>
+        <li>
+          <div class="iocn-link">
+            <a href="#">
+              <i class='bx bx-book-alt' ></i>
+              <span class="link_name">Gaggles</span>
+            </a>
+            <i class='bx bxs-chevron-down arrow' ></i>
+          </div>
+          <ul class="sub-menu">
+            <li><a class="link_name" href="#">Gaggles</a></li>
+            <li><a href="#">Web Design</a></li>
+            <li><a href="#">Login Form</a></li>
+            <li><a href="#">Card Design</a></li>
+          </ul>
+        </li>
+        <li>
+          <div class="iocn-link">
+            <a href="{{url_for('user', username = username)}}">
+              <i class='bx bx-user' ></i>
+              <span class="link_name">Profile</span>
+            </a>
+            <i class='bx bxs-chevron-down arrow' ></i>
+          </div>
+          <ul class="sub-menu">
+            <li><a class="link_name" href="{{url_for('user', username = username)}}">Profile</a></li>
+            <li><a href="#">My History</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="#">
+            <i class='bx bx-cog' ></i>
+            <span class="link_name">Setting</span>
+          </a>
+          <ul class="sub-menu blank">
+            <li><a class="link_name" href="#">Setting</a></li>
+          </ul>
+        </li>
+        <li>
+      <div class="profile-details">
+        <div class="profile-content">
+          <img class= "userPic" src="{{url_for('profilePic',user_id=user_id)}}" >
+        </div>
+        <div class="name-job">
+          <div class="profile_name">{{username}}</div>
+          <div class="job">{{username}}</div>
+        </div>
+        <a href="{{url_for('logout')}}">
+          <i class='bx bx-log-out' ></i>
+        </a>
+      </div>
+    </li>
+  </ul>
     </div>
-
-  <!--right bar--> 
-    <div class="col-sm-3" >
-        <form method=GET action="{{url_for('search')}}">
-                <label for="search-query"> </label>
-                <input class = 'input-search' type="text" name="search-query" placeholder="Search Waggle" /> 
-          </form>      
+  <section class="home-section">
+    <div class="home-content">
+      <i class='bx bx-menu'></i>
     </div>
+    <div class="home-content">
+      <span class="text"> {% block main_content %}
+        {% endblock %} </span>
     </div>
-  </div>
+  </section>
 
+  <script>
+let arrow = document.querySelectorAll(".arrow");
+for (var i = 0; i < arrow.length; i++) {
+  arrow[i].addEventListener("click", (e)=>{
+ let arrowParent = e.target.parentElement.parentElement;//selecting main parent of arrow
+ arrowParent.classList.toggle("showMenu");
+  });
+}
 
-
-
-    <script>
-      const body = document.querySelector('body'),
-      sidebar = body.querySelector('nav'),
-      toggle = body.querySelector(".toggle"),
-      searchBtn = body.querySelector(".search-box"),
-      modeSwitch = body.querySelector(".toggle-switch"),
-      modeText = body.querySelector(".mode-text");
-
-
-toggle.addEventListener("click" , () =>{
-    sidebar.classList.toggle("close");
-})
-
-searchBtn.addEventListener("click" , () =>{
-    sidebar.classList.remove("close");
-})
-
-modeSwitch.addEventListener("click" , () =>{
-    body.classList.toggle("dark");
-    
-    if(body.classList.contains("dark")){
-        modeText.innerText = "Light mode";
-    }else{
-        modeText.innerText = "Dark mode";
-        
-    }
+let sidebar = document.querySelector(".sidebar");
+let sidebarBtn = document.querySelector(".bx-menu");
+console.log(sidebarBtn);
+sidebarBtn.addEventListener("click", ()=>{
+  sidebar.classList.toggle("close");
 });
-    </script>
-
+  </script>
 </body>
 </html>
