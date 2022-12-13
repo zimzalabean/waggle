@@ -2,7 +2,14 @@
 
 {% block main_content %}
 <p>This is {{username}}'s profile</p>
+<img src="{{url_for('profilePic',user_id=user_id)}}" alt="{{user_id}}" style="height:150px">
+<p>Name: {{userInformation.first_name}} {{userInformation.last_name}}</p>
+<p>Class Year: {{userInformation.class_year}}</p>
+<p>Bio: {{userInformation.bio_text}}</p>
 
+<form action="{{url_for('editMyPage')}}">
+    <button type="submit">Edit Profile</button>
+</form> 
 
 {% if isPersonal %}
 <div class = create_gaggle> 
@@ -26,9 +33,11 @@
 <div class="gaggle" id="{{gaggle['gaggle_id']}}">
     <p>Gaggle: {{gaggle.gaggle_name}}</p>
     <p>Description: {{gaggle.description}}</p>
+    {% if isPersonal %}
     <form method="post" action="{{url_for('deleteGaggle', gaggle_id=gaggle['gaggle_id'])}}">
         <input type="submit" name="delete" value="Delete Gaggle">
     </form> 
+    {% endif %}
 </div>
 {% endfor %}
 
@@ -38,9 +47,11 @@
 <div class="gaggle" id="{{gaggle['gaggle_id']}}">
     <p>Gaggle: {{gaggle.gaggle_name}}</p>
     <p>Description: {{gaggle.description}}</p>
-    <form method="get" action="{{url_for('gaggle', gaggle_name=gaggle['gaggle_name'])}}">
-        <input type="submit" name="visit" value="View Gaggle Page">
+    {% if isPersonal %}
+    <form method="get" action="{{url_for('unJoinGaggle', username=username,gaggle_name=gaggle['gaggle_name'], gaggle_id=gaggle['gaggle_id'])}}">
+        <input type="submit" name="visit" value="Unjoin Gaggle">
     </form> 
+    {% endif %}
 </div>
 {% endfor %}
 

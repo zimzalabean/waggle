@@ -2,28 +2,25 @@
 
 {% block main_content %}
 {% import "postTemplateJS.html" as postComp%}
-    {{postComp.post_temp(post=post)}}
+        {{postComp.post_temp(post=post)}}
 
         <!-- previous replies -->  
         <div class = 'comment-thread'>
         {% import "commentTemplateJS.html" as commentComp%}
             {% for comment in comment_chain %}
-                {{commentComp.comment_temp(comment=comment, post=post)}}
+                {{commentComp.comment_temp(comment=comment, user_id=user_id)}}
             {% endfor %}
         </div>
 
-        <br class = 'anchor' id = '{{parent_comment.comment_id}}' >
         <!-- main comment -->  
-        <!-- <div class="main-comment" >  
-        {% import "commentTemplateJS.html" as commentOne%}    
-            {{commentOne.comment_temp(comment=parent_comment, post=post)}}
-        </div>   -->
+        <div  >  
+            {{commentComp.comment_temp(comment=parent_comment, user_id=user_id)}}
+        </div>  
 
         <!-- Replies section-->  
         <div class = 'replies'>
-        {% import "commentTemplateJS.html" as commentComp%}
             {% for comment in replies %}  
-                {{commentComp.comment_temp(comment=comment, post=post)}}
+                {{commentComp.comment_temp(comment=comment, user_id=user_id)}}
             {% endfor %}
         </div>
 

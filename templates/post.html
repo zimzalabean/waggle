@@ -5,37 +5,25 @@
     {% import "postTemplateJS.html" as postComp%}
         {{postComp.post_temp(post=post)}}
 
+    <div class = 'comment-form'>
+        <form action="{{url_for('post', post_id = post.post_id)}}" method="POST">    
+            <div class = 'post-header' style = "align-items: center;">
+                <div class = 'avator'>
+                    <img src="{{url_for('profilePic',user_id=user_id)}}" alt="{{user_id}}" class = 'img-profile'>    
+                </div > 
+                <div class = 'input' style = "width:85%;"><textarea name="comment_content" class = 'write-text' placeholder="share your response?"></textarea></div>
+            </div>
+            <div style = 'display:flex; flex-direction: row-reverse;'><button type = 'submit' name = 'submit' class = 'search-filter' style = 'margin: 0!important;' value = 'Comment'>Comment</button></div>
+        </form>    
+    </div>
 
     <div class = 'cmt-thread'>
         {% import "commentTemplateJS.html" as commentComp%}
         {% for comment in comments %}
-            {{commentComp.comment_temp(comment=comment, post=post)}}
+            {{commentComp.comment_temp(comment=comment, user_id = user_id)}}
         {% endfor %}
     </div>
 
-    <script>
-        function changeLanguage(language) {
-            var element = document.getElementById("url");
-            element.value = language;
-            element.innerHTML = language;
-        }
-        function showDropdown(pid) {
-            document.getElementById("myDropdown_"+pid).classList.toggle("show");
-        }
-        // Close the dropdown if the user clicks outside of it
-        window.onclick = function(event) {
-            if (!event.target.matches('.dropbtn')) {
-                var dropdowns = document.getElementsByClassName("dropdown-content");
-                var i;
-                for (i = 0; i < dropdowns.length; i++) {
-                    var openDropdown = dropdowns[i];
-                    if (openDropdown.classList.contains('show')) {
-                        openDropdown.classList.remove('show');
-                    }
-                }
-            }
-        }
-      </script>
 
 
 {% endblock %}

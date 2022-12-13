@@ -18,13 +18,13 @@
 
     {% if kind == 'Posts' %}
         {% import "postTemplateJS.html" as postComp%}
-        {% for post in posts %}
+        {% for post in results %}
             {{postComp.post_temp(post=post)}}
         {% endfor %} 
 
     {% elif kind == 'Comments' %}
     {% import "commentTemplateJS.html" as commentComp%}
-        {% for comment in comments %}
+        {% for comment in results %}
             {{commentComp.comment_temp(comment=comment, post=post)}}
         {% endfor %}       
 
@@ -38,7 +38,7 @@
     {% else %}
         {% for gaggle in results %}
         <p> 
-            Gaggle:    <a href="{{ url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a>
+        <a href="{{ url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a>
         </p>
         {% endfor %}      
     {% endif %}

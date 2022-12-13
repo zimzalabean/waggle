@@ -2,6 +2,16 @@
     
 {% block main_content %}
 
+{% if user_id != ''%}
+<p>Current Photo:</p>
+<img src="{{url_for('profilePic',user_id=user_id)}}" style="height:150px">
+{% endif %}
+
+<p>Upload New Photo:
+<form method="post" action="{{url_for('file_upload')}}" enctype="multipart/form-data">
+        <p><label>Pic: <input type="file" name="pic"></label></p>
+        <p><input type="submit" value="upload"></p>
+</form>
 
 <form class="edit_form" action="{{url_for('editMyPage')}}" method="POST">
     <div>

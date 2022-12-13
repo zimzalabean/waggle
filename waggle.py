@@ -88,7 +88,7 @@ def getPosts(conn):
     '''returns the latest 20 posts for homepage feed'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        select a.*, b.username as author, c.gaggle_name as gaggle 
+        select a.*, b.username, CONCAT(b.first_name,' ',b.last_name) as full_name, c.gaggle_name 
         from post a
         left join user b
         on (a.poster_id = b.user_id)
@@ -104,7 +104,7 @@ def getPost(conn, post_id):
     '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.*, b.username as author, c.gaggle_name as gaggle
+        SELECT a.*, b.username, CONCAT(b.first_name,' ',b.last_name) as full_name, c.gaggle_name 
         FROM post a
         LEFT JOIN user b
         ON (a.poster_id = b.user_id)
@@ -130,7 +130,7 @@ def getGagglePosts(conn, gaggle_name):
     gaggle_id = getGaggleID(conn, gaggle_name)[0]['gaggle_id']
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.*, b.username as author, c.gaggle_name as gaggle
+        SELECT a.*,  b.username, CONCAT(b.first_name,' ',b.last_name) as full_name, c.gaggle_name  
         FROM post a
         LEFT JOIN user b
         ON (a.poster_id = b.user_id)
@@ -150,7 +150,7 @@ def getPostComments(conn, post_id):
     '''returns all comments on a post based on the post_id'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.*, b.username
+        SELECT a.*, b.username, b.username, CONCAT(b.first_name,' ', b.last_name) as full_name 
         FROM comment a
         LEFT JOIN user b
         ON a.commentor_id = b.user_id
@@ -182,7 +182,8 @@ def addComment(conn, post_id, parent_comment_id, content, commentor_id, posted_d
             SET replies = replies + 1
             WHERE comment_id = %s''',
                     [parent_comment_id])                        
-    conn.commit()         
+    conn.commit() 
+    print('updated')        
     return commentor_id
   
 def likePost(conn, post_id, user_id, kind):
@@ -382,7 +383,7 @@ def getComment(conn, comment_id):
     '''
     curs = dbi.dict_cursor(conn)  
     curs.execute('''
-        SELECT a.*, b.username 
+        SELECT a.*, b.username, CONCAT(b.first_name,' ', b.last_name) as full_name 
         FROM comment a
         LEFT JOIN user b
         ON a.commentor_id = b.user_id
@@ -516,24 +517,21 @@ def responseInvite(conn, gaggle_id, user_id, response):
     return curs.fetchall()    
 
 def searchPost(conn, query):
-    print(query)
     '''returns all posts whose content match the query'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         SELECT * from post 
         WHERE content LIKE %s''',
-                 ["%"+query+"%"]) 
+                 ['%'+query+'%']) 
     return curs.fetchall() 
 
 def searchComment(conn, query):
     '''returns all comments whose content match the query'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.*, b.gaggle_id
+        SELECT *
         FROM comment a
-        LEFT JOIN post b
-        USING (post_id)
-        WHERE a.content LIKE %s''',
+        WHERE content LIKE %s''',
                  ["%"+query+"%"]) 
     return curs.fetchall()   
 
@@ -611,9 +609,9 @@ def getCommentGaggle(conn, comment_id):
     return result[0]['gaggle_id']
 
 def getGagglesCreated(conn, user_id):
-     curs = dbi.dict_cursor(conn) 
-     curs.execute('''select * from gaggle where author_id = %s''', [user_id])
-     return curs.fetchall() 
+    curs = dbi.dict_cursor(conn) 
+    curs.execute('''select * from gaggle where author_id = %s''', [user_id])
+    return curs.fetchall() 
 
 def getGagglesJoined(conn, user_id):
     curs = dbi.dict_cursor(conn)     
@@ -634,10 +632,10 @@ def updateBio(conn, gaggle_id, new_group_bio):
     conn.commit()
     return gaggle_id 
 
-def createGagge(conn, user_id, gaggle_name, description):
+def createGaggle(conn, user_id, gaggle_name, description):
     curs = dbi.dict_cursor(conn)
     result = getGaggle(conn, gaggle_name)
-    if len(result) == 0:
+    if result is None:
         valid = True
         curs.execute('''
             INSERT INTO gaggle(gaggle_name, author_id, description)
@@ -730,3 +728,38 @@ def getPostMetric(conn, post_id):
                 [post_id])   
     result = curs.fetchone()  
     return result   
+def getProfilePic(conn, user_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT filename FROM picfile 
+        WHERE user_id = %s''',
+        [user_id])
+    return curs.fetchone()
+
+def insertProfilePic(conn, user_id, filename):
+    curs = dbi.dict_cursor(conn)
+    curs.execute(
+                '''insert into picfile(user_id,filename) values (%s,%s)
+                   on duplicate key update filename = %s''',
+                [user_id, filename, filename])
+    conn.commit()
+
+def deactivateAccount(conn, user_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        DELETE FROM 
+        user
+        WHERE user_id = %s''', [user_id])
+    conn.commit()
+
+def isAuthor(conn, user_id, gaggle_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT gaggle_id FROM gaggle
+        WHERE author_id = %s 
+        AND gaggle_id = %s''',
+        [user_id, gaggle_id])   
+    if curs.fetchone() is None:
+        return False
+    else:
+        return True                

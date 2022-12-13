@@ -109,10 +109,12 @@
                 </nav>
          </div>
   <!--main body section--> 
-    <div class="col-sm-5" style="border-right: solid #695CFE 1px;">  
+    <div class="col-sm-6" style="border-right: solid #695CFE 1px;">  
         <div class="main-body">
             <div class = 'main-header'>
-                <h5 style = 'font-size: 20px;'>{{title}}</h5>                   
+                {% block header %}                               
+                <h5 style = 'font-size: 20px;'>{{title}}</h5> 
+                {% endblock %}                    
             </div> 
             <div class = 'main-content'> 
             {% block main_content %}
@@ -122,7 +124,7 @@
     </div>
 
   <!--right bar--> 
-    <div class="col-sm-4" >
+    <div class="col-sm-3" >
         <div class = right-side> 
             <div class = 'search-bar'>
                 <form method=GET action="{{url_for('search')}}">

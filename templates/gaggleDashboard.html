@@ -6,7 +6,7 @@
 {% block sub_content %}  
 
 
-
+{% if hasGaggle %}
         <form name="update_gaggle" action="{{url_for('myGaggle', gaggle_name = gaggle.gaggle_name)}}" method="POST">
             <div class="drop_down">
 
@@ -46,8 +46,10 @@
             <p> Status for {{invitee.username}}: {{invitee.accepted}}</p>
         {% endfor %}
 
+{% else %}
+You haven't created any gaggle.
 
-
+{% endif %}
 
 {% endblock %}
         
