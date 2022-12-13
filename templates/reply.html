@@ -1,15 +1,19 @@
 {% extends "baseTemplate.html" %}
 
 {% block main_content %}
-{% import "postTemplateJS.html" as postComp%}
-        {{postComp.post_temp(post=post)}}
+
 
         <!-- previous replies -->  
         <div class = 'comment-thread'>
-        {% import "commentTemplateJS.html" as commentComp%}
-            {% for comment in comment_chain %}
-                {{commentComp.comment_temp(comment=comment, user_id=user_id)}}
-            {% endfor %}
+
+               
+            <a  class="comment-border-link"></a>
+            {% import "postTemplateJS.html" as postComp%}
+            {{postComp.post_temp(post=post)}}
+            {% import "commentTemplateJS.html" as commentComp%}
+                {% for comment in comment_chain %}
+                    {{commentComp.comment_temp(comment=comment, user_id=user_id)}}
+                {% endfor %}
         </div>
 
         <!-- main comment -->  

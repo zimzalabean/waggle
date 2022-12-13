@@ -8,6 +8,8 @@ HTML {
 }
 
 /* side bar*/
+/* Google Fonts Import Link */
+/* side bar*/
 /* Google Font Import - Poppins */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 *{
@@ -53,38 +55,6 @@ body.dark{
     --text-color: #ccc;
 }
 
-/* for a simple navbar. Talk to Scott if you want drop-downs. */
-ul.menu {
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    background-color: #333;
-    position: -webkit-sticky; /* Safari */
-    position: sticky;
-    top: 0;
-}
-
-ul.menu li {
-    float: left;
-}
-
-ul.menu li a {
-    display: block;
-    color: white;
-    text-align: center;
-    padding: 14px 16px;
-    text-decoration: none;
-}
-
-ul.menu li a:hover {
-    background-color: #111;
-}
-
-.active {
-    background-color: #4CAF50;
-}
-
 /* ===== Sidebar ===== */
  .sidebar{
     position: fixed;
@@ -97,8 +67,6 @@ ul.menu li a:hover {
     transition: var(--tran-05);
     z-index: 100; 
     border-right: solid #695CFE 1px; 
-    border-radius: 9px;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.4);
 }
 .sidebar.close{
     width: 88px;
@@ -368,6 +336,35 @@ body.dark .home .text{
     margin: 20px;
 }
 
+.input-search{
+    position: fixed;
+    height: 40px;
+    width: 20%;
+    padding: 15px;
+    background: #f9f5ff;
+    margin-left: 20px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    border: solid #f5efff 1px;
+    border-radius: 20px;
+}
+
+
+/* search form   */
+
+
+
+/* For flashed messages; make them stand out using red and italics */
+
+#messages {
+    color: var(--color-hilite);
+    font-style: italic;
+}
+
+.edit_form{
+    margin: 20px;
+}
+
 .quick-gaggle{
     width: 15%;
     padding: 15px;
@@ -420,24 +417,10 @@ h2, h3 {
     height: 100vw;
 }
 
-/* right side include a fixed search bar and mutable info box */
-.col-sm-3{
-    padding: 0% !important;
-    height: 100vw !important;
-}
-.right-side{
-    position:fixed;
-    padding: 20px;
-}
-/* everything search */
-.input-search{
-    height: 40px;
-    width: 90%;
-    padding: 15px;
-    background: #f9f5ff;
-    margin-left: 20px;
-    border: solid #f5efff 1px;
-    border-radius: 20px;
+.main-content{
+    padding-top: 0;
+    border-left:#c1c1c1 2px; 
+    border-right: #c1c1c1 2px ;
 }
 
 .input-search:hover {
@@ -461,10 +444,13 @@ h2, h3 {
 }
 
 .selected{
-    background-color: #5b10ca !important;
-    color: #ffffff
+    color: #5b10ca !important;
 }
 
+.is-selected{
+    background-color: #bca2e3 !important;
+    color: #ffffff    
+}
 .right-content{
     padding-top: 20%;
 }
@@ -585,9 +571,7 @@ img {
   }
 }
 /* comment */
-.cmt-thread{
-    padding-left: 40px;
-}
+
 
 .add_post_form{
     margin: 20px;
@@ -631,7 +615,7 @@ button:hover {
 .author {
     color: rgba(0, 0, 0, 0.85)!important;
     font-size: 14px;
-    font-weight: 400px !important;
+    font-weight: bold !important;
     font-family: 'Poppins', sans-serif !important;
     text-decoration: none;
     margin-left: 0 !important;
@@ -674,9 +658,7 @@ button:hover {
     width:80%;
 }
 .replies{
-    position: replative;
-    margin-left: 15%;
-    margin-top: 30px;
+    margin-left: 60px;
 }
 
 
@@ -701,6 +683,27 @@ button:hover {
     border-radius: 12px;
     overflow-wrap: break-word;
 }
+
+.comment-thread{
+    position: relative;
+    width: 100%;
+
+}
+
+.comment-border-link {
+    display: flex;
+    position: absolute;
+    margin-top:20px;
+    margin-left:35px;
+    left: 0;
+    width: 10px;
+    height: calc(100% + 20px);
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    background-color: rgba(0, 0, 0, 0.1);
+    background-clip: padding-box;
+}
+
 /* post-format */
 .gaggle-name{
     font-size: 16px;
@@ -780,3 +783,31 @@ button:hover {
 
 /* comment metric */
 
+
+.userPic {
+    display: block;
+    width: 200px;
+    height: 175px;
+    border-radius: 50%;
+    margin-left: auto;
+    margin-right: auto;
+  
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;
+  }
+
+.userInfo {
+    padding: 2%;
+    font-size: 16px;
+    font-weight: 600;
+    text-align:center
+}
+
+.gaggle {
+    padding: 2%;
+    margin: 5px;
+    border: 3px solid rgb(20, 11, 11);
+    float: left;
+    width: 180px;
+}

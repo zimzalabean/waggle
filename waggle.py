@@ -458,8 +458,9 @@ def modInvite(conn, gaggle_id, username):
     '''
     Add valid username and corresponding gaggle_id into mod_invite table. 
     '''
+    valid = False
     invitee_id = getUserID(conn, username)['user_id']
-    curs = dbi.dict_cursor(conn)  
+    curs = dbi.dict_cursor(conn)  #check if user is already invited
     curs.execute('''
         SELECT *
         FROM mod_invite
@@ -467,16 +468,16 @@ def modInvite(conn, gaggle_id, username):
         AND invitee_id = %s''',
                  [gaggle_id, invitee_id]) 
     exists = curs.fetchall()
-    if len(exists) == 0:
-        valid = True
-        accepted = 'Pending'
-        curs.execute('''
-            INSERT INTO mod_invite(gaggle_id, invitee_id, accepted) 
-            VALUES(%s,%s, %s)''',
-                    [gaggle_id, invitee_id, accepted])         
-        conn.commit()  
-    else:
-        valid = False 
+    if len(exists) == 0: #if not set invitation as pending
+        if isGosling(conn, invitee_id, gaggle_id): #check if user is a group member
+            valid = True
+            accepted = 'Pending'
+            curs.execute('''
+                INSERT INTO mod_invite(gaggle_id, invitee_id, accepted) 
+                VALUES(%s,%s, %s)''',
+                        [gaggle_id, invitee_id, accepted])         
+            conn.commit()  
+            return valid
     return valid   
 
 def getInvitation(conn, invitee_id):

@@ -109,17 +109,16 @@
           <img src="{{url_for('profilePic',user_id=comment.commentor_id)}}" alt="{{comment.commentor_id}}" class = 'img-profile'>
         </div>
       <div class="comment-header-info">
-        <div><span style = 'font-weight: 500;font-size: 14px;'>{{comment.full_name}}</span><a href="{{url_for('user', username=comment.username)}}"><span> @{{comment.username}}</span></a></div>
-        <span style = 'font-size: 10px;'> replied:</span>
-        </span> 
+        <div><a href="{{url_for('user', username=comment.username)}}"><span class = 'author'> @{{comment.username}}</span></a> <span style = 'font-size: 10px;'> replied:</span></div>        
+        <div><span class = 'posted-date'>{{comment.posted_date}}</span></div>
     </div>      
     </div>
-
+    
     <div class="comment-img-wrap" onclick= "window.location.href = '{{url_for('addReply', comment_id=comment.comment_id)}}';">
       <p> {{comment.content}}</p>
 
     </div>
-    <div style = 'padding-left:60px;'><span class = 'posted-date'>{{comment.posted_date}}</span></div>
+
     <div class="comment-info-counts">
         
       <div class="comments">
@@ -132,14 +131,14 @@
       <form class = 'like-dislike-comment' method=comment action="{{url_for('likeComment')}}" ></form>      
 
         <div class="dislikes">
-          <button id = 'comment-Dislike{{comment.comment_id}}' onclick ="likeComment('{{comment.comment_id}}','Dislike')">
+          <button class = 'dislike-button' id = 'comment-Dislike{{comment.comment_id}}' onclick ="likeComment('{{comment.comment_id}}','Dislike')">
             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="css-i6dzq1"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path></svg>
         </button>
           <div> <span id="comment-dislikes-count-{{comment.comment_id}}">{{comment.dislikes}}</span></div>        
         </div>
         
         <div class="likes">
-          <button  id = 'comment-Like{{comment.comment_id}}' onclick ="likeComment('{{comment.comment_id}}','Like')">
+          <button class = 'like-button' id = 'comment-Like{{comment.comment_id}}' onclick ="likeComment('{{comment.comment_id}}','Like')">
           <svg class="feather feather-heart sc-dnqmqq jxshSx" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
           </button>
           <div><span id="comment-likes-count-{{comment.comment_id}}">{{comment.likes}}</span></div>
@@ -171,7 +170,23 @@
 </div> 
 
 <script>
+    var btn1 = document.querySelector('like-button');
+    var btn2 = document.querySelector('dislike-button');
+
+    btn1.addEventListener('click', function() {
     
+        if (btn2.classList.contains('selected')) {
+        btn2.classList.remove('selected');
+        }     
+    });
+
+    btn2.addEventListener('click', function() {
+    
+        if (btn1.classList.contains('selected')) {
+        btn1.classList.remove('selected');
+        }     
+    });   
+
     function showReply(cid) {
             event.preventDefault();
             document.getElementById("myDropdown_reply_"+cid).classList.toggle("showReply");
@@ -182,6 +197,13 @@
     function likeComment(comment_id, kind) {
         console.log(comment_id);
         console.log(kind);
+        document.getElementById("comment-"+kind+comment_id).classList.toggle("selected");
+        if (kind=='Like') {
+            document.getElementById("comment-Dislike"+comment_id).classList.remove('selected');
+        }
+        else if (kind == 'Dislike'){
+            document.getElementById("comment-Like"+comment_id).classList.remove('selected');
+        };         
         $.ajax({
                 type: "POST",
                 url: "/likeComment/",
@@ -200,6 +222,7 @@
                 }
             });  event.preventDefault();
     }
+
 
 </script>
 
