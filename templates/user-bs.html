@@ -1,0 +1,67 @@
+{% extends "baseTemplate.html" %}
+
+{% block main_content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <!-- HEADER -->
+    <div class="row">
+        <div class="col-lg-12 mb-4">
+            <div class="card card-header bg-secondary text-white">
+                <div class="d-flex align-items-end align-items-sm-center row">
+                    <div class="col-sm-2">
+                        <div class="card-body px-md-4 py-3">
+                            <img src="{{url_for('profilePic',user_id=user_id)}}" alt="{{user_id}}" alt class="w-vw-10 miw-px-75 h-auto rounded-circle">
+                        </div>
+                    </div>
+                    <div class="col-sm-8">
+                        <div class="card-body py-3">
+                            <h1 class="card-title text-white">{{username}}</h1>
+                            <h4 class="text-white">{{userInformation.first_name}} {{userInformation.last_name}}</h4>
+                            <h4 class="text-white">Class of {{userInformation.class_year}}</h4>
+                            <p>{{userInformation.bio_text}}</p>
+                        </div>
+                    </div>
+                    <div class="col-sm-2">
+                        {% if isPersonal %}
+                        <div class="card-body py-3 px-0">
+                            <a href="{{url_for('editMyPage')}}"><button type="submit" class="btn rounded-pill btn-dark">Edit Profile</button></a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <h4 class="fw-bold py-3 mb-4">Joined Gaggles</h4>
+        <div class="d-flex flex-wrap" id="icons-container">
+            {% for gaggle in gagglesJoined %}
+            <div class="card icon-card cursor-pointer text-center mb-4 mx-2">
+                <div class="card-body">
+                    <p class="icon-name text-truncate mb-0"><a href="{{url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a></p>
+                    {% if isPersonal %}
+                    <form method="get" action="{{url_for('unJoinGaggle', username=username,gaggle_name=gaggle['gaggle_name'], gaggle_id=gaggle['gaggle_id'])}}">
+                        <input type="submit" class="btn btn-sm rounded-pill btn-outline-dark mt-2" name="visit" value="Unjoin">
+                    </form> 
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div> 
+        <h4 class="fw-bold py-3 mb-4">Created Gaggles</h4>
+        <div class="d-flex flex-wrap" id="icons-container">
+            {% for gaggle in gagglesCreated %}
+            <div class="card icon-card cursor-pointer text-center mb-4 mx-2">
+                <div class="card-body">
+                    <p class="icon-name text-truncate mb-0"><a href="{{url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a></p>
+                    {% if isPersonal %}
+                    <form method="get" action="{{url_for('deleteGaggle', gaggle_id=gaggle['gaggle_id'])}}">
+                        <input type="submit" class="btn btn-sm rounded-pill btn-outline-danger mt-2" name="delete" value="Delete">
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div> 
+    </div>
+</div>
+{% endblock %}

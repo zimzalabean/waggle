@@ -40,7 +40,7 @@ def getUserPosts(conn, username):
     user_id = getUserID(conn, username)['user_id']
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.*, b.username as author, c.gaggle_name as gaggle
+        SELECT a.*, b.username, c.gaggle_name
         FROM post a
         LEFT JOIN user b
         ON (a.poster_id = b.user_id)
@@ -50,10 +50,6 @@ def getUserPosts(conn, username):
         order by posted_date DESC''',
                  [user_id])
     all_posts = curs.fetchall()
-    # post_ids = [post['post_id'] for post in posts]
-    # all_posts = []
-    # for pid in post_ids:
-    #     all_posts.append(getPost(conn, pid))
     return all_posts
 
 def searchGaggle(conn, query):

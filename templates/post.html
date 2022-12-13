@@ -1,10 +1,10 @@
 {% extends "baseTemplate.html" %}
 
 {% block main_content %}
-    <div class = 'PostView'></div>
+    <div style = 'background-color: rgb(246, 246, 246);'>
     {% import "postTemplateJS.html" as postComp%}
         {{postComp.post_temp(post=post)}}
-
+    </div>
     <div class = 'comment-form'>
         <form action="{{url_for('post', post_id = post.post_id)}}" method="POST">    
             <div class = 'post-header' style = "align-items: center;">
@@ -17,7 +17,7 @@
         </form>    
     </div>
 
-    <div class = 'cmt-thread'>
+    <div class = 'replies'>
         {% import "commentTemplateJS.html" as commentComp%}
         {% for comment in comments %}
             {{commentComp.comment_temp(comment=comment, user_id = user_id)}}

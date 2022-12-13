@@ -37,7 +37,7 @@ def login():
     Login Page
     """
     if request.method == 'GET':
-        return render_template('login_form.html')
+        return render_template('login-bs.html')
     else:
         username = request.form['username']
         passwd = request.form['pass']
@@ -88,7 +88,7 @@ def logout():
 def signup():
     '''Sign up form '''
     if request.method == 'GET':
-        return render_template('signup.html')
+        return render_template('register.html')
     else: 
         email = request.form.get('email')
         username = request.form.get('username')
@@ -103,11 +103,18 @@ def signup():
         conn = dbi.connect() 
         valid = waggle.insertUser(conn, email, hashed_pass, username, first_name, last_name, class_year, bio_text, strike)
         if valid:
+            user_id = waggle.getUserID(conn, username)
+            # default_file = '3.jpeg'
+            # curs = dbi.dict_cursor(conn)
+            # curs.execute(
+            #     '''insert into picfile(user_id,filename) values (%s,%s)''',
+            #     [user_id, default_file])
+            # conn.commit()
             flash("Signup success")
             return redirect(url_for('login'))
         else: 
             flash('Username already in use, please choose new one')
-            return render_template('signup.html', email = email, password = password, first_name = first_name, last_name = last_name,class_year = class_year,bio_text = bio_text)
+            return render_template('register.html', email = email, password = password, first_name = first_name, last_name = last_name,class_year = class_year,bio_text = bio_text)
 
 def isLoggedIn():
     '''Helper function to determine if user is logged in'''
@@ -472,22 +479,6 @@ def user(username):
         return redirect(url_for('profile'))
     else: 
         return render_template('user.html', username=username, gagglesCreated=gagglesCreated, gagglesJoined=gagglesJoined, isPersonal = isPersonal, userInformation=userInfo, user_id=uid)
-# @app.route('/user/<username>')
-# def user(username):
-#     """
-#     Returns the profile page of the user with the given username.
-#     """
-#     conn = dbi.connect()
-#     user_id = session.get('user_id', '')
-#     uid = waggle.getUserID(conn, username)['user_id']
-#     gagglesCreated = waggle.getGagglesCreated(conn, uid)
-#     gagglesJoined = waggle.getGagglesJoined(conn, uid)
-#     userInfo = waggle.getUserInfo(conn, uid) #changed the user_id to uid
-#     if user_id == uid:
-#         isPersonal = True
-#     else:
-#         isPersonal = False
-#     return render_template('user.html', username=username, gagglesCreated=gagglesCreated, gagglesJoined=gagglesJoined, isPersonal = isPersonal, userInformation=userInfo, user_id=uid)
 
 @app.route('/profile/')
 def profile():
@@ -666,7 +657,7 @@ def createGaggle():
         if len(gaggle_name) > 0: 
             valid = waggle.createGaggle(conn, user_id, gaggle_name, description)
             if valid:
-                gaggle_id = waggle.getGaggleID()['gaggle_id']
+                gaggle_id = waggle.getGaggleID(conn, gaggle_name)[0]['gaggle_id']
                 joinGaggle(conn, user_id, gaggle_id)
                 return redirect(url_for('gaggle', gaggle_name = gaggle_name))  
             else:
@@ -824,19 +815,6 @@ def search():
         query = session.get('query')
         results = waggle.searchPost(conn, query) 
     return render_template('testform.html', query = query, results = results, kind = kind, user_id = user_id) 
-
-# @app.route('/user/<username>/history/')
-# def history(username):
-#     """
-#     Returns the post, comment, and like/dislike history of the user with the given username.
-#     """
-#     conn = dbi.connect()
-#     user_id = session.get('user_id', '')
-#     posts = waggle.getUserPosts(conn, username)
-#     for post in posts:
-#             post_id = post['post_id']
-#             post['canDelete'] = canDeletePost(post_id, user_id)
-#     return render_template('history.html', username = username, posts = posts)
 
 
 @app.before_first_request

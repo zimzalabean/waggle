@@ -25,7 +25,7 @@
     {% elif kind == 'Comments' %}
     {% import "commentTemplateJS.html" as commentComp%}
         {% for comment in results %}
-            {{commentComp.comment_temp(comment=comment, post=post)}}
+            {{commentComp.comment_temp(comment=comment, user_id = user_id)}}
         {% endfor %}       
 
     {% elif kind == 'Goslings' %}
