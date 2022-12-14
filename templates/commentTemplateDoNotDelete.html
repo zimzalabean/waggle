@@ -64,12 +64,14 @@
     background:none;
     border:none;
   }
-  .comment-info-counts :hover {
-    color:#a155bb;
+  .comment-info-counts div button:hover {
+    color:#c2a3cc;
   }
-
-  .comment-info-counts div .selected {
-    color:#9e47b8;
+  
+  .selected {
+    color:#f8e2ff;
+    background-color: #c2a3cc;
+    clip-path: circle(20px)
   }
   
   @media screen and (max-width:430px){
@@ -128,22 +130,22 @@
 
       <form class = 'like-dislike-comment' method=comment action="{{url_for('likeComment')}}" ></form>      
 
+        <div class="dislikes">
+          <button class = 'dislike-button' id = 'comment-Dislike{{comment.comment_id}}' onclick ="likeComment('{{comment.comment_id}}','Dislike')">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="css-i6dzq1"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path></svg>
+        </button>
+          <div> <span id="comment-dislikes-count-{{comment.comment_id}}">{{comment.dislikes}}</span></div>        
+        </div>
+        
         <div class="likes">
-          {% if comment.isLiked %}
-          <button class = 'selected' id = 'comment-Like{{comment.comment_id}}' onclick ="likeComment('{{comment.comment_id}}','Unlike')">
-            <svg class="feather feather-heart sc-dnqmqq jxshSx" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-            </button>
-
-          {% else %}
-          <button id = 'comment-Like{{comment.comment_id}}' onclick ="likeComment('{{comment.comment_id}}','Like')">
-            <svg class="feather feather-heart sc-dnqmqq jxshSx" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-            </button>
-
-          {% endif %}          
+          <button class = 'like-button' id = 'comment-Like{{comment.comment_id}}' onclick ="likeComment('{{comment.comment_id}}','Like')">
+          <svg class="feather feather-heart sc-dnqmqq jxshSx" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+          </button>
           <div><span id="comment-likes-count-{{comment.comment_id}}">{{comment.likes}}</span></div>
         </div> 
 
       </form>
+
      
       <div class="action">
         <button>
@@ -157,17 +159,34 @@
 </div>
 <div id="myDropdown_reply_{{comment.comment_id}}" class="dropdown-reply" style = 'padding-left:20px;'>   
     <form method='post' action="{{url_for('addReply', comment_id = comment.comment_id)}}" >     
-      <div class = 'comment-header' style = 'align-items: center; '>
-        <div class = 'avator-comment'>
-            <img src="{{url_for('profilePic',user_id=user_id)}}" alt="{{user_id}}" class = 'img-profile'>    
-        </div > 
-        <div><input type ='text' class ='write-text' name="comment_content"  placeholder="Reply to this comment" ></div>
-        <div><input type="submit" name="submit" class = 'search-filter' value="Reply"></div>
-    </div>
+        <div class = 'comment-header' style = 'align-items: center; '>
+            <div class = 'avator-comment'>
+                <img src="{{url_for('profilePic',user_id=user_id)}}" alt="{{user_id}}" class = 'img-profile'>    
+            </div > 
+            <div><input type ='text' class ='write-text' name="comment_content"  placeholder="Reply to this comment" ></div>
+            <div><input type="submit" name="submit" class = 'search-filter' value="Reply"></div>
+        </div>
     </form>
 </div> 
 
 <script>
+    var btn1 = document.querySelector('like-button');
+    var btn2 = document.querySelector('dislike-button');
+
+    btn1.addEventListener('click', function() {
+    
+        if (btn2.classList.contains('selected')) {
+        btn2.classList.remove('selected');
+        }     
+    });
+
+    btn2.addEventListener('click', function() {
+    
+        if (btn1.classList.contains('selected')) {
+        btn1.classList.remove('selected');
+        }     
+    });   
+
     function showReply(cid) {
             event.preventDefault();
             document.getElementById("myDropdown_reply_"+cid).classList.toggle("showReply");
@@ -178,10 +197,11 @@
     function likeComment(comment_id, kind) {
         console.log(comment_id);
         console.log(kind);
-        if (kind =='Like') {
-          document.getElementById("comment-Like"+comment_id).classList.toggle("selected");
+        document.getElementById("comment-"+kind+comment_id).classList.toggle("selected");
+        if (kind=='Like') {
+            document.getElementById("comment-Dislike"+comment_id).classList.remove('selected');
         }
-        else if (kind == 'Unlike'){
+        else if (kind == 'Dislike'){
             document.getElementById("comment-Like"+comment_id).classList.remove('selected');
         };         
         $.ajax({
@@ -198,6 +218,7 @@
                     var dislikes = resp.dislikes;
                     console.log("New likes for comment "+comment_id+" is "+likes +" and new dislikes is "+dislikes);
                     $("#comment-likes-count-"+comment_id).text(likes);
+                    $("#comment-dislikes-count-"+comment_id).text(dislikes);
                 }
             });  event.preventDefault();
     }

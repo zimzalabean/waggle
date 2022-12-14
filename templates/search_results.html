@@ -1,12 +1,71 @@
-{% extends "base.html" %}
+{% extends "base-bs.html" %}
 
-{% block content %}
+{% block main_content %}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
 <body>
-    <p>Gaggles matching {{query}}:</p>
-    <ul>
+    <div class = 'search-kind'>
+                <form method=get action="{{url_for('search')}}" >       
+                        <button type="submit" id = 'gg-btn' class = 'search-filter' name="submit" value="Gaggles">GAGGLES</button>
+                        <button type="submit" id = 'pst-btn' class = 'search-filter' name="submit" value="Posts">POSTS</button>
+                        <button type="submit" id = 'cmt-btn' class = 'search-filter' name="submit" value="Comments">COMMENTS</button>
+                        <button type="submit" id = 'gsl-btn' class = 'search-filter' name="submit" value="Goslings">GOSLINGS</button>
+                        <input type="hidden" name="query" value="{{query}}">
+                </form>
+    </div>
+
+    <div class = 'search-result'>  
+    Results matching {{query}}:
+
+    {% if kind == 'Posts' %}
+        {% import "postTemplateJS.html" as postComp%}
+        {% for post in results %}
+            {{postComp.post_temp(post=post)}}
+        {% endfor %} 
+
+    {% elif kind == 'Comments' %}
+    {% import "commentTemplateJS.html" as commentComp%}
+        {% for comment in results %}
+            {{commentComp.comment_temp(comment=comment, user_id = user_id)}}
+        {% endfor %}       
+
+    {% elif kind == 'Goslings' %}
+        {% for user in results %}
+        <p> 
+             Gosling:   <a href="{{url_for('user', username=user.username)}}">{{user.username}}</a>
+        </p>    
+        {% endfor %}  
+
+    {% else %}
         {% for gaggle in results %}
-        <li><a href="{{ url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a></li>
-        {% endfor %}
-    </ul>
+        <p> 
+        <a href="{{ url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a>
+        </p>
+        {% endfor %}      
+    {% endif %}
+    </div>       
 </body>
+
+<script>
+var btn1 = document.querySelector('#gg-btn');
+var btn2 = document.querySelector('#pst-btn');
+var btn3 = document.querySelector('pst-btn');
+var btn4 = document.querySelector('#gsl-btn');
+
+const buttons = ["gg-btn", "pst-btn","pst-btn", "gsl-btn"]
+
+window.addEventListener("load", function() {  
+  for (let x in buttons) {
+    let btn = document.getElementById("btn");
+    let val = btn.value;
+    console.log(val)
+    if (val== "{{kind}}") {
+        x.classList.toggle('is-selected');
+    };
+  }
+});
+
+</script>
+
+
+
 {% endblock %}

@@ -1,0 +1,98 @@
+{% extends "base-bs.html" %}
+
+{% block main_content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <!-- HEADER -->
+    <div class="row">
+        <div class="col-lg-12 mb-4">
+            <div class="card card-header bg-primary text-white">
+                <div class="d-flex align-items-end align-items-sm-center row">
+                    <div class="col-sm-2">
+                        <!-- <div class = 'avator'>
+                            <img src="{{url_for('profilePic',user_id=user_id)}}" alt="{{user_id}}" class = 'img-profile'>    
+                        </div >  -->
+                    </div>
+                    <div class="col-sm-8">
+                        <div class="card-body py-3">
+                            <h1 class="card-title text-white">{{gaggle.gaggle_name}}</h1>
+                        </div>
+                    </div>
+                    <div class="col-sm-2">
+                        <div class="card-body py-3">
+                            <form name="join_group" action="{{url_for('joinGaggle', gaggle_name = gaggle.gaggle_name)}}" class="ml-0" method="POST">
+                                {% if isAuthor %}                                
+                                <a href = "{{url_for('myGaggle', gaggle_name = gaggle.gaggle_name)}}"><button class = "btn btn-lg rounded-pill btn-secondary">EDIT GROUP</button></a> 
+                                {% elif joined %}
+                                <input type="submit" class="btn btn-lg rounded-pill btn-secondary" name="submit" value="Unjoin">
+                                {% else %}
+                                <input type="submit" class="btn btn-lg rounded-pill btn-dark" name="submit" value="Join">
+                                {% endif %}
+                                <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <!-- SIDE BAR (RIGHT COLUMN)-->
+        <div class="col-lg-4 order-1">
+            <div class="card">
+                <div class="d-flex align-items-end align-items-sm-center row">
+                    <!-- <div class="col-sm-3">
+                        <img src="/static/img/avatars/1.png" alt class="w-vw-5 m-3 py-0 h-auto rounded-circle" />
+                    </div> -->
+                    <div class="col-sm-9 py-0">
+                        <h3>{{gaggle.gaggle_name}}</h3>
+                    </div>
+                </div>
+                <hr/>
+                <div class="d-flex align-items-end align-items-sm-center row">
+                    <div class="col-sm-12">
+                        <p class="mx-3">{{gaggle.description}}</p>
+                    </div>
+                </div>
+                <hr/>
+                <div class="d-flex align-items-end align-items-sm-center row">
+                    <p class="mx-3"><strong>Created by: </strong><a href="{{url_for('user', username=gaggle.username)}}">{{gaggle.username}}</a></p>
+                </div>
+                <hr/>
+                <div class="d-flex align-items-end align-items-sm-center row">
+                    <p class="mx-3"><strong>Moderators: </strong></p>
+                </div>
+                <hr/>
+                <div class="d-flex align-items-end align-items-sm-center row">
+                    <p class="mx-3"><a href="{{url_for('gaggleMembers', gaggle_name = gaggle.gaggle_name)}}">View Members</a></p>
+                </div>
+            </div>
+        </div>
+        <!-- LEFT COLUMN -->
+        <div class="col-lg-8 mb-4 order-0">
+            <!-- CREATE POST -->
+            {% if joined %}
+            <div class="card mb-4">
+                <div class="d-flex align-items-end align-items-sm-center row">
+                    <h4 class="m-3">Create Post:</h4>
+                    <form name="write_post" action="{{url_for('addPost')}}" method="POST">
+                        <textarea class="mx-4 mb-0" name="content" rows="4" style="width: 45vw; min-width: 400px"></textarea>
+                        <input type="submit" class="btn rounded-pill btn-dark m-4 mt-2" value="Post">
+                        <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
+                        <input type="hidden" name="gaggle_name" value="{{gaggle.gaggle_name}}">
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+            {% block sub_content %}
+                <!-- FEED -->
+                <h3>Feed</h3>
+                {% import "postTemplateJS.html" as postComp%}
+                {% for post in posts %}
+                    {{postComp.post_temp(post=post)}}
+                {% endfor %}
+            {% endblock %}
+        </div>
+    </div>
+</div>
+{% endblock %}

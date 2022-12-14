@@ -714,6 +714,7 @@ def getCommentMetric(conn, comment_id):
         WHERE comment_id = %s''', 
                 [comment_id])   
     result = curs.fetchone()  
+    print(result)
     return result
 
 def getPostMetric(conn, post_id):
@@ -759,4 +760,71 @@ def isAuthor(conn, user_id, gaggle_id):
     if curs.fetchone() is None:
         return False
     else:
-        return True                
+        return True   
+
+def hasLikedCmt(conn, user_id, comment_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT comment_id 
+        FROM comment_like
+        WHERE kind = 'Like'
+        AND user_id = %s 
+        AND comment_id = %s''',
+        [user_id, comment_id])   
+    if curs.fetchone() is None:
+        return False
+    else:
+        return True       
+
+def hasLikedPost(conn, user_id, post_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT post_id
+        FROM post_like
+        WHERE kind = 'Like'
+        AND user_id = %s 
+        AND post_id = %s''',
+        [user_id, post_id])   
+    if curs.fetchone() is None:
+        return False
+    else:
+        return True  
+
+def unlikeComment(conn, user_id, comment_id):
+    '''Remove a user into a gaggle member list'''
+    curs = dbi.dict_cursor(conn)
+    print(comment_id)
+    kind = 'Like'
+    curs.execute('''
+        DELETE FROM comment_like
+        WHERE 
+        kind = %s
+        AND user_id = %s
+        AND comment_id = %s''', 
+                [kind, user_id, comment_id])
+    conn.commit()  # need this!   
+    print('inserted')
+    curs.execute('''
+        UPDATE comment
+        SET likes = likes - 1
+        WHERE comment_id = %s''',
+                [comment_id])
+    conn.commit()
+    print('decreases likes')
+    return "Unliked"        
+
+def getUserComments(conn, user_id):
+    '''returns all of user's comments sorted by latest'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT a.*, b.username, c.gaggle_name
+        FROM post a
+        LEFT JOIN user b
+        ON (a.poster_id = b.user_id)
+        LEFT JOIN gaggle c
+        ON (a.gaggle_id = c.gaggle_id)
+        WHERE poster_id = %s
+        order by posted_date DESC''',
+                 [user_id])
+    all_posts = curs.fetchall()
+    return all_posts

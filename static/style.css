@@ -443,10 +443,6 @@ h2, h3 {
     color: #ffffff
 }
 
-.selected{
-    color: #5b10ca !important;
-}
-
 .is-selected{
     background-color: #bca2e3 !important;
     color: #ffffff    
@@ -641,7 +637,7 @@ button:hover {
 }
 /* display reply */
 .dropdown-reply{
-    display: none;
+    display: none !important;
 
 }
 
