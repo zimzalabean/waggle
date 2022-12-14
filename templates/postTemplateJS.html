@@ -1,0 +1,228 @@
+{% macro post_temp(post) -%}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+<style>
+img {
+  max-width:100%;
+}
+.avator {
+  width:48px;
+  height:48px;
+  margin-right: 15px;
+  clip-path: circle(48px);
+}
+.img-profile{
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+  border-radius:50%;
+}
+
+.post-wrap {
+  max-width:100%;
+  /* background: #fff; */
+  background: none;
+  border-radius:3px;
+  padding: 20px;
+  border-bottom: 1px solid #e6ecf0;
+  border-top: 1px solid #e6ecf0;
+}
+.post-wrap:hover{
+    background-color: rgb(246, 246, 246);
+}
+.post-header {
+  display: flex;
+  align-items:flex-start;
+  /* align-items:stretch; */
+  font-size:14px;
+}
+.post-header-info {
+  font-family: 'Poppins', sans-serif;
+}
+.post-header-info span posted-date {
+  color:#657786;
+  font-size:12px;
+  margin-left: 20px;
+}
+
+.post-img-wrap {
+  margin-top: 10px;
+  padding-left: 60px;
+  min-height: 10vh;
+}
+
+.post-info-counts {
+  display: flex;
+  margin-left: 60px;
+  margin-top: 10px;
+  border-top: #657786 1px;
+}
+.post-info-counts div {
+  display: flex;
+  margin-right: 20px;
+}
+.post-info-counts div button {
+  color:#4b5b68;
+  margin-right: 10px;
+  background:none;
+  border:none;
+}
+.post-info-counts div button:hover {
+  color:#c2a3cc;
+}
+
+.post-info-counts div .selected {
+    color:#9e47b8;
+  }
+
+@media screen and (max-width:430px){
+  body {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  .post-header {
+    flex-direction:column;
+  }
+  .post-header img {
+    margin-bottom: 20px;
+  }
+  .post-header-info p {
+    margin-bottom: 30px;
+    padding-left:20px;
+  }
+  .post-img-wrap {
+    min-height:20%;
+    padding-left: 0;
+  }
+  .post-info-counts {
+  display: flex;
+  margin-left: 0;
+}
+.post-info-counts div {
+  margin-right: 10px;
+}
+}
+</style>
+
+<div class="post-wrap">
+    <div class="post-header">
+        <div class = 'avator'>
+          <img src="{{url_for('profilePic',user_id=post.poster_id)}}" alt="{{post.poster_id}}" class = 'img-profile'>
+        </div>
+      <div class="post-header-info">
+        <div class = 'gaggle-name'> <a href="{{url_for('user', username=post.username)}}"><span>@{{post.username}}</span></a>   <span class = 'posted-date'> @{{post.posted_date}}</span>      </div> 
+        <div><a href="{{url_for('gaggle',gaggle_name=post.gaggle_name)}}"> 🐣 {{post.gaggle_name}}</a> </div>
+        
+      </div>      
+    </div>
+
+    <div class="post-img-wrap" onclick= "window.location.href = '{{url_for('post', post_id=post.post_id)}}';">
+      <p> {{post.content}}</p>
+
+    </div>
+
+    <div class="post-info-counts">
+
+      <div class="posts">
+        <a href = "{{url_for('post', post_id = post.post_id)}}">
+        <button>
+        <svg class="feather feather-message-circle sc-dnqmqq jxshSx" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+        </button></a>
+        <div class="post-count">{{post.replies}}</div>
+      </div>
+
+
+      <form class = 'like-dislike-post' method=post action="{{url_for('likePost')}}" >     
+
+        <div class="likes">
+          {% if post.isLiked %}
+          <button class = 'selected' id = 'post-Like{{post.post_id}}' onclick ="likePost('{{post.post_id}}','Unlike')">
+            <svg class="feather feather-heart sc-dnqmqq jxshSx" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+            </button>
+
+          {% else %}
+          <button id = 'post-Like{{post.post_id}}' onclick ="likePost('{{post.post_id}}','Like')">
+            <svg class="feather feather-heart sc-dnqmqq jxshSx" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+            </button>
+
+          {% endif %}          
+          <div><span id="post-likes-count-{{post.post_id}}">{{post.likes}}</span></div>
+        </div> 
+
+      </form>
+
+
+     
+      <div class="action">
+        <button onclick="showDropdown('{{post.post_id}}')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-three-dots" viewBox="0 0 16 16">
+            <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
+          </svg>
+        </button>
+        <div id="myDropdown_{{post.post_id}}" class="dropdown-content">
+          {% if post.canDelete %}
+          <a href="{{url_for('deletePost', post_id=post['post_id'], author_id=post['poster_id'], gaggle_name=post['gaggle'])}}">Delete Post</a>
+          {% endif %}
+          {% if not post.canDelete %}
+          <a href="{{url_for('flagPost', post_id = post.post_id, author_id=post.poster_id, gaggle_name=post['gaggle'])}}">Report Post</a>
+          {% endif %}
+        </div> 
+      </div>
+
+  </div>
+</div>
+
+<script>
+        function likePost(post_id, kind) {
+            console.log(post_id);
+            if (kind =='Like') {
+              document.getElementById("post-Like"+post_id).classList.toggle("selected");
+            }
+            else if (kind == 'Unlike'){
+                document.getElementById("post-Like"+post_id).classList.remove('selected');
+            };  
+            $.ajax({
+                    type: "POST",
+                    url: "/likePost/",
+                    data: JSON.stringify({'post_id': post_id, 'kind': kind}),
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    async: true,
+                    success: function (resp) {
+                        console.log(resp);
+                        var post_id = resp.post_id;
+                        var likes = resp.likes;
+                        var dislikes = resp.dislikes;
+                        console.log("New likes for post "+post_id+" is "+likes +" and new dislikes is "+dislikes);
+                        $("#post-likes-count-"+post_id).text(likes);
+                        $("#post-dislikes-count-"+post_id).text(dislikes);
+                    }
+                });  event.preventDefault();
+        }
+
+        function changeLanguage(language) {
+            var element = document.getElementById("url");
+            element.value = language;
+            element.innerHTML = language;
+        }
+        function showDropdown(pid) {
+            document.getElementById("myDropdown_"+pid).classList.toggle("dropdown-content-show");
+            console.log(document.getElementById("myDropdown_"+pid));
+        }
+
+
+        // Close the dropdown if the user clicks outside of it
+        window.onclick = function(event) {
+            if (!event.target.matches('.dropbtn')) {
+                var dropdowns = document.getElementsByClassName("dropdown-content");
+                var i;
+                for (i = 0; i < dropdowns.length; i++) {
+                    var openDropdown = dropdowns[i];
+                    if (openDropdown.classList.contains('show')) {
+                        openDropdown.classList.remove('show');
+                    }
+                }
+            }}
+        </script>
+    
+{%- endmacro -%}

@@ -16,13 +16,15 @@ INSERT INTO post
   content,
   posted_date,
   likes,
-  dislikes)
+  dislikes, 
+  replies
+  )
 VALUES
-  (1,1,'Welcome','2022-11-11 11:11:11',0,0),
-  (2,2,'Welcome','2022-11-11 11:11:11',0,0), 
-  (3,3,'Welcome','2022-11-11 11:11:11',0,0), 
-  (4,4,'Welcome','2022-11-11 11:11:11',0,0),
-  (5,5,'Welcome','2022-11-11 11:11:11',0,0);
+  (1,1,'Welcome','2022-11-11 11:11:11',0,0,0),
+  (2,2,'Welcome','2022-11-11 11:11:11',0,0,0), 
+  (3,3,'Welcome','2022-11-11 11:11:11',0,0,0), 
+  (4,4,'Welcome','2022-11-11 11:11:11',0,0,0),
+  (5,5,'Welcome','2022-11-11 11:11:11',0,0,0);
 
 INSERT INTO gosling
   (user_id,
@@ -41,13 +43,14 @@ INSERT INTO comment
     content,
     posted_date,
     likes,
-    dislikes)
+    dislikes, 
+    replies)
 VALUES
-  (null,1,1,'First comment','2022-11-12 11:13:11',0,0),
-  (1,1,2,'Second replying to first','2022-11-12 11:13:11',0,0),
-  (2,1,3,'Third replying to 2nd','2022-11-12 11:13:11',0,0),
-  (1,1,4,'Fourth replying to first','2022-11-12 11:13:11',0,0),
-  (null,2,5,'Fifth standalone','2022-11-12 11:13:11',0,0);
+  (null,1,1,'First comment','2022-11-12 11:13:11',0,0,0),
+  (1,1,2,'Second replying to first','2022-11-12 11:13:11',0,0,0),
+  (2,1,3,'Third replying to 2nd','2022-11-12 11:13:11',0,0,0),
+  (1,1,4,'Fourth replying to first','2022-11-12 11:13:11',0,0,0),
+  (null,2,5,'Fifth standalone','2022-11-12 11:13:11',0,0,0);
 
 
 -- INSERT INTO post_like

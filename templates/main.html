@@ -1,26 +1,35 @@
-{% extends "baseTemplate.html" %}
+{% extends "base-bs.html" %}
     
+<!-- display main feed -->
 {% block main_content %}
-    <p>Joined gaggles:</p>
-        <ul>
-            {% for gaggle in gaggles %}
-            <li><a href="{{url_for('gaggle', gaggle_name=gaggle['gaggle_name'])}}">{{gaggle['gaggle_name']}}</a></li>
-            {% endfor %}
-        </ul>
 
-    <p>My feed</p>
-
+<!-- most recent 20 posts -->
+    {% import "postTemplateJS.html" as postComp%}
     {% for post in posts %}
-    <div class="post-main" id="{{post['post_id']}}">
-        <p>post id: {{post['post_id']}}</p>
-        <p>author: <a href="{{url_for('user', username=post['author'])}}">{{post['author']}}</a> gaggle: <a href="{{url_for('gaggle',gaggle_name=post['gaggle'])}}">{{post['gaggle']}}</a></p>
-        <p>content: {{post['content']}}</p>
-        <p>likes: {{post['likes']}}</p>
-        <p>dislikes: {{post['dislikes']}}</p>
-        <p>{{post['posted_date']}}</p>
+        {{postComp.post_temp(post=post)}}
+    {% endfor %}
+
+{% endblock %}
+
+<!-- right content -->
+{% block right_content %}
+    <div class = 'gaggle-list'>
+        <h5>YOUR WEDGES</h5>
+
+            {% for gaggle in gaggles %}
+            <p>w/<a href="{{url_for('gaggle', gaggle_name=gaggle['gaggle_name'])}}">{{gaggle['gaggle_name']}}</a></p>
+            {% endfor %}
     </div>
 
-    {% endfor %}
+    <div class = 'gaggle-list'>
+        <h5>YOUR GAGGLES</h5>
+
+            {% for gaggle in gaggles %}
+            <p>g/<a href="{{url_for('gaggle', gaggle_name=gaggle['gaggle_name'])}}">{{gaggle['gaggle_name']}}</a></p>
+            {% endfor %}
+    </div>  
+
+
 
 
 {% endblock %}

@@ -1,0 +1,26 @@
+{% extends "base-bs.html" %}
+
+{% block main_content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <!-- HEADER -->
+    <div>
+        <p>Create Gaggle</p>
+        <form action="{{url_for('createGaggle')}}" method="POST">
+        <table>
+            <tr>
+                <td><label for="gaggle_name">Gaggle Name*</label></td>
+                <td><input id="gaggle_name" name='gaggle_name' value="{{gaggle_name}}"></td> 
+            </tr>
+            <tr>
+                <td><label for="description">Description*</label></td>
+                <td><input id="description" name='description' value="{{description}}"></td>
+            </tr>            
+            </table>
+            <input type="submit" name="submit" value="Create">
+        </form>
+
+    <p>*: Required </p>
+    
+    </div>
+</div>
+{% endblock %}

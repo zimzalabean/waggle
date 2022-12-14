@@ -1,42 +1,53 @@
-{% extends "base.html" %}
+{% extends "base-bs.html" %}
 
 {% block main_content %}
-<ul class="menu">
-    <li><a href="{{url_for('history', username = username)}}">All History</a></li>
-    <li><a href="{{url_for('history', username = username)}}">Posts</a></li>
-    <li><a href="{{url_for('history', username = username)}}">Comments</a></li>
-    <li><a href="{{url_for('history', username = username)}}">Likes/Dislikes</a></li>
-  </ul>
-<div>
-    <p>This is the history of {{username}}</p>
+<div class="container-xxl flex-grow-1 container-p-y">
+  <h3 class="fw-bold py-2 mb-2">{{username}}'s History</h3>
+       <!-- Pills -->
+      <div class="row">
+        <div class="col-xl-12">
+          <div class="nav-align-top mb-4">
+            <ul class="nav nav-pills mb-3 nav-fill" role="tablist">
+              <li class="nav-item">
+                <button
+                  type="button"
+                  class="nav-link active"
+                  role="tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#navs-pills-justified-all"
+                  aria-controls="navs-pills-justified-all"
+                  aria-selected="true"
+                >
+                <i class='tf-icons bx bx-world'></i> All
+                </button>
+              </li>
+              <li class="nav-item">
+                <button
+                  type="button"
+                  class="nav-link"
+                  role="tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#navs-pills-justified-posts"
+                  aria-controls="navs-pills-justified-posts"
+                  aria-selected="false"
+                >
+                <i class='tf-icons bx bx-pencil'></i> Posts
+                </button>
+              </li>
+              <div class="tab-pane fade" id="navs-pills-justified-posts" role="tabpanel">
+                <!-- post section -->
+                {% import "postTemplateJS.html" as postComp%}
+                    {% for post in posts %}
+                        {{postComp.post_temp(post=post)}}
+                    {% endfor %}
+              </div>
+              <div class="tab-pane fade" id="navs-pills-justified-likes" role="tabpanel">
+                
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Pills -->
 
-    <p>Post History:</p>
-        {% import "post_template.html" as postComp%}
-        {% for post in posts %}
-            {{postComp.post_temp(post=post)}}
-        {% endfor %}
-        <script>
-            function changeLanguage(language) {
-                var element = document.getElementById("url");
-                element.value = language;
-                element.innerHTML = language;
-            }
-            function showDropdown(pid) {
-                document.getElementById("myDropdown_"+pid).classList.toggle("show");
-            }
-            // Close the dropdown if the user clicks outside of it
-            window.onclick = function(event) {
-                if (!event.target.matches('.dropbtn')) {
-                    var dropdowns = document.getElementsByClassName("dropdown-content");
-                    var i;
-                    for (i = 0; i < dropdowns.length; i++) {
-                        var openDropdown = dropdowns[i];
-                        if (openDropdown.classList.contains('show')) {
-                            openDropdown.classList.remove('show');
-                        }
-                    }
-                }
-            }
-        </script>
-</div>
 {% endblock %}
