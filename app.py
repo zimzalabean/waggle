@@ -321,7 +321,7 @@ def post(post_id):
     if request.method == 'GET':
         return render_template('post.html', post = post, comments = comments, valid = valid, username=username, user_id=user_id, gaggle = gaggle)
     else:
-        content = request.form['comment_content'] 
+        content = request.form.get('content') 
         parent_comment_id = None  
         add_comment = waggle.addComment(conn, post_id, parent_comment_id, content, user_id, posted_date)                   
         return redirect(url_for('post', post_id = post_id ))
@@ -871,7 +871,11 @@ def dashboard():
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
+<<<<<<< HEAD
     db_to_use = 'mp2_db' 
+=======
+    db_to_use = 'waggle_db' 
+>>>>>>> bd25ade953a1cd6e34b745afb4c7f7787e2ff21a
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 

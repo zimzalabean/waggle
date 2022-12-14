@@ -680,25 +680,7 @@ button:hover {
     overflow-wrap: break-word;
 }
 
-.comment-thread{
-    position: relative;
-    width: 100%;
 
-}
-
-.comment-border-link {
-    display: flex;
-    position: absolute;
-    margin-top:20px;
-    margin-left:35px;
-    left: 0;
-    width: 10px;
-    height: calc(100% + 20px);
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    background-color: rgba(0, 0, 0, 0.1);
-    background-clip: padding-box;
-}
 
 /* post-format */
 .gaggle-name{

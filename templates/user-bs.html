@@ -8,9 +8,9 @@
             <div class="card card-header bg-secondary text-white">
                 <div class="d-flex align-items-end align-items-sm-center row">
                     <div class="col-sm-2">
-                        <div class="card-body px-md-4 py-3">
-                            <img src="{{url_for('profilePic',user_id=user_id)}}" alt="{{url_for('profilePic',user_id=3)}}" alt class="w-vw-10 miw-px-75 h-auto rounded-circle">
-                        </div>
+                        <div class = 'avator' style = 'width:100px; height:100px;margin-left: 15%; clip-path: circle(100px);'>
+                            <img src="{{url_for('profilePic',user_id=user_id)}}"  class = 'img-profile' style = "  object-fit: cover; width: 100%; height: 100%; border-radius:50%;">
+                        </div>   
                     </div>
                     <div class="col-sm-8">
                         <div class="card-body py-3">
