@@ -1,0 +1,5418 @@
+====================== app.py =====================
+from flask import (Flask, render_template, make_response, url_for, request,
+                   redirect, flash, session, send_from_directory, jsonify)
+from werkzeug.utils import secure_filename
+import bcrypt
+from datetime import datetime
+app = Flask(__name__)
+
+# one or the other of these. Defaults to MySQL (PyMySQL)
+# change comment characters to switch to SQLite
+
+import cs304dbi as dbi
+# import cs304dbi_sqlite3 as dbi
+import waggle
+import random
+import json
+
+app.secret_key = 'your secret here'
+# replace that with a random key
+app.secret_key = ''.join([ random.choice(('ABCDEFGHIJKLMNOPQRSTUVXYZ' +
+                                          'abcdefghijklmnopqrstuvxyz' +
+                                          '0123456789'))
+                           for i in range(20) ])
+
+# This gets us better error messages for certain common request errors
+app.config['TRAP_BAD_REQUEST_ERRORS'] = True
+
+# For File Upload
+app.config['UPLOADS'] = 'setup/uploads'
+app.config['MAX_CONTENT_LENGTH'] = 1*1024*1024 # 1 MB
+
+
+####_____Login/Logout/Authorization Functions_____#### 
+
+@app.route('/login/', methods=['GET', 'POST'])
+def login():
+    """
+    Login Page
+    """
+    if request.method == 'GET':
+        return render_template('login-bs.html')
+    else:
+        username = request.form['username']
+        passwd = request.form['pass']
+        conn = dbi.connect()
+        curs = dbi.dict_cursor(conn)
+        curs.execute('''SELECT user_id, hashed_pass
+                        FROM user
+                        WHERE username = %s''',
+                    [username])
+        row = curs.fetchone()
+        if row is None:     # if username does not exist
+            flash('Login incorrect. Try again or join.')
+            return redirect(url_for('login'))
+        stored = row['hashed_pass']
+        hashed2 = bcrypt.hashpw(passwd.encode('utf-8'),stored.encode('utf-8'))
+        hashed2_str = hashed2.decode('utf-8')
+        if hashed2_str == stored:
+            flash('successfully logged in as ' + username)
+            session['username'] = username
+            session['user_id'] = row['user_id']
+            session['logged_in'] = True
+            return redirect(url_for('homepage'))
+        else:       # if password is incorrect
+            flash('Login incorrect. Try again or join.')
+            return redirect(url_for('login'))
+
+@app.route('/logout/')
+def logout():
+    '''
+    Logout Page
+    '''
+    try:
+        if 'username' in session:
+            username = session['username']
+            session.pop('username')
+            session.pop('user_id')
+            session.pop('logged_in')
+            flash('You have been logged out.')
+            return redirect(url_for('login'))
+        else:
+            flash('You are not logged in. Please log in or join.')
+            return redirect(url_for('login') )
+    except Exception as err:
+        flash('some kind of error '+str(err))
+        return redirect( url_for('login'))
+
+@app.route('/signup/', methods=['GET', 'POST'])
+def signup():
+    '''Sign up form '''
+    if request.method == 'GET':
+        return render_template('register.html')
+    else: 
+        email = request.form.get('email')
+        username = request.form.get('username')
+        password = request.form.get('password')   
+        first_name = request.form.get('first_name') 
+        last_name = request.form.get('last_name') 
+        class_year = request.form.get('class_year') 
+        bio_text = request.form.get('bio_text') 
+        strike = 0 
+        hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        hashed_pass = hashed.decode('utf-8')
+        conn = dbi.connect() 
+        valid = waggle.insertUser(conn, email, hashed_pass, username, first_name, last_name, class_year, bio_text, strike)
+        if valid:
+            user_id = waggle.getUserID(conn, username)
+            flash("Signup success")
+            return redirect(url_for('login'))
+        else: 
+            flash('Username already in use, please choose new one')
+            return render_template('register.html', email = email, password = password, first_name = first_name, last_name = last_name,class_year = class_year,bio_text = bio_text)
+
+####_____Helper Functions_____#### 
+
+def isLoggedIn():
+    '''Helper function to determine if user is logged in'''
+    user_id = session.get('user_id', '')
+    if user_id == '':
+        flash('You are logged out')
+        return redirect(url_for('login'))   
+    else:
+        return user_id
+
+def likedComments(user_id, comments):
+    '''
+    Take in a list of comments and check if if this user has liked these comments
+    '''
+    conn = dbi.connect() 
+    for comment in comments:
+        comment_id = comment['comment_id']
+        comment['isLiked'] = waggle.hasLikedCmt(conn, user_id, comment_id)
+    return comments
+
+def likedPosts(user_id, posts):
+    '''
+    Take in a list of comments and check if if this user has liked these comments
+    '''
+    conn = dbi.connect() 
+    for post in posts:
+        post_id = post['post_id']
+        post['isLiked'] = waggle.hasLikedPost(conn, user_id, post_id)
+    return posts
+
+def canDeletePost(post_id, user_id):
+    '''
+    Helper function to determine if current user can delete a post.
+    Check if user_id is the author the post_id.
+    '''
+    conn = dbi.connect() 
+    post = waggle.getPost(conn, post_id)
+    poster_id = post['poster_id']
+    if user_id == poster_id:
+        return True
+    else: 
+        return False
+
+def getRepliesThread(comment_id, thread):  
+    '''Helper function to get all the parent comment_id of the input comment_id.'''
+    conn = dbi.connect() 
+    parent_comment = waggle.getParentComment(conn, comment_id)
+    print("current_thread" + str(thread))
+    if len(parent_comment) == 0:
+        return thread 
+    else:
+        parent_comment_id = parent_comment[0]['parent_comment_id'] 
+        thread.append(parent_comment_id)
+        return getRepliesThread(parent_comment_id, thread)
+
+####_____Homepage Functions_____####
+
+@app.route('/')
+def homepage():
+    """
+    Main page. For now, contains a feed of all posts from all Gaggles.
+    """
+    conn = dbi.connect()
+    user_id = isLoggedIn()
+    username = session.get('username', '')
+    logged = session.get('logged_in', False)
+    if logged == False:
+        flash('You are not logged in. Please log in or join.')
+        return redirect(url_for('login'))
+    else:
+        gaggles = waggle.getUserGaggle(conn, username)
+        posts_info = waggle.getPosts(conn)
+        for post in posts_info:
+            post['canDelete'] = True
+        posts = likedPosts(user_id, posts_info)
+        return render_template('main.html',  gaggles = gaggles, username=username, posts=posts, user_id = user_id)
+
+####_____Search Functions_____####
+
+@app.route('/search/', methods=["GET"])
+def search():
+    """
+    Called when user searches for aanything in the search bar. Returns any matched 
+    under different filter that have a name matching the keyword search.
+    """
+    conn = dbi.connect()
+    kind = request.args.get('submit')
+    user_id = isLoggedIn()
+    if kind is None: #fresh search
+        query = request.args.get('search-query')
+        session['query'] = query #set query
+        results = waggle.searchGaggle(conn, query)     
+    elif kind == 'Posts':
+        query = session.get('query')
+        results = waggle.searchPost(conn, query)
+    elif kind == 'Comments':
+        query = session.get('query')
+        results = waggle.searchComment(conn, query)
+    elif kind == 'Goslings':
+        query = session.get('query')
+        results = waggle.searchPeople(conn, query)
+    else:
+        query = session.get('query')
+        results = waggle.searchPost(conn, query) 
+    return render_template('testform.html', query = query, results = results, kind = kind, user_id = user_id) 
+
+####_____Post Functions_____#### 
+
+@app.route('/deletePost/<post_id>/<author_id>/<gaggle_name>')
+def deletePost(post_id, author_id, gaggle_name):
+    """
+    Called when user presses "delete" button on a post. The post gets deleted from the database if 
+    the post was written by the logged in user.
+    """
+    username = session.get('username', '')
+    user_id = session.get('user_id', '')
+    logged = session.get('logged_in', False)
+    if logged == False:
+        flash('You are not logged in. Please log in or join')
+        return redirect(url_for('login'))
+    if user_id != int(author_id):
+        flash('You are not authorized to delete this post/comment.')
+        return redirect(url_for('homepage'))
+    conn = dbi.connect()    
+    deleted = waggle.deletePost(conn, post_id)
+    flash('Deleted post with post_id {pid}'.format(pid=post_id))
+    return redirect(url_for('gaggle', gaggle_name=gaggle_name)) #redirects back to the gaggle page
+
+@app.route('/user/<username>/history/')
+def history(username):
+    """
+    Returns the post, comment, and like/dislike history of the user with the given username.
+    """
+    conn = dbi.connect()
+    user_id = session.get('user_id', '')
+    posts = waggle.getUserPosts(conn, username)
+    for post in posts:
+        post_id = post['post_id']
+        post['canDelete'] = canDeletePost(post_id, user_id)
+    posts = likedPosts(user_id, posts)
+    comments = likedComments(user_id,waggle.getUserComments(conn, user_id))
+    return render_template('history.html', username = username, posts = posts, comments = comments, user_id=user_id)
+
+@app.route('/user/history/')
+def personalHistory():
+    """
+    Returns the post, comment, and like/dislike history of the user with the given username.
+    """
+    conn = dbi.connect()
+    user_id = isLoggedIn()
+    username = session.get('username', '')
+    return redirect(url_for('history', username = username))
+
+@app.route('/newpost/', methods=["POST"])
+def addPost():
+    """
+    Called when user clicks the 'post' button on a Gaggle page. Inserts a new row
+    in the 'post' table in the database.
+    """
+    conn = dbi.connect()
+    content = request.form.get('content')
+    gaggle_id = request.form.get('gaggle_id')
+    gaggle_name = request.form.get('gaggle_name')
+    now = datetime.now()
+    posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
+    if len(content) == 0:
+        flash('Please enter some content.')
+        return redirect(url_for('gaggle', gaggle_name=gaggle_name))
+    else:
+        poster_id = session.get('user_id', '')
+        valid = waggle.isGosling(conn, poster_id, gaggle_id)
+        if poster_id != '':
+            if valid:
+                try:
+                    print(posted_date)
+                    add = waggle.addPost(conn, gaggle_id, poster_id, content, None, posted_date)
+                except Exception as e: 
+                    print(e)
+                    flash('Error:' +e)
+            else:
+                flash('You must be a gosling of this gaggle to perform this action.')
+            return redirect(url_for('gaggle', gaggle_name=gaggle_name))    
+        else:
+            flash('You have been logged out.')
+            return redirect(url_for('login'))
+
+@app.route('/post/<post_id>/', methods=['GET', 'POST']) #add hyperlink from group-bs.html to post
+def post(post_id):
+    """
+    Returns the page for the specific post with the given post_id.
+    """
+    now = datetime.now()
+    posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
+    user_id = isLoggedIn()   
+    username = session.get('username')
+    conn = dbi.connect() 
+    post = waggle.getPost(conn, post_id)
+    post['canDelete'] = canDeletePost(post_id, user_id)
+    gaggle_id = post['gaggle_id']
+    conn = dbi.connect()
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''SELECT *
+                    FROM gaggle
+                    WHERE gaggle_id = %s''',[gaggle_id])
+    gaggle = curs.fetchone()
+    comments = likedComments(user_id, waggle.getPostComments(conn, post_id))
+    valid = waggle.isGosling(conn, user_id, gaggle_id)
+    if request.method == 'GET':
+        return render_template('post.html', post = post, comments = comments, valid = valid, username=username, user_id=user_id, gaggle = gaggle)
+    else:
+        content = request.form['comment_content'] 
+        parent_comment_id = None  
+        add_comment = waggle.addComment(conn, post_id, parent_comment_id, content, user_id, posted_date)                   
+        return redirect(url_for('post', post_id = post_id ))
+    
+
+@app.route('/likeComment/', methods=['POST'])
+def likeComment(): #if comment isn't liked then insert like else unlike
+    """
+    Receive a request from AJAX to modify a like status with a comment.
+    AJAX send a data with comment_id and "kind" that indicate this is a Like or Unlike request
+    """    
+    user_id = isLoggedIn()
+    conn = dbi.connect()  
+    if request.method == 'POST': 
+        data = request.get_json()
+        comment_id = data['comment_id']
+        unliking = waggle.hasLikedCmt(conn, user_id, comment_id)
+        if unliking: #User has liked a comment and is unliking it
+            waggle.unlikeComment(conn, user_id, comment_id,)
+        else:
+            kind = 'Like'
+            waggle.likeComment(conn, comment_id, user_id, kind)
+        metric = waggle.getCommentMetric(conn, comment_id)
+        return jsonify(metric)
+
+@app.route('/flag_post/<post_id>/<author_id>/<gaggle_name>', methods=['GET', 'POST'])
+def flagPost(post_id, author_id, gaggle_name):
+    '''
+    If a user is logged in then the function checks if they already reported this post,
+    if not then it inserts a new flag into a flag_post table and updates
+    flags count for a post in post table.
+    '''
+    user_id = isLoggedIn()
+    username = session.get('username')
+    reporter_id = session.get('user_id')
+    conn = dbi.connect()
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''SELECT *
+                    FROM flag_post
+                    WHERE post_id = %s and reporter_id = %s''',[post_id, reporter_id])
+    res = curs.fetchone()
+    if request.method == 'GET':
+        if res is not None:
+            flash('You have already reported this post')
+            return redirect(request.referrer)
+        else:
+            return render_template('flag_post.html', post_id=post_id, author_id=author_id, gaggle_name=gaggle_name, username=username, user_id = user_id)
+    else:
+        flagged_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        reason = request.form['reason']
+        #insert into flag_post table
+        curs.execute('''insert into flag_post (post_id, reporter_id, reason, flagged_date, mod_aprroved)
+                            values (%s,%s,%s,%s,'Pending')''',[post_id, reporter_id,reason,flagged_date])
+        #update post table
+        #curs.execute('''update post set flags=flags+1 where post_id=%s''', [post_id])
+        conn.commit()
+        flash('You have successfully reported a post {pid}'.format(pid=post_id))
+        return redirect(url_for('gaggle', gaggle_name=gaggle_name))
+
+
+####_____Comment/Replies Functions_____####
+
+@app.route('/likePost/', methods=['POST'])
+def likePost():
+    """
+    Receive a request from AJAX to modify a like status with a comment.
+    AJAX send a data with comment_id and "kind" that indicate this is a Like or Unlike request
+    """
+    user_id = isLoggedIn()
+    conn = dbi.connect()  
+    if request.method == 'POST': 
+        data = request.get_json()
+        post_id = data['post_id']
+        unliking = waggle.hasLikedPost(conn, user_id, post_id)
+        if unliking: #User has liked a comment and is unliking it
+            waggle.unlikePost(conn, user_id, post_id)
+        else:
+            kind = 'Like'
+            waggle.likePost(conn, post_id, user_id, kind)
+        metric = waggle.getPostMetric(conn, post_id)
+        return jsonify(metric)
+
+
+@app.route('/reply/<comment_id>', methods=['GET', 'POST'])
+def addReply(comment_id):
+    """
+    Show original post and entire conversation thread of the comment you're replying to.
+    Update the parent comment's replies when you reply. 
+    """
+    now = datetime.now()
+    posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
+    user_id = isLoggedIn()   
+    username = session.get('username')
+    conn = dbi.connect() 
+    #=============================================
+    # get information about the comment and check if current user has liked it
+    comment = waggle.getComment(conn, comment_id)
+    comment['isLiked'] = waggle.hasLikedCmt(conn, user_id, comment_id)
+    #==============================================
+    # get the post the comment originates from
+    post_id = comment['post_id']
+    post = waggle.getPost(conn, post_id)
+    #=============================================
+    # retrieve previous comments in the conversation if there is any  
+    parent_comment_id = comment['comment_id']
+    replies = likedComments(user_id, waggle.getReplies(conn, comment_id))
+    thread = [parent_comment_id]
+    chain = getRepliesThread(parent_comment_id, thread)
+    comment_chain_id = [x for x in chain if x is not None][::-1]
+    comment_chain = likedComments(user_id, [waggle.getComment(conn, id)for id in comment_chain_id[:-1]]) #this is the previous comment chain
+    if request.method == 'GET':
+        return render_template('reply.html', comment_chain = comment_chain, parent_comment = comment, replies = replies, post = post, username=username, user_id = user_id)
+    else: #reply
+        kind = request.form.get('submit')
+        content = request.form['comment_content']  
+        add_comment = waggle.addComment(conn, post_id, parent_comment_id, content, user_id, posted_date)
+        return redirect( url_for('addReply', comment_id = comment_id )) 
+
+
+####_____User Profile Functions_____#### 
+
+@app.route('/user/edit/', methods=['GET', 'POST'])
+def editMyPage():
+    """
+    Returns a page where a user can edit their profile information.
+    Updates the user table in the database.
+    """
+    user_id = session.get('user_id', '')
+    if user_id == '':
+        flash('You are not logged in. Please log in or join.')
+        return redirect(url_for('login'))
+    username = session.get('username')
+    conn = dbi.connect()
+    user_info = waggle.getUserInfo(conn, user_id)
+    if request.method == 'GET':
+        return render_template('edit_user_info.html', user=user_info, username=username,user_id=user_id)
+    else:
+        new_fn, new_ln, new_cy, new_bio = '', '', '', ''
+        if request.form['first_name'] != '':
+            new_fn = request.form['first_name']
+            curs = dbi.dict_cursor(conn)
+            curs.execute('''UPDATE user
+                            SET first_name = %s
+                            WHERE user_id = %s''',
+                        [new_fn,user_id])
+            conn.commit()
+        if request.form['last_name'] != '':
+            new_ln = request.form['last_name']
+            curs = dbi.dict_cursor(conn)
+            curs.execute('''UPDATE user
+                            SET last_name = %s
+                            WHERE user_id = %s''',
+                        [new_ln,user_id])
+            conn.commit()
+        if request.form['class_year'] != '':
+            new_cy = request.form['class_year']
+            curs = dbi.dict_cursor(conn)
+            curs.execute('''UPDATE user 
+                            SET class_year = %s
+                            WHERE user_id = %s''',
+                        [new_cy,user_id])
+            conn.commit()
+        if request.form['bio_text'] != '':
+            new_bio = request.form['bio_text']
+            curs = dbi.dict_cursor(conn)
+            curs.execute('''UPDATE user
+                            SET bio_text = %s
+                            WHERE user_id = %s''',
+                        [new_bio,user_id])
+            conn.commit()
+        flash('Your information was successfully updated.')
+        return redirect(url_for('editMyPage'))
+
+@app.route('/upload/', methods=["GET", "POST"])
+def file_upload():
+    '''
+    Allow user to upload their file and insert it into the database (profile picture specifically)
+    '''
+    user_id = session.get('user_id', '')
+    if user_id == '':
+        flash('You are not logged in. Please log in or join.')
+        return redirect(url_for('login'))
+    username = session.get('username')
+    conn = dbi.connect()    
+    if request.method == 'GET':
+        return redirect(url_for('editMyPage'))
+    else:
+        try:
+            imageFile = request.files['pic']
+            user_filename = imageFile.filename
+            ext = user_filename.split('.')[-1]
+            filename = secure_filename('{}.{}'.format(user_id,ext))
+            pathname = os.path.join(app.config['UPLOADS'],filename)
+            imageFile.save(pathname)
+            waggle.insertProfilePic(conn, user_id, filename)
+            flash('Upload successful')
+            return redirect(url_for('editMyPage'))
+        except Exception as err:
+            flash('Upload failed {why}'.format(why=err))
+            return redirect(url_for('editMyPage'))
+   
+@app.route('/user/<username>')
+def user(username):
+    """
+    Returns the profile page of the user with the given username.
+    """
+    conn = dbi.connect()
+    user_id = isLoggedIn() #get current_user id
+    uid = waggle.getUserID(conn, username)['user_id'] #get uid of person in question
+    gagglesCreated = waggle.getGagglesCreated(conn, uid)
+    gagglesJoined = waggle.getGagglesJoined(conn, uid)
+    for gaggle in gagglesJoined:
+        gaggle['isAuthor'] = waggle.isAuthor(conn, uid, gaggle['gaggle_id'])
+    userInfo = waggle.getUserInfo(conn, uid)
+    isPersonal = False
+    if user_id == uid: #if uid of person in question matches current user
+        isPersonal = True
+    return render_template('user-bs.html', username=username, gagglesCreated=gagglesCreated, gagglesJoined=gagglesJoined, isPersonal = isPersonal, userInformation=userInfo, user_id=uid)
+
+@app.route('/profile/')
+def profile():
+    """
+    Returns the profile page of the user logged in
+    """
+    username = session.get('username')
+    return redirect(url_for('user', username=username))
+
+@app.route('/pic/<user_id>')
+def profilePic(user_id):
+    """
+    Retrieves the profile pic of the user from the database or the default photo
+    """
+    conn = dbi.connect()
+    profilePic = waggle.getProfilePic(conn, user_id)
+    if(profilePic is None): #sets the default photo if user's profile pic doesn't exist
+        filename = '0.jpeg'
+    else: 
+        filename = profilePic['filename']
+    return send_from_directory(app.config['UPLOADS'],filename)
+    
+def getRepliesThread(comment_id, thread):  
+    '''Helper function to get all the previous comment_id of the input comment_id.'''
+    conn = dbi.connect() 
+    parent_comment = waggle.getParentComment(conn, comment_id)
+    print("current_thread" + str(thread))
+    if len(parent_comment) == 0:
+        return thread 
+    else:
+        parent_comment_id = parent_comment[0]['parent_comment_id'] 
+        thread.append(parent_comment_id)
+        return getRepliesThread(parent_comment_id, thread)
+
+def canIntComment(comment_id, user_id):
+    '''
+    Helper function to determine if current user can interact with the comment.
+    Check if user_id is a member of the group that the comment was made in.
+    '''
+    conn = dbi.connect()
+    gaggle_id = waggle.getCommentGaggle(conn, comment_id)
+    valid = waggle.isGosling(conn, user_id, gaggle_id)
+    return valid
+
+
+@app.route('/blockUser/<username>', methods=["POST"])
+def blockUser(username):
+    pass
+
+@app.route('/deactivate/')
+def deactivateAccount():
+    '''
+    Deactivate account
+    ''' 
+    conn = dbi.connect()
+    try:
+        uid = session['user_id']
+        deleted = waggle.deactivateAccount(conn, uid)
+        if 'username' in session:
+            username = session['username']
+            session.pop('username')
+            session.pop('user_id')
+            session.pop('logged_in')
+            return redirect(url_for('login'))
+    except Exception as err:
+        flash('some kind of error '+str(err))
+        return redirect( url_for('login'))
+
+
+####_____Gaggle Functions_____#### 
+
+@app.route('/gaggle/<gaggle_name>')
+def gaggle(gaggle_name):
+    """
+    Returns the page for the Gaggle with the given name. Page displays all posts in that Gaggle.
+    """
+    user_id = session.get('user_id', '')
+    username = session.get('username', '')
+    logged = session.get('logged_in', False)
+    if user_id == '':
+        flash('You are logged out')
+        return redirect(url_for('login')) 
+    else: 
+        conn = dbi.connect() 
+        gaggle = waggle.getGaggle(conn, gaggle_name)  
+        posts = waggle.getGagglePosts(conn, gaggle_name)
+        for post in posts:
+            post_id = post['post_id']
+            post['canDelete'] = canDeletePost(post_id, user_id)
+        gaggle_id = waggle.getGaggleID(conn, gaggle_name)['gaggle_id']
+        joined  = waggle.isGosling(conn, user_id, gaggle_id)
+        isAuthor = waggle.isAuthor(conn,user_id, gaggle_id)
+        return render_template('group-bs.html', gaggle = gaggle, posts = posts, joined = joined, isAuthor = isAuthor, username=username, user_id = user_id)
+
+@app.route('/gaggle/<gaggle_name>/members/')
+def gaggleMembers(gaggle_name):
+    """
+    Returns a page with list of all members of the Gaggle with the given name.
+    """
+    user_id = isLoggedIn()
+    conn = dbi.connect() 
+    members = waggle.getMembers(conn, gaggle_name)  
+    username = session.get('username')
+    return render_template('groupMembers.html', gaggle_name = gaggle_name, members = members, username=username, user_id = user_id) 
+
+@app.route('/gaggle/<gaggle_name>/join/', methods=['GET', 'POST'])
+def joinGaggle(gaggle_name):
+    """
+    Called when a user clicks on the 'join' button on a Gaggle page. Inserts a new row
+    in the gosling table in the database. If user is already a member, then the
+    button functions as an 'unjoin'.
+    """
+    conn = dbi.connect() 
+    user_id = isLoggedIn()
+    if request.method == 'GET':
+        return redirect(url_for('gaggle', gaggle_name = gaggle_name))      
+    else:  
+        gaggle_id = request.form.get('gaggle_id')
+        if request.form.get('submit') == 'Join':
+            action = waggle.joinGaggle(conn, user_id, gaggle_id)
+        else: 
+            action = waggle.unjoinGaggle(conn, user_id, gaggle_id)             
+        return redirect(url_for('gaggle', gaggle_name=gaggle_name))
+
+
+@app.route('/creator/<gaggle_name>', methods=['GET', 'POST'])
+def myGaggle(gaggle_name):
+    '''
+    Show gaggles you've created, toggle to change gaggle. Default view is first gaggle. 
+    '''
+    user_id = isLoggedIn()
+    conn = dbi.connect() 
+    gaggles = waggle.getGagglesCreated(conn, user_id)
+    hasGaggle = False   
+    if len(gaggles) > 0:
+        gaggle_id = waggle.getGaggleID(conn, gaggle_name)['gaggle_id']
+        invitees = waggle.getInvitees(conn, gaggle_id)
+        gaggle = waggle.getGaggle(conn, gaggle_name)
+        hasGaggle = True
+    if request.method == 'GET':
+        return render_template('gaggleDashboard.html', hasGaggle = hasGaggle, gaggles = gaggles, gaggle = gaggle, invitees = invitees, user_id = user_id)
+    else:
+        kind = request.form.get('submit')
+        if kind == 'Change':
+            gaggle_name = request.form.get('new_gaggle_name')           
+        elif kind == 'Update':
+            new_group_bio = request.form.get('content') 
+            updated = waggle.updateBio(conn, gaggle_id, new_group_bio)
+        else:
+            invitee_username = request.form.get('invitee_username')
+            validInvite = waggle.modInvite(conn, gaggle_id, invitee_username)
+            if validInvite:
+                flash('Invitation sent')
+            else:
+                flash('Invitation already pending')
+        return redirect(url_for('myGaggle', gaggle_name = gaggle_name)) 
+
+@app.route('/delete/<gaggle_id>', methods=['GET', 'POST'])
+def deleteGaggle(gaggle_id):
+    '''
+    Deletes gaggle.
+    '''
+    user_id = isLoggedIn()
+    username = session.get('username',)
+    conn = dbi.connect() 
+    gagglesCreated = waggle.getGagglesCreated(conn, user_id)
+    gagglesJoined = waggle.getGagglesJoined(conn, user_id)
+    isPersonal = True
+    if request.method == 'GET':
+        return render_template('user-bs.html', username=username, gagglesCreated=gagglesCreated, gagglesJoined=gagglesJoined, isPersonal = isPersonal, user_id = user_id)
+    else:
+        delete = waggle.deleteGaggle(conn, gaggle_id)
+        flash('Successfully deleted gaggle')
+        return redirect(url_for('user', username = username))
+
+@app.route('/creator/', methods=['GET', 'POST'])
+def createGaggle():
+    '''
+    Create gaggle.
+    '''
+    user_id = isLoggedIn()
+    conn = dbi.connect() 
+    username = session.get('username')
+    if request.method == 'GET':
+        return render_template('createGaggleForm.html')
+    else:
+        gaggle_name = request.form.get('gaggle_name')           
+        description = request.form.get('description') 
+        if len(gaggle_name) > 0: 
+            valid = waggle.createGaggle(conn, user_id, gaggle_name, description)
+            if valid:
+                gaggle_id = waggle.getGaggleID(conn, gaggle_name)['gaggle_id']
+                action = waggle.joinGaggle(conn, user_id, gaggle_id)
+                return redirect(url_for('gaggle', gaggle_name = gaggle_name))  
+            else:
+                flash("gaggle name already existed")
+                return render_template('createGaggleForm.html')
+        else:
+            flash('gaggle name cannot be empty')
+            return render_template('createGaggleForm.html')
+
+@app.route('/unjoinGaggle/<username>/<gaggle_id>/<gaggle_name>', methods=['POST'])
+def unJoinGaggle(username,gaggle_id, gaggle_name):
+    """
+    Removes user from the Gaggle member list
+    """
+    conn = dbi.connect()
+    user_id = session.get('user_id', '')
+    logged = session.get('logged_in', False)
+    if logged == False:
+        flash('You are not logged in. Please log in or join')
+        return redirect(url_for('login'))
+    deleted = waggle.unjoinGaggle(conn, user_id, gaggle_id) 
+    flash('Successfully left {gaggle_name}'.format(gaggle_name=gaggle_name))
+    return redirect(url_for('user', username=username)) 
+
+
+####_____Moderator Functions to be implemented in beta phase not tested _____####
+
+@app.route('/invitemod/', methods=['GET', 'POST'])
+def inviteMod():
+    '''Display gaggles you've created with the status of your mod invitation.
+    Let you send mod invitation to users for your specified gaggle.'''
+    user_id = isLoggedIn()
+    username = session.get('username')
+    conn = dbi.connect()     
+    gaggles = waggle.getInvitees(conn, user_id)     
+    if request.method == 'GET':
+        return render_template('invite_mod.html', gaggles = gaggles, username=username, user_id = user_id)
+    else: 
+        invitee_username = request.form.get('invitee_username')
+        gaggle_id = request.form.get('gaggle_id')
+        validInvite = waggle.modInvite(conn, gaggle_id, invitee_username)
+        if validInvite:
+            flash('Invitation sent')
+        else:
+            flash('Invitation already pending')
+        return redirect(url_for('inviteMod'))
+
+@app.route('/modqueue/', methods=['GET', 'POST'])
+def modqueue():
+    logged_in = session.get('logged_in', False)
+    if logged_in != False:
+        username = session.get('username')
+        user_id = session.get('user_id')
+        gaggle_id = 'None'
+        conn = dbi.connect()
+        gaggles = waggle.getMyModGaggles(conn, user_id)
+        if request.method == 'GET':
+            return render_template('modqueue.html', gaggles=gaggles, gaggle_id=gaggle_id, pending = [], approved = [], username=username, user_id = user_id)
+        else:
+            gaggle_id = request.form.get('chosen_gaggle')
+            flagged = waggle.get_flagged_posts(conn, gaggle_id)
+            pending, approved = [], []
+            for flag in flagged:
+                if flag['mod_aprroved']=='Pending':
+                    pending.append(flag)
+                else:
+                    approved.append(flag)
+            return render_template('modqueue.html', gaggles=gaggles, gaggle_id=gaggle_id, pending = pending, approved = approved, username=username, user_id = user_id)
+    else:
+        flash('You are not logged in. Please login or join.')
+        return redirect(url_for('login'))
+
+@app.route('/modapprove/<post_id>/<reported_user_id>', methods=['POST'])
+def modapprove(post_id, reported_user_id):
+    approval = request.form.get('submit')
+    conn = dbi.connect()
+    if approval == 'Yes':
+        curs = dbi.dict_cursor(conn)
+        curs.execute('''
+            update flag_post
+            set mod_aprroved = 'Yes'
+            where post_id = %s and reporter_id = %s
+        ''', [post_id, reported_user_id])
+        conn.commit()
+        waggle.increment_flag(conn, post_id)
+        res = waggle.increment_strikes(conn, reported_user_id)
+        if res == 'ban':
+            flash('user needs to get banned')
+    else:
+        curs = dbi.dict_cursor(conn)
+        curs.execute('''
+            update flag_post
+            set mod_aprroved = 'No'
+            where post_id = %s and reporter_id = %s
+        ''', [post_id, reported_user_id])
+        conn.commit()
+    return redirect(url_for('modqueue'))
+
+@app.route('/invitation/', methods=['GET', 'POST'])
+def response_invite():
+    '''Display invitations to become moderators and let you respond.'''
+    user_id = isLoggedIn()
+    conn = dbi.connect() 
+    invitations = waggle.getInvitation(conn, user_id)
+    if request.method == 'GET':
+        return render_template('invitation.html', invitations = invitations, user_id = user_id)
+    else:
+        response = request.form.get('submit')
+        gaggle_id = request.form.get('gaggle_id')
+        responded =  waggle.responseInvite(conn, gaggle_id, user_id, response)
+        return redirect(url_for('response_invite'))  
+
+
+####_____Moderator/Creator Functions_____####
+
+@app.route('/dashboard/', methods=['GET'])
+def dashboard():
+    """
+    Show dashboard where you can choose to edit information about groups you've created or moderate your gaggles.
+    """
+    user_id = isLoggedIn()
+    conn = dbi.connect() 
+    hasGaggle = False  
+    gaggles = waggle.getGagglesCreated(conn, user_id)
+    if len(gaggles) > 0:
+        gaggle = gaggles[0] 
+        gaggle_id = gaggle['gaggle_id']         
+        invitees = waggle.getInvitees(conn, gaggle_id)
+        hasGaggle = True
+    if request.method == 'GET':
+        return render_template('gaggleDashboard.html', hasGaggle = hasGaggle, gaggles = gaggles, gaggle = gaggle, invitees = invitees, user_id = user_id)
+
+
+
+
+@app.before_first_request
+def init_db():
+    dbi.cache_cnf()
+    # set this local variable to 'wmdb' or your personal or team db
+    db_to_use = 'hs1_db' 
+    dbi.use(db_to_use)
+    print('will connect to {}'.format(db_to_use))
+
+if __name__ == '__main__':
+    import sys, os
+    if len(sys.argv) > 1:
+        # arg, if any, is the desired port number
+        port = int(sys.argv[1])
+        assert(port>1024)
+    else:
+        port = os.getuid()
+    app.debug = True
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
+    app.run('0.0.0.0',port)
+
+====================== waggle.py =====================
+import cs304dbi as dbi
+
+# ==========================================================
+# The functions that do most of the work.
+def getUserID(conn, username):
+    '''returns user_id based on username'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT user_id
+        FROM user 
+        WHERE username = %s''',
+                 [username])
+    return curs.fetchone()    
+
+def getUserInfo(conn, user_id):
+    '''returns user information based on user_id'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT first_name, last_name, class_year, bio_text
+        FROM user
+        WHERE user_id = %s''',
+                 [user_id])
+    return curs.fetchone()      
+
+def getUserGaggle(conn,username):
+    '''returns all gaggles that a user is a member of'''
+    user_id = getUserID(conn, username)['user_id']
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT a.gaggle_id, b.gaggle_name 
+        FROM gosling a 
+        LEFT JOIN gaggle b 
+        USING (gaggle_id) 
+        WHERE a.user_id = %s''',
+                 [user_id]) #Get a list of all gaggle
+    return curs.fetchall()
+
+def getUserPosts(conn, username):
+    '''returns all of a user's posts sorted by latest'''
+    user_id = getUserID(conn, username)['user_id']
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT a.*, b.username, c.gaggle_name
+        FROM post a
+        LEFT JOIN user b
+        ON (a.poster_id = b.user_id)
+        LEFT JOIN gaggle c
+        ON (a.gaggle_id = c.gaggle_id)
+        WHERE poster_id = %s
+        order by posted_date DESC''',
+                 [user_id])
+    all_posts = curs.fetchall()
+    return all_posts
+
+def searchGaggle(conn, query):
+    '''returns all gaggles whose names match the query'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT * from gaggle 
+        WHERE gaggle_name LIKE %s''',
+                 ["%"+query+"%"]) 
+    return curs.fetchall()    
+
+def getGaggle(conn, gaggle_name):
+    '''returns information about a gaggle based on its gaggle_name'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT a.*, b.username
+        FROM gaggle a
+        LEFT JOIN user b
+        ON (a.author_id = b.user_id)
+        WHERE gaggle_name = %s''',
+                 [gaggle_name])
+    return curs.fetchone()      
+
+def getPosts(conn):
+    '''returns the latest 20 posts for homepage feed'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        select a.*, b.username, CONCAT(b.first_name,' ',b.last_name) as full_name, c.gaggle_name 
+        from post a
+        left join user b
+        on (a.poster_id = b.user_id)
+        left join gaggle c
+        on (a.gaggle_id = c.gaggle_id)
+        order by posted_date DESC
+        limit 20 
+    ''')
+    return curs.fetchall()
+
+def getPost(conn, post_id):
+    '''Get post and username and gaggle_name based on post_id
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT a.*, b.username, CONCAT(b.first_name,' ',b.last_name) as full_name, c.gaggle_name 
+        FROM post a
+        LEFT JOIN user b
+        ON (a.poster_id = b.user_id)
+        LEFT JOIN gaggle c
+        ON (a.gaggle_id = c.gaggle_id)
+        WHERE a.post_id = %s''',
+                 [post_id])
+    result = curs.fetchone()
+    return result
+
+def getGaggleID(conn, gaggle_name):
+    '''returns gaggle_id based on gaggle_name'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT gaggle_id
+        FROM gaggle 
+        WHERE gaggle_name = %s''',
+                 [gaggle_name])
+    return curs.fetchone()  
+
+def getGagglePosts(conn, gaggle_name):
+    '''returns all posts in a gaggle based on gaggle_name sorted by latest'''
+    gaggle_id = getGaggleID(conn, gaggle_name)['gaggle_id']
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT a.*,  b.username, CONCAT(b.first_name,' ',b.last_name) as full_name, c.gaggle_name  
+        FROM post a
+        LEFT JOIN user b
+        ON (a.poster_id = b.user_id)
+        LEFT JOIN gaggle c
+        ON (a.gaggle_id = c.gaggle_id)
+        WHERE c.gaggle_id = %s
+        order by posted_date DESC''',
+                 [gaggle_id])
+    all_posts = curs.fetchall()
+    #post_ids = [post['post_id'] for post in posts]
+    #all_posts = []
+    #for pid in post_ids:
+        #all_posts.append(getPost(conn, pid))
+    return all_posts
+
+def getPostComments(conn, post_id):
+    '''returns all comments on a post based on the post_id'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT a.*, b.username, b.username, CONCAT(b.first_name,' ', b.last_name) as full_name 
+        FROM comment a
+        LEFT JOIN user b
+        ON a.commentor_id = b.user_id
+        WHERE parent_comment_id IS NULL 
+        AND post_id = %s
+        ORDER BY a.posted_date DESC''',
+                 [post_id])
+    return curs.fetchall()      
+
+def addComment(conn, post_id, parent_comment_id, content, commentor_id, posted_date):
+    '''insert a new comment into the comment table'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        INSERT INTO comment(post_id, parent_comment_id, content, commentor_id, posted_date, likes, dislikes, flags, replies) 
+        VALUES (%s,%s,%s,%s,%s,0,0,0,0) ''', 
+                [post_id, parent_comment_id, content, commentor_id, posted_date])
+    conn.commit()  # need this!   
+    #if this is a reply to a post
+    if parent_comment_id is None:
+        curs.execute('''
+            UPDATE post
+            SET replies = replies + 1
+            WHERE post_id = %s''',
+                    [post_id])
+    #else it is a reply to a comment                
+    else:
+        curs.execute('''
+            UPDATE comment
+            SET replies = replies + 1
+            WHERE comment_id = %s''',
+                    [parent_comment_id])                        
+    conn.commit() 
+    print('updated')        
+    return commentor_id
+  
+def likePost(conn, post_id, user_id, kind):
+    '''Record user's like/dislike of a post by 
+    inserting the interaction into the post_like table'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT * FROM post_like
+        WHERE post_id = %s
+        AND user_id = %s''', 
+                [post_id, user_id])
+    exists = curs.fetchall()
+    if len(exists) == 0:
+        valid = True
+        curs.execute('''
+            INSERT INTO post_like(post_id, user_id, kind) 
+            VALUES (%s,%s,%s) ''', 
+                    [post_id, user_id, kind])
+        conn.commit()  # need this!
+        updatePostMetrics(conn, post_id, kind)
+    else:
+        if exists[0]['kind'] != kind:
+            #if there is a like/dislike already but the user wants to change it to the opposite value
+            valid = True
+            curs.execute('''update post_like
+                        set kind= %s
+                        where post_id=%s and user_id=%s''', [kind, post_id, user_id])
+            if kind == 'Like':
+                #increment like and decrement dislike
+                curs.execute('''
+                    UPDATE post
+                    SET likes = likes + 1, dislikes = dislikes - 1
+                    WHERE post_id = %s''',
+                            [post_id])
+            else:
+                #increment dislike and decrement like
+                curs.execute('''
+                    UPDATE post
+                    SET likes = likes - 1, dislikes = dislikes + 1
+                    WHERE post_id = %s''',
+                            [post_id])
+            conn.commit()
+        else:
+            valid = False
+    return valid   
+
+def likeComment(conn, comment_id, user_id, kind):
+    '''Record user's like/dislike of a comment by 
+    inserting the interaction into the comment_like table'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT * FROM comment_like 
+        WHERE comment_id = %s
+        AND user_id = %s''', 
+                [comment_id, user_id])
+    exists = curs.fetchall()
+    if len(exists) == 0:
+        valid = True
+        curs.execute('''
+            INSERT INTO comment_like(comment_id, user_id, kind) 
+            VALUES (%s,%s,%s) ''', 
+                    [comment_id, user_id, kind])         
+        conn.commit()
+        updateCommentMetrics(conn, comment_id, kind)  
+    else:
+        if exists[0]['kind'] != kind:
+            valid = True
+            curs.execute('''update comment_like
+                        set kind= %s
+                        where comment_id=%s and user_id=%s''', [kind, comment_id, user_id])
+            if kind == 'Like':
+                #increment like and decrement dislike
+                curs.execute('''
+                    UPDATE comment
+                    SET likes = likes + 1, dislikes = dislikes - 1
+                    WHERE comment_id = %s''',
+                            [comment_id])
+            else:
+                #increment dislike and decrement like
+                curs.execute('''
+                    UPDATE comment
+                    SET likes = likes - 1, dislikes = dislikes + 1
+                    WHERE comment_id = %s''',
+                            [comment_id])
+            conn.commit()
+        else:
+            valid = False    
+    return valid 
+
+def getMembers(conn, gaggle_name):
+    '''returns all members of a gaggle based on the gaggle_name'''    
+    curs = dbi.dict_cursor(conn)
+    gaggle_id = getGaggleID(conn, gaggle_name)['gaggle_id']
+    curs.execute('''
+        SELECT username
+        FROM gosling 
+        LEFT JOIN user 
+        USING (user_id)
+        WHERE gaggle_id = %s''',
+                 [gaggle_id])
+    return curs.fetchall()  
+     
+
+def updateCommentMetrics(conn, comment_id, kind):
+    '''Update number of likes and dislikes of a comment'''
+    curs = dbi.dict_cursor(conn)  
+    if kind == 'Like':
+        curs.execute('''
+            UPDATE comment
+            SET likes = likes + 1
+            WHERE comment_id = %s''',
+                    [comment_id])
+    else:
+        curs.execute('''
+            UPDATE comment
+            SET dislikes = dislikes + 1 
+            WHERE comment_id = %s''',
+                    [comment_id])            
+    conn.commit() 
+    curs.execute('''
+        SELECT comment_id, likes, dislikes 
+        FROM comment
+        WHERE comment_id = %s''',
+                [comment_id])   
+    result = curs.fetchone()
+    return result
+
+def updatePostMetrics(conn, post_id, kind):
+    '''Update number of likes and dislikes of a comment'''
+    curs = dbi.dict_cursor(conn)  
+    if kind == 'Like':
+        curs.execute('''
+            UPDATE post
+            SET likes = likes + 1
+            WHERE post_id = %s''',
+                    [post_id])
+    else:
+        curs.execute('''
+            UPDATE post
+            SET dislikes = dislikes + 1 
+            WHERE post_id = %s''',
+                    [post_id])            
+    conn.commit()  
+    return post_id
+
+def joinGaggle(conn, user_id, gaggle_id):
+    '''Add a user into a gaggle member list'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        INSERT INTO gosling(user_id, gaggle_id) 
+        VALUES (%s,%s) ''', 
+                [user_id, gaggle_id])
+    conn.commit()  # need this!   
+    return "Joined "
+
+def unjoinGaggle(conn, user_id, gaggle_id):
+    '''Remove a user into a gaggle member list'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        DELETE FROM gosling
+        WHERE user_id = %s
+        AND gaggle_id = %s''', 
+                [ user_id, gaggle_id])
+    conn.commit()  # need this!   
+    return "Unjoined"
+
+def isGosling(conn, user_id, gaggle_id):  
+    '''Check if a user is in a gaggle member list'''  
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        SELECT * from gosling
+        WHERE user_id = %s
+        AND gaggle_id = %s''',
+                 [user_id, gaggle_id])   
+    result = len(curs.fetchall())
+    if result == 0:
+        return False
+    else:
+        return True   
+
+def addPost(conn, gaggle_id, poster_id, content, tag_id, posted_date):
+    '''
+    Add new post into post table.
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        INSERT INTO post(gaggle_id, poster_id, content, tag_id, posted_date, likes, dislikes, flags, replies) 
+        VALUES(%s, %s, %s, %s, %s, 0, 0, 0, 0)''',
+        [gaggle_id, poster_id, content, tag_id, posted_date])
+    conn.commit()
+    return poster_id 
+
+
+def getComment(conn, comment_id):
+    '''
+    Retrieve comment info based on its comment_id.
+    '''
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        SELECT a.*, b.username, CONCAT(b.first_name,' ', b.last_name) as full_name 
+        FROM comment a
+        LEFT JOIN user b
+        ON a.commentor_id = b.user_id
+        WHERE comment_id = %s''',
+                 [comment_id])     
+    return curs.fetchone() 
+
+def getReplies(conn, comment_id):  
+    '''
+    Retrieve replies to a comment based on its comment_id. 
+    '''
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        SELECT a.*, b.username 
+        FROM comment a
+        LEFT JOIN user b
+        ON a.commentor_id = b.user_id
+        WHERE parent_comment_id = %s
+        ORDER BY posted_date desc''',
+                 [comment_id])     
+    return curs.fetchall()    
+
+def getParentComment(conn , comment_id):
+    '''
+    Retrieve parent comment of a reply based on its comment_id.
+    '''
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        SELECT parent_comment_id 
+        FROM comment
+        WHERE comment_id = %s''',
+                 [comment_id]) 
+    return curs.fetchall()
+                   
+def insertUser(conn, email,hashed_pass,username,first_name,last_name,class_year,bio_text,strike):
+    '''
+    Add user information into the user table. 
+    '''
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        SELECT username
+        FROM user
+        WHERE username = %s''',
+                 [username]) 
+    exist = curs.fetchall()
+    if len(exist) == 0:
+        valid = True    
+        curs.execute("""INSERT INTO user(email,hashed_pass,username,first_name,last_name,class_year,bio_text,strike)
+                    VALUES(%s,%s,%s,%s,%s,%s,%s,%s)""",
+                    [email,hashed_pass,username,first_name,last_name,class_year,bio_text,strike])
+        conn.commit()
+    else:
+        valid = False                 
+    return valid 
+
+def getInvitees(conn, gaggle_id):
+    '''
+    Retrieve status of existing mod invitations for a gaggle based on its id. 
+    '''
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        SELECT b.username, a.accepted 
+        FROM 
+        mod_invite a
+        LEFT JOIN user b
+        ON (a.invitee_id = b.user_id)
+        WHERE a.gaggle_id= %s''',
+                [gaggle_id])  
+    return curs.fetchall()
+
+def modInvite(conn, gaggle_id, username):
+    '''
+    Add valid username and corresponding gaggle_id into mod_invite table. 
+    '''
+    valid = False
+    invitee_id = getUserID(conn, username)['user_id']
+    curs = dbi.dict_cursor(conn)  #check if user is already invited
+    curs.execute('''
+        SELECT *
+        FROM mod_invite
+        WHERE gaggle_id = %s
+        AND invitee_id = %s''',
+                 [gaggle_id, invitee_id]) 
+    exists = curs.fetchall()
+    if len(exists) == 0: #if not set invitation as pending
+        if isGosling(conn, invitee_id, gaggle_id): #check if user is a group member
+            valid = True
+            accepted = 'Pending'
+            curs.execute('''
+                INSERT INTO mod_invite(gaggle_id, invitee_id, accepted) 
+                VALUES(%s,%s, %s)''',
+                        [gaggle_id, invitee_id, accepted])         
+            conn.commit()  
+            return valid
+    return valid   
+
+def getInvitation(conn, invitee_id):
+    '''
+    Retrieve mod invitations a user received.
+    '''
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        SELECT a.gaggle_id, b.gaggle_name
+        FROM mod_invite a 
+        LEFT JOIN gaggle b 
+        USING (gaggle_id)
+        WHERE 
+            a.accepted = 'Pending'
+            AND a.invitee_id = %s''',
+                 [invitee_id]) 
+    return curs.fetchall()
+
+def responseInvite(conn, gaggle_id, user_id, response):
+    '''
+    Update status of mod invitation response in mod_invite table.
+    Add user_id and approriate gaggle_id into moderator table.
+    '''
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        UPDATE mod_invite
+        SET accepted = %s
+        WHERE gaggle_id = %s
+        AND invitee_id = %s''',
+                [response, gaggle_id, user_id])
+    conn.commit()  
+    if response == 'Yes':
+        curs.execute('''
+            INSERT INTO moderator(gaggle_id, user_id)
+            VALUES (%s, %s)''',
+                        [gaggle_id, user_id]) 
+        conn.commit()  
+    return curs.fetchall()    
+
+def searchPost(conn, query):
+    '''returns all posts whose content match the query'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT * from post 
+        WHERE content LIKE %s''',
+                 ['%'+query+'%']) 
+    return curs.fetchall() 
+
+def searchComment(conn, query):
+    '''returns all comments whose content match the query'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT *
+        FROM comment a
+        WHERE content LIKE %s''',
+                 ["%"+query+"%"]) 
+    return curs.fetchall()   
+
+def searchPeople(conn, query):
+    '''returns all people whose names match the query'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT * from user 
+        WHERE username LIKE %s''',
+                 ["%"+query+"%"]) 
+    return curs.fetchall()   
+
+def deletePost(conn, post_id):
+    '''
+    Delete post
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''delete
+                    from post
+                    where post_id = %s''',
+                    [post_id])
+    conn.commit()
+    return post_id
+
+def getBadUsers(conn, gaggle_id):
+    '''
+    Return users who have violation in the group.  
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT * from bad_gosling
+        WHERE gaggle_id = %s''',
+                 [gaggle_id]) 
+    return curs.fetchall()     
+
+def banUser(conn, gaggle_id, username):
+    '''
+    Ban user from accessing the group
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        UPDATE bad_gosling
+        SET ban_status = 'Yes'
+        WHERE gaggle_id = %s
+        AND username = %s''',
+                [gaggle_id, username])
+    conn.commit()             
+    return username
+
+def reinstateUser(conn, gaggle_id, username):
+    '''
+    Reinstate user from accessing the group
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        UPDATE bad_gosling
+        SET ban_status = 'No'
+        WHERE gaggle_id = %s
+        AND username = %s''',
+                [gaggle_id, username])
+    conn.commit()             
+    return username
+
+def getCommentGaggle(conn, comment_id):
+    '''Return gaggle this comment is from'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT b.gaggle_id
+        FROM comment a
+        LEFT JOIN post b
+        USING (post_id)
+        WHERE a.comment_id = %s''',
+                 [comment_id]) 
+    result = curs.fetchall()  
+    return result[0]['gaggle_id']
+
+def getGagglesCreated(conn, user_id):
+    '''
+    Returns the gaggles that the user_id has created
+    '''
+    curs = dbi.dict_cursor(conn) 
+    curs.execute('''select * from gaggle where author_id = %s''', [user_id])
+    return curs.fetchall() 
+
+def getGagglesJoined(conn, user_id):
+    '''
+    Returns the gaggles that the user_id is apart of 
+    '''
+    curs = dbi.dict_cursor(conn)     
+    curs.execute('''
+        select * from gosling inner join gaggle
+        using (gaggle_id)
+        where user_id = %s
+        ''', [user_id])
+    return curs.fetchall()
+
+def updateBio(conn, gaggle_id, new_group_bio):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        UPDATE gaggle
+        SET description = %s
+        WHERE gaggle_id = %s''',
+                [new_group_bio, gaggle_id])
+    conn.commit()
+    return gaggle_id 
+
+def createGaggle(conn, user_id, gaggle_name, description):
+    '''
+    Check if gaggle name is available, if so insert new gaggle in gaggle table
+    '''
+    curs = dbi.dict_cursor(conn)
+    result = getGaggle(conn, gaggle_name)
+    if result is None:
+        valid = True
+        curs.execute('''
+            INSERT INTO gaggle(gaggle_name, author_id, description)
+            VALUES(%s,%s,%s)''',
+                    [gaggle_name, user_id, description])
+        conn.commit()
+    else:
+        valid = False
+    return valid
+
+def getMyModGaggles(conn, user_id):
+    '''
+    Gets gaggles of which user_id is a mod of
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        select a.gaggle_id, b.gaggle_name 
+        from moderator a
+        left join gaggle b using (gaggle_id)
+        where user_id = %s
+        ''', [user_id])
+    return curs.fetchall()
+
+def deleteGaggle(conn, gaggle_id):
+    '''
+    Delete gaggle based on its gaggle_id
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        DELETE FROM 
+        gaggle
+        WHERE gaggle_id = %s''', [gaggle_id])
+    conn.commit()    
+
+
+def getCommentMetric(conn, comment_id):
+    '''
+    Return metrics of a comment based on its comment_id
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT comment_id, dislikes, likes 
+        FROM comment
+        WHERE comment_id = %s''', 
+                [comment_id])   
+    result = curs.fetchone()  
+    print(result)
+    return result
+
+def getPostMetric(conn, post_id):
+    '''
+    Return metrics of a post based on its post_id
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT post_id, dislikes, likes 
+        FROM post
+        WHERE post_id = %s''', 
+                [post_id])   
+    result = curs.fetchone()  
+    return result  
+
+def getProfilePic(conn, user_id):
+    '''
+    Get user profile pic filename on their user_id 
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT filename FROM picfile 
+        WHERE user_id = %s''',
+        [user_id])
+    return curs.fetchone()
+
+def insertProfilePic(conn, user_id, filename):
+    '''
+    Insert new pic into user's profile table
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute(
+                '''insert into picfile(user_id,filename) values (%s,%s)
+                   on duplicate key update filename = %s''',
+                [user_id, filename, filename])
+    conn.commit()
+
+def deactivateAccount(conn, user_id):
+    '''
+    Deactivate account and delete all data of a user based on their user_id
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        DELETE FROM 
+        user
+        WHERE user_id = %s''', [user_id])
+    conn.commit()
+
+def isAuthor(conn, user_id, gaggle_id):
+    '''
+    Check if this user is the author of this gaggle based on its gaggle_id
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT gaggle_id FROM gaggle
+        WHERE author_id = %s 
+        AND gaggle_id = %s''',
+        [user_id, gaggle_id])   
+    if curs.fetchone() is None:
+        return False
+    else:
+        return True   
+
+def hasLikedCmt(conn, user_id, comment_id):
+    '''
+    Check if a user has liked this comment based on its comment_id
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT comment_id 
+        FROM comment_like
+        WHERE kind = 'Like'
+        AND user_id = %s 
+        AND comment_id = %s''',
+        [user_id, comment_id])   
+    if curs.fetchone() is None:
+        return False
+    else:
+        return True       
+
+def hasLikedPost(conn, user_id, post_id):
+    '''
+    Check if user with this user_id has liked post based on its post_id 
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT post_id
+        FROM post_like
+        WHERE kind = 'Like'
+        AND user_id = %s 
+        AND post_id = %s''',
+        [user_id, post_id])   
+    if curs.fetchone() is None:
+        return False
+    else:
+        return True  
+
+def unlikeComment(conn, user_id, comment_id):
+    '''Remove a user's like of a comment based on its comment_id
+    and update like count '''
+    curs = dbi.dict_cursor(conn)
+    print(comment_id)
+    kind = 'Like'
+    curs.execute('''
+        DELETE FROM comment_like
+        WHERE 
+        kind = %s
+        AND user_id = %s
+        AND comment_id = %s''', 
+                [kind, user_id, comment_id])
+    conn.commit()  # need this!   
+    print('inserted')
+    curs.execute('''
+        UPDATE comment
+        SET likes = likes - 1
+        WHERE comment_id = %s''',
+                [comment_id])
+    conn.commit()
+    print('decreases likes')
+    return "Unliked"  
+
+def unlikePost(conn, user_id, post_id):
+    '''Remove a user's like of a post based on its post_id
+    and update like count '''
+    curs = dbi.dict_cursor(conn)
+    kind = 'Like'
+    curs.execute('''
+        DELETE FROM post_like
+        WHERE 
+        kind = %s
+        AND user_id = %s
+        AND post_id = %s''', 
+                [kind, user_id, post_id])
+    conn.commit()  # need this!   
+    print('inserted')
+    curs.execute('''
+        UPDATE post
+        SET likes = likes - 1
+        WHERE post_id = %s''',
+                [post_id])
+    conn.commit()
+    print('decreases likes')
+    return "Unliked"           
+
+def getUserComments(conn, user_id):
+    '''returns all of user's comments sorted by latest'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT * 
+        FROM comment
+        WHERE commentor_id = %s
+        ORDER BY posted_date desc''',
+                 [user_id])
+    all_posts = curs.fetchall()
+    return all_posts
+
+####_____To be used Functions for beta not yet tested_____#### 
+
+def get_flagged_posts(conn, gaggle_id):
+    '''
+    Get flagged posts in a gaggle based on its gaggle_id
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        select a.*, b.content, c.username, c.user_id
+        from flag_post a
+        left join post b using (post_id)
+        left join user c on a.reporter_id = c.user_id
+        where b.gaggle_id = %s
+        order by a.flagged_date desc
+        ''', [gaggle_id])
+    return curs.fetchall()
+
+def increment_flag(conn, post_id):
+    '''
+    Increment flag count for a post 
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        update post
+        set flags = flags+1
+        where post_id = %s
+    ''', [post_id])
+    conn.commit()
+
+def increment_strikes(conn, user_id):
+    '''
+    Increment strikes count for a post
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        select strike
+        from user
+        where user_id = %s
+    ''', [user_id])
+    curr_strikes = curs.fetchone()['strike']
+    res = ''
+    if curr_strikes < 2:
+        res = 'strike'
+    else:
+        res = 'ban'
+    curs.execute('''
+        update user
+        set strike = strike+1
+        where user_id = %s
+    ''', [user_id])
+    conn.commit()
+    return res    
+====================== *.sql =====================
+
+====================== templates/base-bs.html =====================
+<!DOCTYPE html>
+
+<!-- =========================================================
+* Sneat - Bootstrap 5 HTML Admin Template - Pro | v1.0.0
+==============================================================
+
+* Product Page: https://themeselection.com/products/sneat-bootstrap-html-admin-template/
+* Created by: ThemeSelection
+* License: You must have a valid license purchased in order to legally use the theme for your project.
+* Copyright ThemeSelection (https://themeselection.com)
+
+=========================================================
+ -->
+<!-- beautify ignore:start -->
+<html
+  lang="en"
+  class="light-style layout-menu-fixed"
+  dir="ltr"
+  data-theme="theme-default"
+  data-assets-path="/static/"
+  data-template="vertical-menu-template-free"
+>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"
+    />
+
+    <title>{{ page_title }}</title>
+
+    <meta name="description" content="" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/img/favicon/favicon.ico" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Icons. Uncomment required icon fonts -->
+    <link rel="stylesheet" href="/static/vendor/fonts/boxicons.css" />
+
+    <!-- Core CSS -->
+    <link rel="stylesheet" href="/static/vendor/css/core.css" class="template-customizer-core-css" />
+    <link rel="stylesheet" href="/static/vendor/css/theme-default.css" class="template-customizer-theme-css" />
+    <link rel="stylesheet" href="/static/css/demo.css" />
+
+    <!-- Vendors CSS -->
+    <link rel="stylesheet" href="/static/vendor/libs/perfect-scrollbar/perfect-scrollbar.css" />
+
+    <link rel="stylesheet" href="/static/vendor/libs/apex-charts/apex-charts.css" />
+
+    <!-- Page CSS -->
+
+
+
+    <!-- Helpers -->
+    <script src="/static/vendor/js/helpers.js"></script>
+
+    <!--! Template customizer & Theme config files MUST be included after core stylesheets and helpers.js in the <head> section -->
+    <!--? Config:  Mandatory theme config file contain global vars & default theme options, Set your preferred theme option in this file.  -->
+    <script src="/static/js/config.js"></script>
+
+    {% block head_stuff %} {% endblock %}
+  </head>
+
+  <body>
+    <!-- Layout wrapper -->
+    <div class="layout-wrapper layout-content-navbar">
+      <div class="layout-container">
+        <!-- Menu -->
+
+        <aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
+          <div class="app-brand demo">
+            <a href="{{url_for('homepage')}}" class="app-brand-link">
+              <span class="app-brand-text demo menu-text fw-bolder ms-2">Waggle</span>
+            </a>
+
+            <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto d-block d-xl-none">
+              <i class="bx bx-chevron-left bx-sm align-middle"></i>
+            </a>
+          </div>
+
+          <div class="menu-inner-shadow"></div>
+
+          <ul class="menu-inner py-1">
+            <!-- Sidebar -->
+            <li class="menu-item active">
+              <a href="{{url_for('homepage')}}" class="menu-link">
+                <i class="menu-icon tf-icons bx bxs-home"></i>
+                <div data-i18n="Analytics">Home</div>
+              </a>
+            </li>
+            <li class="menu-item">
+              <a href="{{url_for('personalHistory')}}" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-history"></i>
+                <div data-i18n="Authentications">History</div>
+              </a>
+            </li>
+            <li class="menu-item">
+              <a href="{{url_for('createGaggle')}}" class="menu-link">
+                <i class="menu-icon tf-icons bx bxs-book"></i>
+                <div data-i18n="Misc">Create Gaggle</div>
+              </a>
+            </li>
+            <li class="menu-item">
+              <a href="{{url_for('profile')}}" class="menu-link">
+                <i class="menu-icon tf-icons bx bxs-dashboard"></i>
+                <div data-i18n="Misc">Profile</div>
+              </a>
+            </li>
+          </ul>
+        </aside>
+        <!-- / Menu -->
+
+        <!-- Layout container -->
+        <div class="layout-page">
+          <!-- Navbar -->
+          <nav
+            class="layout-navbar container-xxl navbar navbar-expand-xl navbar-detached align-items-center bg-navbar-theme"
+            id="layout-navbar"
+          >
+            <div class="layout-menu-toggle navbar-nav align-items-xl-center me-3 me-xl-0 d-xl-none">
+              <a class="nav-item nav-link px-0 me-xl-4" href="javascript:void(0)">
+                <i class="bx bx-menu bx-sm"></i>
+              </a>
+            </div>
+
+            <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
+              <!-- Search -->
+              <div class="navbar-nav align-items-center">
+                <div class="nav-item d-flex align-items-center">
+                  <i class="bx bx-search fs-4 lh-0"></i>
+                  <form class="search_form" method="GET" action="{{url_for('search')}}">
+                    <input type="text" class="form-control border-0 shadow-none" id="search-query" name="search-query" placeholder="Find Gaggles...">
+                  </form>
+                </div>
+              </div>
+              <!-- /Search -->
+
+              <ul class="navbar-nav flex-row align-items-center ms-auto">
+                <!-- User -->
+                <li class="nav-item navbar-dropdown dropdown-user dropdown">
+                  <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown">
+                    <div class="avatar avatar-online"  style = "display: block; background-color: blueviolet; border-radius:50%">
+                      <!-- <button style = "display: block; background-color: blueviolet; border-radius:50%"> -->
+                      <!-- <img src="{{url_for('profilePic',user_id=user_id)}}" alt class="w-px-40 h-auto rounded-circle" /> -->
+                    </div>                    
+                  </a>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                      <a class="dropdown-item" href="{{url_for('user', username = username)}}">
+                        <div class="d-flex">
+                          <div class="flex-shrink-0 me-3">
+                            <!-- <div class="avatar avatar-online">
+                              <img src="/static/img/avatars/1.png" alt class="w-px-40 h-auto rounded-circle" />
+                            </div> -->
+                          </div>
+                          <div class="flex-grow-1">
+                            <span class="fw-semibold d-block">{{username}}</span>
+                            <small class="text-muted">View Profile</small>
+                          </div>
+                        </div>
+                      </a>
+                    </li>
+                    <li>
+                      <div class="dropdown-divider"></div>
+                    </li>
+                    <!-- <li>
+                      <a class="dropdown-item" href="#">
+                        <i class="bx bx-cog me-2"></i>
+                        <span class="align-middle">Settings</span>
+                      </a>
+                    </li>
+                    <li>
+                      <div class="dropdown-divider"></div>
+                    </li> -->
+                    <li>
+                      <a class="dropdown-item" href="{{url_for('logout')}}">
+                        <i class="bx bx-power-off me-2"></i>
+                        <span class="align-middle">Log Out</span>
+                      </a>
+                    </li>
+                  </ul>
+                </li>
+                <!--/ User -->
+              </ul>
+            </div>
+          </nav>
+
+          <!-- / Navbar -->
+          {% with messages = get_flashed_messages() %}
+            {% if messages %}
+              {% for msg in messages %}
+                <div class="alert alert-primary alert-dismissible" role="alert">
+                  {{msg}}
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+              {% endfor %}
+            {% endif %}
+          {% endwith %}
+
+          <!-- Content wrapper -->
+          <div class="content-wrapper">
+            {% block main_content %}
+            
+            {% endblock %}
+
+            <!-- Footer -->
+            <footer class="content-footer footer bg-footer-theme">
+              <div class="container-xxl d-flex flex-wrap justify-content-between py-2 flex-md-row flex-column">
+                <div class="mb-2 mb-md-0">
+                  ©
+                  <script>
+                    document.write(new Date().getFullYear());
+                  </script>
+                  , made with ❤️ by
+                  <a href="https://themeselection.com" target="_blank" class="footer-link fw-bolder">ThemeSelection</a>
+                </div>
+                <div>
+                  <a href="https://themeselection.com/license/" class="footer-link me-4" target="_blank">License</a>
+                  <a href="https://themeselection.com/" target="_blank" class="footer-link me-4">More Themes</a>
+
+                  <a
+                    href="https://themeselection.com/demo/sneat-bootstrap-html-admin-template/documentation/"
+                    target="_blank"
+                    class="footer-link me-4"
+                    >Documentation</a
+                  >
+
+                  <a
+                    href="https://github.com/themeselection/sneat-html-admin-template-free/issues"
+                    target="_blank"
+                    class="footer-link me-4"
+                    >Support</a
+                  >
+                </div>
+              </div>
+            </footer>
+            <!-- / Footer -->
+
+            <div class="content-backdrop fade"></div>
+          </div>
+          
+          <!-- Content wrapper -->
+        </div>
+        <!-- / Layout page -->
+      </div>
+
+      <!-- Overlay -->
+      <div class="layout-overlay layout-menu-toggle"></div>
+    </div>
+    <!-- / Layout wrapper -->
+
+    <!-- Core JS -->
+    <!-- build:js assets/vendor/js/core.js -->
+    <script src="/static/vendor/libs/jquery/jquery.js"></script>
+    <script src="/static/vendor/libs/popper/popper.js"></script>
+    <script src="/static/vendor/js/bootstrap.js"></script>
+    <script src="/static/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
+
+    <script src="/static/vendor/js/menu.js"></script>
+    <!-- endbuild -->
+
+    <!-- Vendors JS -->
+    <script src="/static/vendor/libs/apex-charts/apexcharts.js"></script>
+
+    <!-- Main JS -->
+    <script src="/static/js/main.js"></script>
+
+    <!-- Page JS -->
+    <script src="/static/js/dashboards-analytics.js"></script>
+
+    <!-- Place this tag in your head or just before your close body tag. -->
+    <script async defer src="https://buttons.github.io/buttons.js"></script>
+  </body>
+</html>
+
+====================== templates/base.html =====================
+{% extends "baseTemplate.html" %}
+
+{% block search_bar %}
+  <form class="search_form" method=GET action="{{url_for('search')}}">
+    <label for="search-query">Find gaggle: </label>
+    <input id="search-query" name="search-query" value="">
+    <input type="submit" name="submit-btn" value="Search">
+  </form>  
+{% endblock %}
+
+{% block main_content %}
+{% endblock %} 
+====================== templates/baseTemplate.html =====================
+<!DOCTYPE html>
+  <!-- Coding by CodingLab | www.codinglabweb.com -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!----======== CSS ======== -->
+    <link rel='stylesheet' href="{{url_for('static', filename = 'style.css')}}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!----===== Boxicons CSS ===== -->
+    <link href='https://unpkg.com/boxicons@2.1.1/css/boxicons.min.css' rel='stylesheet'>
+    <!----===== Bootstrap CSS ===== -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    
+    <!--<title>Dashboard Sidebar Menu</title>--> 
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+
+        <!--<title>Dashboard Sidebar Menu</title>--> 
+          <div class="col-sm-3"> 
+                <nav class="sidebar close">
+                    <header>
+                        <div class="image-text">
+                            <span class="image">
+                                <!--<img src="logo.png" alt="">-->
+                            </span>
+
+                            <div class="text logo-text">
+                                <span class="name">Waggle</span>
+                                <span class="username">{{username}}</span>
+                            </div>
+                        </div>
+
+                        <i class='bx bx-chevron-right toggle'></i>
+                    </header>
+
+                    <div class="menu-bar">
+                        <div class="menu">
+                            <ul class="menu-links">
+                                <li class="nav-link">
+                                    <a href="{{url_for('homepage')}}">
+                                        <i class='bx bx-home-alt icon' ></i>
+                                        <span class="text nav-text">Home</span>
+                                    </a>
+                                </li>
+
+                                <li class="nav-link">
+                                <a href="{{url_for('profile')}}">
+                                    <i class='bx bx-user-circle icon' ></i>
+                                    <span class="text nav-text">Profile</span>
+                                </a>
+                            </li>
+                                <li class="nav-link">
+                                    <a href="{{url_for('dashboard')}}">
+                                        <i class='bx bx-bar-chart-alt-2 icon' ></i>
+                                        <span class="text nav-text">Dashboard</span>
+                                    </a>
+                                </li>
+
+                                <li class="nav-link">
+                                    <a href="#">
+                                        <i class='bx bx-bell icon'></i>
+                                        <span class="text nav-text">Notifications</span>
+                                    </a>
+                                </li>
+
+
+                                <li class="nav-link">
+                                    <a href="#">
+                                        <i class='bx bx-heart icon' ></i>
+                                        <span class="text nav-text">Explore</span>
+                                    </a>
+                                </li>
+
+                            </ul>
+                        </div>
+
+                        <div class="bottom-content">
+                            <li class="">
+                                <a href="{{url_for('logout')}}">
+                                    <i class='bx bx-log-out icon' ></i>
+                                    <span class="text nav-text">Logout</span>
+                                </a>
+                            </li>
+
+                            <li class="mode">
+                                <div class="sun-moon">
+                                    <i class='bx bx-moon icon moon'></i>
+                                    <i class='bx bx-sun icon sun'></i>
+                                </div>
+                                <span class="mode-text text">Dark mode</span>
+
+                                <div class="toggle-switch">
+                                    <span class="switch"></span>
+                                </div>
+                            </li>
+                            
+                        </div>
+                    </div>
+
+                </nav>
+         </div>
+  <!--main body section--> 
+    <div class="col-sm-6" style="border-right: solid #695CFE 1px;">  
+      {% block header %}
+        <div class = 'title'>
+          {{title}}                      
+        </div>  
+        {% endblock %}
+        <div class="main-content">
+            {% block main_content %}
+            {% endblock %} 
+
+        </div>    
+    </div>
+
+  <!--right bar--> 
+    <div class="col-sm-3" >
+        <form method=GET action="{{url_for('search')}}">
+                <label for="search-query"> </label>
+                <input class = 'input-search' type="text" name="search-query" placeholder="Search Waggle" /> 
+          </form>      
+    </div>
+    </div>
+  </div>
+
+
+
+
+    <script>
+      const body = document.querySelector('body'),
+      sidebar = body.querySelector('nav'),
+      toggle = body.querySelector(".toggle"),
+      searchBtn = body.querySelector(".search-box"),
+      modeSwitch = body.querySelector(".toggle-switch"),
+      modeText = body.querySelector(".mode-text");
+
+
+toggle.addEventListener("click" , () =>{
+    sidebar.classList.toggle("close");
+})
+
+searchBtn.addEventListener("click" , () =>{
+    sidebar.classList.remove("close");
+})
+
+modeSwitch.addEventListener("click" , () =>{
+    body.classList.toggle("dark");
+    
+    if(body.classList.contains("dark")){
+        modeText.innerText = "Light mode";
+    }else{
+        modeText.innerText = "Dark mode";
+        
+    }
+});
+    </script>
+
+</body>
+</html>
+====================== templates/cas =====================
+
+====================== templates/commentTemplateDoNotDelete.html =====================
+{% macro comment_temp(comment, user_id) -%}
+
+<style>
+  .comment-wrap {
+    max-width:100%;
+    align-self: flex-end;
+    background: none;
+    /* border-radius:3px; */
+    padding: 20px;
+    border: none;
+    /* border-bottom: 1px solid #e6ecf0;
+    border-top: 1px solid #e6ecf0; */
+  }
+  .comment-wrap:hover {
+    background-color: rgb(246, 246, 246);
+}
+  .comment-header {
+    display: flex;
+    align-items:flex-start;
+    font-size:14px;
+  }
+  .avator-comment {
+    width:40px;
+    height:40px;
+    margin-right: 15px;
+    clip-path: circle(48px);
+  }
+  .img-profile{
+    object-fit: cover;
+    width: 100%;
+    height: 100%;
+    border-radius:50%;
+  }
+  
+  .comment-header-info {
+    font-family: 'Poppins', sans-serif;
+  }
+  .comment-header-info span commented-date {
+    color:#657786;
+    font-size:10px;
+    margin-left: 20px;
+  }
+  
+  .comment-img-wrap {
+    padding-left: 60px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+  }
+  
+  .comment-info-counts {
+    display: flex;
+    align-items: center;
+    margin-left: 60px;
+    margin-top: 10px;
+    border-top: #657786 1px;
+  }
+  .comment-info-counts div {
+    display: flex;
+    margin-right: 20px;
+  }
+  .comment-info-counts div button {
+    color:#4b5b68;
+    margin-right: 10px;
+    background:none;
+    border:none;
+  }
+  .comment-info-counts div button:hover {
+    color:#c2a3cc;
+  }
+  
+  .selected {
+    color:#f8e2ff;
+    background-color: #c2a3cc;
+    clip-path: circle(20px)
+  }
+  
+  @media screen and (max-width:430px){
+    body {
+      padding-left: 20px;
+      padding-right: 20px;
+    }
+    .comment-header {
+      flex-direction:column;
+    }
+    .comment-header img {
+      margin-bottom: 20px;
+    }
+    .comment-header-info p {
+      margin-bottom: 30px;
+      padding-left:20px;
+    }
+    .comment-img-wrap {
+      min-height:20%;
+      padding-left: 0;
+    }
+    .comment-info-counts {
+    display: flex;
+    margin-left: 0;
+  }
+  .comment-info-counts div {
+    margin-right: 10px;
+  }
+}
+</style>
+
+<div class="comment-wrap">
+    <div class="comment-header">
+        <div class = 'avator-comment'>
+          <img src="{{url_for('profilePic',user_id=comment.commentor_id)}}" alt="{{comment.commentor_id}}" class = 'img-profile'>
+        </div>
+      <div class="comment-header-info">
+        <div><a href="{{url_for('user', username=comment.username)}}"><span class = 'author'> @{{comment.username}}</span></a> <span style = 'font-size: 10px;'> replied:</span></div>        
+        <div><span class = 'posted-date'>{{comment.posted_date}}</span></div>
+    </div>      
+    </div>
+    
+    <div class="comment-img-wrap" onclick= "window.location.href = '{{url_for('addReply', comment_id=comment.comment_id)}}';">
+      <p> {{comment.content}}</p>
+
+    </div>
+
+    <div class="comment-info-counts">
+        
+      <div class="comments">
+        <button  onclick ="showReply('{{comment.comment_id}}')">
+        <svg class="feather feather-message-circle sc-dnqmqq jxshSx" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+        </button>
+        <div class="comment-count">{{comment.replies}}</div>
+      </div>
+
+      <form class = 'like-dislike-comment' method=comment action="{{url_for('likeComment')}}" ></form>      
+
+        <div class="dislikes">
+          <button class = 'dislike-button' id = 'comment-Dislike{{comment.comment_id}}' onclick ="likeComment('{{comment.comment_id}}','Dislike')">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="css-i6dzq1"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path></svg>
+        </button>
+          <div> <span id="comment-dislikes-count-{{comment.comment_id}}">{{comment.dislikes}}</span></div>        
+        </div>
+        
+        <div class="likes">
+          <button class = 'like-button' id = 'comment-Like{{comment.comment_id}}' onclick ="likeComment('{{comment.comment_id}}','Like')">
+          <svg class="feather feather-heart sc-dnqmqq jxshSx" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+          </button>
+          <div><span id="comment-likes-count-{{comment.comment_id}}">{{comment.likes}}</span></div>
+        </div> 
+
+      </form>
+
+     
+      <div class="action">
+        <button>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-three-dots" viewBox="0 0 16 16">
+            <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
+          </svg>
+        </button>
+      </div>
+
+    </div>
+</div>
+<div id="myDropdown_reply_{{comment.comment_id}}" class="dropdown-reply" style = 'padding-left:20px;'>   
+    <form method='post' action="{{url_for('addReply', comment_id = comment.comment_id)}}" >     
+        <div class = 'comment-header' style = 'align-items: center; '>
+            <div class = 'avator-comment'>
+                <img src="{{url_for('profilePic',user_id=user_id)}}" alt="{{user_id}}" class = 'img-profile'>    
+            </div > 
+            <div><input type ='text' class ='write-text' name="comment_content"  placeholder="Reply to this comment" ></div>
+            <div><input type="submit" name="submit" class = 'search-filter' value="Reply"></div>
+        </div>
+    </form>
+</div> 
+
+<script>
+    var btn1 = document.querySelector('like-button');
+    var btn2 = document.querySelector('dislike-button');
+
+    btn1.addEventListener('click', function() {
+    
+        if (btn2.classList.contains('selected')) {
+        btn2.classList.remove('selected');
+        }     
+    });
+
+    btn2.addEventListener('click', function() {
+    
+        if (btn1.classList.contains('selected')) {
+        btn1.classList.remove('selected');
+        }     
+    });   
+
+    function showReply(cid) {
+            event.preventDefault();
+            document.getElementById("myDropdown_reply_"+cid).classList.toggle("showReply");
+            console.log(document.getElementById("myDropdown_reply_"+cid));
+        }
+
+
+    function likeComment(comment_id, kind) {
+        console.log(comment_id);
+        console.log(kind);
+        document.getElementById("comment-"+kind+comment_id).classList.toggle("selected");
+        if (kind=='Like') {
+            document.getElementById("comment-Dislike"+comment_id).classList.remove('selected');
+        }
+        else if (kind == 'Dislike'){
+            document.getElementById("comment-Like"+comment_id).classList.remove('selected');
+        };         
+        $.ajax({
+                type: "POST",
+                url: "/likeComment/",
+                data: JSON.stringify({'comment_id': comment_id, 'kind': kind}),
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                async: true,
+                success: function (resp) {
+                    console.log(resp);
+                    var comment_id = resp.comment_id;
+                    var likes = resp.likes;
+                    var dislikes = resp.dislikes;
+                    console.log("New likes for comment "+comment_id+" is "+likes +" and new dislikes is "+dislikes);
+                    $("#comment-likes-count-"+comment_id).text(likes);
+                    $("#comment-dislikes-count-"+comment_id).text(dislikes);
+                }
+            });  event.preventDefault();
+    }
+
+
+</script>
+
+{%- endmacro%}
+====================== templates/comment_template.html =====================
+{% macro comment_temp(comment, post) -%}
+    <div class="comment" id="{{comment.comment_id}}">
+        <p><a href="{{url_for('addReply', comment_id=comment.comment_id)}}">Reply_id: {{comment.comment_id}}</a> </p>
+        <p>author: <a href="{{url_for('user', username=comment.commentor_id)}}">{{comment.username}}</a> </p>
+        <p>{{comment.content}}</p>
+        <p>{{comment.posted_date}}</p>
+        <p>Likes: {{comment.likes}}</p>
+        <p>Dislikes: {{comment.dislikes}}</p>
+        <form method=post action="{{url_for('likeComment', post_id = post.post_id, comment_id = comment.comment_id)}}" >
+            <input type="submit" name="submit" value="Like">
+            <input type="submit" name="submit" value="Dislike"> 
+        </form> 
+    </div>
+{%- endmacro%}
+====================== templates/commentTemplateJS.html =====================
+{% macro comment_temp(comment, user_id) -%}
+
+<style>
+  .comment-wrap {
+    max-width:100%;
+    align-self: flex-end;
+    background: none;
+    /* border-radius:3px; */
+    padding: 20px;
+    border: none;
+    /* border-bottom: 1px solid #e6ecf0;
+    border-top: 1px solid #e6ecf0; */
+  }
+  .comment-wrap:hover {
+    background-color: rgb(246, 246, 246);
+}
+  .comment-header {
+    display: flex;
+    align-items:flex-start;
+    font-size:14px;
+  }
+  .avator-comment {
+    width:40px;
+    height:40px;
+    margin-right: 15px;
+    clip-path: circle(48px);
+  }
+  .img-profile{
+    object-fit: cover;
+    width: 100%;
+    height: 100%;
+    border-radius:50%;
+  }
+  
+  .comment-header-info {
+    font-family: 'Poppins', sans-serif;
+  }
+  .comment-header-info span commented-date {
+    color:#657786;
+    font-size:10px;
+    margin-left: 20px;
+  }
+  
+  .comment-img-wrap {
+    padding-left: 60px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+  }
+  
+  .comment-info-counts {
+    display: flex;
+    align-items: center;
+    margin-left: 60px;
+    margin-top: 10px;
+    border-top: #657786 1px;
+  }
+  .comment-info-counts div {
+    display: flex;
+    margin-right: 20px;
+  }
+  .comment-info-counts div button {
+    color:#4b5b68;
+    margin-right: 10px;
+    background:none;
+    border:none;
+  }
+  .comment-info-counts :hover {
+    color:#a155bb;
+  }
+
+  .comment-info-counts div .selected {
+    color:#9e47b8;
+  }
+  
+  @media screen and (max-width:430px){
+    body {
+      padding-left: 20px;
+      padding-right: 20px;
+    }
+    .comment-header {
+      flex-direction:column;
+    }
+    .comment-header img {
+      margin-bottom: 20px;
+    }
+    .comment-header-info p {
+      margin-bottom: 30px;
+      padding-left:20px;
+    }
+    .comment-img-wrap {
+      min-height:20%;
+      padding-left: 0;
+    }
+    .comment-info-counts {
+    display: flex;
+    margin-left: 0;
+  }
+  .comment-info-counts div {
+    margin-right: 10px;
+  }
+}
+</style>
+
+<div class="comment-wrap">
+    <div class="comment-header">
+        <div class = 'avator-comment'>
+          <img src="{{url_for('profilePic',user_id=comment.commentor_id)}}" alt="{{comment.commentor_id}}" class = 'img-profile'>
+        </div>
+      <div class="comment-header-info">
+        <div><a href="{{url_for('user', username=comment.username)}}"><span class = 'author'> @{{comment.username}}</span></a> <span style = 'font-size: 10px;'> replied:</span></div>        
+        <div><span class = 'posted-date'>{{comment.posted_date}}</span></div>
+    </div>      
+    </div>
+    
+    <div class="comment-img-wrap" onclick= "window.location.href = '{{url_for('addReply', comment_id=comment.comment_id)}}';">
+      <p> {{comment.content}}</p>
+
+    </div>
+
+    <div class="comment-info-counts">
+        
+      <div class="comments">
+        <button  onclick ="showReply('{{comment.comment_id}}')">
+        <svg class="feather feather-message-circle sc-dnqmqq jxshSx" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+        </button>
+        <div class="comment-count">{{comment.replies}}</div>
+      </div>
+
+      <form class = 'like-dislike-comment' method=comment action="{{url_for('likeComment')}}" >     
+
+        <div class="likes">
+          {% if comment.isLiked %}
+          <button class = 'selected' id = 'comment-Like{{comment.comment_id}}' onclick ="likeComment('{{comment.comment_id}}','Unlike')">
+            <svg class="feather feather-heart sc-dnqmqq jxshSx" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+            </button>
+
+          {% else %}
+          <button id = 'comment-Like{{comment.comment_id}}' onclick ="likeComment('{{comment.comment_id}}','Like')">
+            <svg class="feather feather-heart sc-dnqmqq jxshSx" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+            </button>
+
+          {% endif %}          
+          <div><span id="comment-likes-count-{{comment.comment_id}}">{{comment.likes}}</span></div>
+        </div> 
+
+      </form>
+     
+      <div class="action">
+        <button>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-three-dots" viewBox="0 0 16 16">
+            <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
+          </svg>
+        </button>
+      </div>
+
+    </div>
+</div>
+<div id="myDropdown_reply_{{comment.comment_id}}" class="dropdown-reply" style = 'padding-left:20px;'>   
+    <form method='post' action="{{url_for('addReply', comment_id = comment.comment_id)}}" >     
+      <div class = 'comment-header' style = 'align-items: center; '>
+        <div class = 'avator-comment'>
+            <img src="{{url_for('profilePic',user_id=user_id)}}" alt="{{user_id}}" class = 'img-profile'>    
+        </div > 
+        <div><input type ='text' class ='write-text' name="comment_content"  placeholder="Reply to this comment" ></div>
+        <div><input type="submit" name="submit" class = 'search-filter' value="Reply"></div>
+    </div>
+    </form>
+</div> 
+
+<script>
+    function showReply(cid) {
+            event.preventDefault();
+            document.getElementById("myDropdown_reply_"+cid).classList.toggle("showReply");
+            console.log(document.getElementById("myDropdown_reply_"+cid));
+        }
+
+
+    function likeComment(comment_id, kind) {
+        console.log(comment_id);
+        console.log(kind);
+        if (kind =='Like') {
+          document.getElementById("comment-Like"+comment_id).classList.toggle("selected");
+        }
+        else if (kind == 'Unlike'){
+            document.getElementById("comment-Like"+comment_id).classList.remove('selected');
+        };         
+        $.ajax({
+                type: "POST",
+                url: "/likeComment/",
+                data: JSON.stringify({'comment_id': comment_id, 'kind': kind}),
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                async: true,
+                success: function (resp) {
+                    console.log(resp);
+                    var comment_id = resp.comment_id;
+                    var likes = resp.likes;
+                    var dislikes = resp.dislikes;
+                    console.log("New likes for comment "+comment_id+" is "+likes +" and new dislikes is "+dislikes);
+                    $("#comment-likes-count-"+comment_id).text(likes);
+                }
+            });  event.preventDefault();
+    }
+
+
+</script>
+
+{%- endmacro%}
+====================== templates/createGaggleForm.html =====================
+{% extends "base-bs.html" %}
+
+{% block main_content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <!-- HEADER -->
+    <div>
+        <p>Create Gaggle</p>
+        <form action="{{url_for('createGaggle')}}" method="POST">
+        <table>
+            <tr>
+                <td><label for="gaggle_name">Gaggle Name*</label></td>
+                <td><input id="gaggle_name" name='gaggle_name' value="{{gaggle_name}}"></td> 
+            </tr>
+            <tr>
+                <td><label for="description">Description*</label></td>
+                <td><input id="description" name='description' value="{{description}}"></td>
+            </tr>            
+            </table>
+            <input type="submit" name="submit" value="Create">
+        </form>
+
+    <p>*: Required </p>
+    
+    </div>
+</div>
+{% endblock %}
+
+====================== templates/dashboard.html =====================
+{% extends "baseTemplate.html" %}
+
+          
+{% block main_content %}
+<div class="container">
+  <nav>
+    <ul>
+      <li><a href="{{url_for('dashboard')}}">My Gaggle</a></li>
+      <li><a href="{{url_for('modqueue')}}">Moderator Queue</a></li>
+    </ul>
+  </nav>
+</div>
+
+
+  {% block sub_content %}
+
+  {% endblock %}
+
+{% endblock %}
+====================== templates/edit_user_info.html =====================
+{% extends "base-bs.html" %}
+    
+{% block main_content %}
+
+{% if user_id != ''%}
+<p>Current Photo:</p>
+<img src="{{url_for('profilePic',user_id=user_id)}}" style="height:150px">
+{% endif %}
+
+<p>Upload New Photo:
+<form method="post" action="{{url_for('file_upload')}}" enctype="multipart/form-data">
+        <p><label>Pic: <input type="file" name="pic"></label></p>
+        <p><input type="submit" value="upload"></p>
+</form>
+
+<form class="edit_form" action="{{url_for('editMyPage')}}" method="POST">
+    <div>
+        <div class="inputs">
+            <div>Current First Name: {{user['first_name']}}</div>
+            <label>New First Name: <input name="first_name"></input></label>
+        </div>
+        
+        <div class="inputs">
+            <div>Current Last Name: {{user['last_name']}}</div>
+            <label>New Last Name: <input name="last_name"></input></label>
+        </div>
+        
+        <div class="inputs">
+            <div>Current Class Year: {{user['class_year']}}</div>
+            <label>New Class Year: <input name="class_year"></input></label>
+        </div>
+        
+        <div class="inputs">
+            <div>Current Bio: {{user['bio_text']}}</div>
+            <label>New Bio: <textarea name="bio_text" rows="1" cols="10"></textarea></label>  
+        </div>
+        
+        <div class="inputs"><input type="submit" value="Update"></div>
+    </div>
+</form>
+{% endblock %}
+
+====================== templates/flag_post.html =====================
+{% extends "super_base.html" %}
+    
+{% block main_content %}
+<p>You are reporting post {{post_id}} of user {{author_id}}</p>
+<p>We want to know why you want to flag this post to provide some information for our moderators. Please provide a reason for your report:</p>
+<form action="{{url_for('flagPost', post_id = post_id, author_id=author_id, gaggle_name=gaggle_name)}}" method="POST">
+    <label>Reason: <textarea name="reason" rows="1" cols="10"></textarea></label>
+    <input type="submit" value="Report">
+</form>
+{% endblock %}
+====================== templates/gaggleDashboard.html =====================
+{% extends "dashboard.html" %}
+
+
+
+
+{% block sub_content %}  
+
+
+{% if hasGaggle %}
+        <form name="update_gaggle" action="{{url_for('myGaggle', gaggle_name = gaggle.gaggle_name)}}" method="POST">
+            <div class="drop_down">
+
+                <label for="gaggles">Selected gaggle:</label>
+                    <select name="new_gaggle_name" id="{{gaggle.gaggle_id}}">
+                        {% for gaggle in gaggles %}
+                            <option value="{{gaggle.gaggle_name}}">{{gaggle.gaggle_name}}</option>
+                        {% endfor %}
+                    </select>
+                <input type="submit" name = "submit" value="Change">
+
+            </div>
+
+            <br><br>
+                <h1>Displaying creator view for {{gaggle.gaggle_name}}</h1>
+
+            <p> Update bio here: </p>
+
+            <div class = "update_group">
+                <textarea name="content" rows="4" cols="50"></textarea>
+                <input type="submit" name = 'submit' value="Update">
+            </div>
+
+            <br><br>
+            <p> Send mod invitation: </p>
+
+            <div class = "mod_invite">
+                <textarea name="invitee_username" rows="1" cols="30"></textarea>
+                <input type="submit" name="submit" value="Invite">                    
+            </div>
+
+        </form>
+
+        <p> Your invitation response: </p>
+
+        {% for invitee in invitees %}
+            <p> Status for {{invitee.username}}: {{invitee.accepted}}</p>
+        {% endfor %}
+
+{% else %}
+You haven't created any gaggle.
+
+{% endif %}
+
+{% endblock %}
+        
+        
+
+====================== templates/gaggleSearchResults.html =====================
+{% extends "base.html" %}
+
+{% block main_content %}
+    <body>
+            <p>
+                    <form method=get action="{{url_for('searchGaggle')}}" >       
+                            <input type="submit" name="submit" value="Posts">
+                            <input type="submit" name="submit" value="Comments">
+                            <input type="hidden" name="query" value="{{query}}">
+                    </form>
+            </p>
+        <p>Results matching {{query}} in {{gaggle_name}}:</p>
+
+        {% if kind == 'Posts' %}
+            {% for post in results %}
+            <p> 
+                {% if post.gaggle_id == {{gaggle_id}} %}
+                Post:   <a href="{{ url_for('post', post_id= post.post_id)}}">{{post.post_id}}</a>
+                {% endif %}
+            </p>
+            {% endfor %}  
+        {% elif kind == 'Comments' %}
+            {% for comment in results %}
+            <p> 
+                {% if comment.gaggle_id == {{gaggle_id}} %}
+                Comment:   <a href="{{ url_for('addReply', comment_id = comment.comment_id)}}">{{comment.comment_id}}</a>
+                {% endif %}
+            </p>
+            {% endfor %}              
+        {% endif %}     
+    </body>
+{% endblock %}
+
+====================== templates/group-bs.html =====================
+{% extends "base-bs.html" %}
+
+{% block main_content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <!-- HEADER -->
+    <div class="row">
+        <div class="col-lg-12 mb-4">
+            <div class="card card-header bg-primary text-white">
+                <div class="d-flex align-items-end align-items-sm-center row">
+                    <div class="col-sm-2">
+                        <!-- <div class = 'avator'>
+                            <img src="{{url_for('profilePic',user_id=user_id)}}" alt="{{user_id}}" class = 'img-profile'>    
+                        </div >  -->
+                    </div>
+                    <div class="col-sm-8">
+                        <div class="card-body py-3">
+                            <h1 class="card-title text-white">{{gaggle.gaggle_name}}</h1>
+                        </div>
+                    </div>
+                    <div class="col-sm-2">
+                        <div class="card-body py-3">
+                            <form name="join_group" action="{{url_for('joinGaggle', gaggle_name = gaggle.gaggle_name)}}" class="ml-0" method="POST">
+                                {% if isAuthor %}                                
+                                <a href = "{{url_for('myGaggle', gaggle_name = gaggle.gaggle_name)}}"><button class = "btn btn-lg rounded-pill btn-secondary">EDIT GROUP</button></a> 
+                                {% elif joined %}
+                                <input type="submit" class="btn btn-lg rounded-pill btn-secondary" name="submit" value="Unjoin">
+                                {% else %}
+                                <input type="submit" class="btn btn-lg rounded-pill btn-dark" name="submit" value="Join">
+                                {% endif %}
+                                <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <!-- SIDE BAR (RIGHT COLUMN)-->
+        <div class="col-lg-4 order-1">
+            <div class="card">
+                <div class="d-flex align-items-end align-items-sm-center row">
+                    <!-- <div class="col-sm-3">
+                        <img src="/static/img/avatars/1.png" alt class="w-vw-5 m-3 py-0 h-auto rounded-circle" />
+                    </div> -->
+                    <div class="col-sm-9 py-0">
+                        <h3>{{gaggle.gaggle_name}}</h3>
+                    </div>
+                </div>
+                <hr/>
+                <div class="d-flex align-items-end align-items-sm-center row">
+                    <div class="col-sm-12">
+                        <p class="mx-3">{{gaggle.description}}</p>
+                    </div>
+                </div>
+                <hr/>
+                <div class="d-flex align-items-end align-items-sm-center row">
+                    <p class="mx-3"><strong>Created by: </strong><a href="{{url_for('user', username=gaggle.username)}}">{{gaggle.username}}</a></p>
+                </div>
+                <hr/>
+                <div class="d-flex align-items-end align-items-sm-center row">
+                    <p class="mx-3"><strong>Moderators: </strong></p>
+                </div>
+                <hr/>
+                <div class="d-flex align-items-end align-items-sm-center row">
+                    <!-- <p class="mx-3"><a href="{{url_for('gaggleMembers', gaggle_name = gaggle.gaggle_name)}}">View Members</a></p> -->
+                </div>
+            </div>
+        </div>
+        <!-- LEFT COLUMN -->
+        <div class="col-lg-8 mb-4 order-0">
+            <!-- CREATE POST -->
+            {% if joined %}
+            <div class="card mb-4">
+                <div class="d-flex align-items-end align-items-sm-center row">
+                    <h4 class="m-3">Create Post:</h4>
+                    <form name="write_post" action="{{url_for('addPost')}}" method="POST">
+                        <textarea class="mx-4 mb-0" name="content" rows="4" style="width: 45vw; min-width: 400px"></textarea>
+                        <input type="submit" class="btn rounded-pill btn-dark m-4 mt-2" value="Post">
+                        <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
+                        <input type="hidden" name="gaggle_name" value="{{gaggle.gaggle_name}}">
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+            {% block sub_content %}
+                <!-- FEED -->
+                <h3>Feed</h3>
+                {% import "postTemplateJS.html" as postComp%}
+                {% for post in posts %}
+                    {{postComp.post_temp(post=post)}}
+                {% endfor %}
+            {% endblock %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+====================== templates/group.html =====================
+{% extends "base-bs.html" %}
+
+{% block header %}
+<div class = 'header' style = 'display: flex;'>
+    <div class = 'gaggle-name' style = 'padding: 10px;'>                       
+        <h5 style = 'font-size: 20px;'> 🐣 {{gaggle.gaggle_name}} </h5>
+    </div>  
+    <div class="header-button"> 
+        {% if isAuthor %} 
+        <a href = "{{url_for('myGaggle', gaggle_name = gaggle.gaggle_name)}}"><button class = 'search-filter'>EDIT GROUP</button></a> 
+        {% else %}
+            <form name="join_group" action="{{url_for('joinGaggle', gaggle_name = gaggle.gaggle_name)}}" method="POST">
+                {% if joined %}
+                <input type="submit" class = 'search-filter' name = "submit" value="Unjoin">
+                {% else %}
+                <input type="submit" class = 'search-filter' name = "submit" value="Join">
+                {% endif %}
+                <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
+            </form>
+        {% endif %}
+    </div> 
+</div>
+{% endblock %} 
+
+
+{% block main_content %}
+
+
+    {% if joined %}
+    <!-- <div class="add_post_form"> -->
+        <form name="write_post" action="{{url_for('addPost')}}" method="POST">
+            <textarea name="content" class = 'write-text' placeholder="Something to share with the class?"></textarea>
+            <input type="submit" class = 'search-filter' value="Post">
+            <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
+            <input type="hidden" name="gaggle_name" value="{{gaggle.gaggle_name}}">
+        </form>
+    <!-- </div> -->
+    {% endif %}
+
+    {% import "postTemplateJS.html" as postComp%}
+    {% for post in posts %}
+        {{postComp.post_temp(post=post)}}
+    {% endfor %}
+
+
+{% endblock %}
+
+{% block right_content %}
+<p>welcome to {{gaggle.gaggle_name}} </p>
+<p>created by <a href="{{url_for('user', username=gaggle.username)}}">{{gaggle.username}}</a></p>
+<p>about:  {{gaggle.description}}</p>
+<p><a href="{{url_for('gaggleMembers', gaggle_name = gaggle.gaggle_name)}}">View members</a></p>
+
+
+
+
+
+
+
+
+{% endblock %} 
+
+====================== templates/groupMembers.html =====================
+{% extends "super_base.html" %}
+
+{% block main_content %}
+    {% for member in members %}
+    <ul>
+        <li><a href="{{url_for('user', username=member.username)}}">{{member.username}}</a></li>
+    </ul>
+    {% endfor %}
+
+Return to gaggle: <a href="{{url_for('gaggle', gaggle_name = gaggle_name)}}">{{gaggle_name}}</a>    
+{% endblock %}
+
+====================== templates/history.html =====================
+{% extends "base-bs.html" %}
+
+{% block main_content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+  <h3 class="fw-bold py-2 mb-2">{{username}}'s History</h3>
+       <!-- Pills -->
+      <div class="row">
+        <div class="col-xl-12">
+          <div class="nav-align-top mb-4">
+            <ul class="nav nav-pills mb-3 nav-fill" role="tablist">
+              <li class="nav-item">
+                <button
+                  type="button"
+                  class="nav-link active"
+                  role="tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#navs-pills-justified-all"
+                  aria-controls="navs-pills-justified-all"
+                  aria-selected="true"
+                >
+                <i class='tf-icons bx bx-world'></i> All
+                </button>
+              </li>
+              <li class="nav-item">
+                <button
+                  type="button"
+                  class="nav-link"
+                  role="tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#navs-pills-justified-posts"
+                  aria-controls="navs-pills-justified-posts"
+                  aria-selected="false"
+                >
+                <i class='tf-icons bx bx-pencil'></i> Posts
+                </button>
+              </li>
+              <div class="tab-pane fade" id="navs-pills-justified-posts" role="tabpanel">
+                <!-- post section -->
+                {% import "postTemplateJS.html" as postComp%}
+                    {% for post in posts %}
+                        {{postComp.post_temp(post=post)}}
+                    {% endfor %}
+              </div>
+              <div class="tab-pane fade" id="navs-pills-justified-likes" role="tabpanel">
+                
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Pills -->
+
+{% endblock %}
+
+====================== templates/invitation.html =====================
+{% extends "super_base.html" %}
+
+{% block main_content %}
+    {% for gaggle in invitations %}
+        <div class = 'mods_invitation'>
+
+            <p>Gaggle: <a href="{{url_for('gaggle',gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a> </p>
+            <p> Accept invitation to become this gaggle's moderator?: 
+                <form method=post action="{{url_for('response_invite')}}" >       
+                    <input type="submit" name="submit" value="Yes">
+                    <input type="submit" name="submit" value="No">
+                    <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
+                </form>
+            </p>
+
+        </div>
+
+    {% endfor %}
+    </div>
+    
+
+
+{% endblock %}
+
+====================== templates/invite_mod.html =====================
+{% extends "super_base.html" %}
+
+{% block main_content %}
+
+
+
+    {% for gaggle in gaggles %}
+        <div class = 'gaggleModsInvite'>
+
+            <p>Gaggle: <a href="{{url_for('gaggle',gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a> </p>
+            <p> 
+            <form method=post action="{{url_for('inviteMod')}}" >       
+                <textarea name="invitee_username" rows="1" cols="30"></textarea>
+                <input type="submit" name="submit" value="Invite">
+                <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
+            </form>
+            </p>
+
+            {% for invitee in invitees %}
+            <p> Status for {{invitee.username}}: {{invitee.accepted}}</p>
+            {% endfor %}
+        </div>
+
+    {% endfor %}
+    </div>
+    
+
+
+{% endblock %}
+
+====================== templates/login-bs.html =====================
+<!DOCTYPE html>
+
+<!-- =========================================================
+* Sneat - Bootstrap 5 HTML Admin Template - Pro | v1.0.0
+==============================================================
+
+* Product Page: https://themeselection.com/products/sneat-bootstrap-html-admin-template/
+* Created by: ThemeSelection
+* License: You must have a valid license purchased in order to legally use the theme for your project.
+* Copyright ThemeSelection (https://themeselection.com)
+
+=========================================================
+ -->
+<!-- beautify ignore:start -->
+<html
+  lang="en"
+  class="light-style customizer-hide"
+  dir="ltr"
+  data-theme="theme-default"
+  data-assets-path="/static/"
+  data-template="vertical-menu-template-free"
+>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"
+    />
+
+    <title>Waggle | Login</title>
+
+    <meta name="description" content="" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/img/favicon/favicon.ico" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Icons. Uncomment required icon fonts -->
+    <link rel="stylesheet" href="/static/vendor/fonts/boxicons.css" />
+
+    <!-- Core CSS -->
+    <link rel="stylesheet" href="/static/vendor/css/core.css" class="template-customizer-core-css" />
+    <link rel="stylesheet" href="/static/vendor/css/theme-default.css" class="template-customizer-theme-css" />
+    <link rel="stylesheet" href="/static/css/demo.css" />
+
+    <!-- Vendors CSS -->
+    <link rel="stylesheet" href="/static/vendor/libs/perfect-scrollbar/perfect-scrollbar.css" />
+
+    <!-- Page CSS -->
+    <!-- Page -->
+    <link rel="stylesheet" href="/static/vendor/css/pages/page-auth.css" />
+    <!-- Helpers -->
+    <script src="/static/vendor/js/helpers.js"></script>
+
+    <!--! Template customizer & Theme config files MUST be included after core stylesheets and helpers.js in the <head> section -->
+    <!--? Config:  Mandatory theme config file contain global vars & default theme options, Set your preferred theme option in this file.  -->
+    <script src="/static/js/config.js"></script>
+  </head>
+
+  <body>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for msg in messages %}
+          <div class="alert alert-primary alert-dismissible" role="alert">
+            {{msg}}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    <!-- Content -->
+
+    <div class="container-xxl">
+      <div class="authentication-wrapper authentication-basic container-p-y">
+        <div class="authentication-inner">
+          <!-- Register -->
+          <div class="card">
+            <div class="card-body">
+              <!-- Logo -->
+              <div class="app-brand justify-content-center">
+                <span class="app-brand-text demo text-body fw-bolder">Waggle</span>
+              </div>
+              <!-- /Logo -->
+              <h4 class="mb-3">Welcome to Waggle! 👋</h4>
+
+              <form id="formAuthentication" class="mb-3" action="{{url_for('login')}}" method="POST">
+                <div class="mb-3">
+                  <label for='username' class="form-label">Username
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="email"
+                    name="username"
+                    placeholder="Enter your username"
+                    autofocus
+                  /></label>
+                </div>
+                <div class="mb-3 form-password-toggle">
+                  <div class="d-flex justify-content-between">
+                    <label id = 'password' class="form-label" for="password">Password</label>
+                    <a href="auth-forgot-password-basic.html">
+                      <small>Forgot Password?</small>
+                    </a>
+                  </div>
+                  <div class="input-group input-group-merge">
+                    <input
+                      type="password"
+                      id="password"
+                      class="form-control"
+                      name="pass"
+                      placeholder="&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;"
+                      aria-describedby="password"
+                    />
+                    <span class="input-group-text cursor-pointer"><i class="bx bx-hide"></i></span>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <button class="btn btn-primary d-grid w-100" type="submit">Sign in</button>
+                </div>
+              </form>
+
+              <p class="text-center">
+                <span>New to Waggle?</span>
+                <a href="{{url_for('signup')}}">
+                  <span>Create an account</span>
+                </a>
+              </p>
+            </div>
+          </div>
+          <!-- /Register -->
+        </div>
+      </div>
+    </div>
+
+    <!-- / Content -->
+
+    <!-- Core JS -->
+    <!-- build:js assets/vendor/js/core.js -->
+    <script src="/static/vendor/libs/jquery/jquery.js"></script>
+    <script src="/static/vendor/libs/popper/popper.js"></script>
+    <script src="/static/vendor/js/bootstrap.js"></script>
+    <script src="/static/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
+
+    <script src="/static/vendor/js/menu.js"></script>
+    <!-- endbuild -->
+
+    <!-- Vendors JS -->
+
+    <!-- Main JS -->
+    <script src="/static/js/main.js"></script>
+
+    <!-- Page JS -->
+
+    <!-- Place this tag in your head or just before your close body tag. -->
+    <script async defer src="https://buttons.github.io/buttons.js"></script>
+  </body>
+</html>
+
+====================== templates/login_form.html =====================
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waggle</title>
+    <link rel='stylesheet' href="{{url_for('static', filename = 'style.css')}}">
+</head>
+<body>
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <div id="messages">
+    {% for msg in messages %}
+    <p>{{msg}}</p>
+    {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <div>
+        <p>Login Page</p>
+    
+        <form action="{{url_for('login')}}" method="POST">
+            <p><label>Username: <input type="text" name="username"></input></label></p>
+            <p></p><label>Password: <input type="text" name="pass"></input></label></p>
+            <input type="submit" value="Login">
+        </form>
+        <p> Sign up: <a href="{{url_for('signup')}}"> Here</a> </p>
+    </div>
+</body>
+</html>
+
+
+
+====================== templates/main.html =====================
+{% extends "base-bs.html" %}
+    
+<!-- display main feed -->
+{% block main_content %}
+
+<!-- most recent 20 posts -->
+    {% import "postTemplateJS.html" as postComp%}
+    {% for post in posts %}
+        {{postComp.post_temp(post=post)}}
+    {% endfor %}
+
+{% endblock %}
+
+<!-- right content -->
+{% block right_content %}
+    <div class = 'gaggle-list'>
+        <h5>YOUR WEDGES</h5>
+
+            {% for gaggle in gaggles %}
+            <p>w/<a href="{{url_for('gaggle', gaggle_name=gaggle['gaggle_name'])}}">{{gaggle['gaggle_name']}}</a></p>
+            {% endfor %}
+    </div>
+
+    <div class = 'gaggle-list'>
+        <h5>YOUR GAGGLES</h5>
+
+            {% for gaggle in gaggles %}
+            <p>g/<a href="{{url_for('gaggle', gaggle_name=gaggle['gaggle_name'])}}">{{gaggle['gaggle_name']}}</a></p>
+            {% endfor %}
+    </div>  
+
+
+
+
+{% endblock %}
+
+====================== templates/moderator.html =====================
+{% extends "base.html" %}
+
+{% block main_content %}
+    <p>Mod dashboard for {{gaggle_name}} </p>
+
+
+
+    
+    {% for user in users %}
+    <div class="bad_gosling" id="{{user.username}}">
+        <p>User: <a href="{{url_for('user', username=user.username)}}">{{user.username}}</a>
+        <p>Strikes incurred: user.strikes </p> 
+            <form method="post" action="{{url_for('modUserList', gaggle_name = gaggle_name)}}">
+                {% if user.ban_status == 'Yes' %}
+                <input type="submit" name="submit" value="Reinstate">
+                {% else %}
+                <input type="submit" name="submit" value="Ban">
+                {% endif %}
+                <input type="hidden" name="username" value="{{user.username}}">
+                <input type="hidden" name="gaggle_id" value="{{gaggle_id}}">
+            </form>
+    </div>
+    {% endfor %}
+
+{% endblock %}
+
+====================== templates/modqueue.html =====================
+{% extends "dashboard.html" %}
+      
+{% block sub_content %}
+
+<div>
+    <form method="POST" action="{{url_for('modqueue')}}">
+        <label>Mod Queue for gaggle:</label>
+        <select name="chosen_gaggle">
+            <option value="">gaggle</option>
+            {%for gaggle in gaggles%}
+            <option value="{{gaggle.gaggle_id}}">{{gaggle.gaggle_name}}</option>
+            {%endfor%}
+        </select>
+        <input type="submit" value="Change">
+    </form>
+</div>
+
+{% if gaggle_id != None %}
+
+<p>Pending Flag Requests:</p>
+    <table class="modqueue">
+        <tr>
+            <th>Post id</th>
+            <th>Post Content</th>
+            <th>Reporter</th>
+            <th>Reason</th>
+            <th>Flagged date</th>
+            <th>Mod approved<th>
+            <th>Flag</th>
+        </tr>
+        {% for flag in pending %}
+            <div class="flag">
+                <tr>
+                    <td><a href="{{url_for('post', post_id=flag.post_id)}}">{{flag.post_id}}</a></td>
+                    <td>{{flag.content}}</td>
+                    <td><a href="{{url_for('user', username=flag.reporter_id)}}">{{flag.username}}</a></td>
+                    <td>{{flag.reason}}</td>
+                    <td>{{flag.flagged_date}}</td>
+                    <td>{{flag.mod_aprroved}}</td>
+                    <td>
+                        <form method="POST" action="{{url_for('modapprove', post_id=flag.post_id, reported_user_id=flag.user_id)}}">
+                            <input type="submit" name="submit" value="Yes">
+                            <input type="submit" name="submit" value="No">
+                        </form>
+                    </td>
+                </tr>
+            </div>
+        {%endfor%}
+       
+    </table>
+
+
+<p>Reviewed Flag Requests:</p>
+    <table class="modqueue">
+        <tr>
+            <th>Post id</th>
+            <th>Post Content</th>
+            <th>Reporter</th>
+            <th>Reason</th>
+            <th>Flagged date</th>
+            <th>Mod approved<th>
+        </tr>
+        {% for flag in approved %}
+            <div class="flag">
+                <tr>
+                    <td><a href="{{url_for('post', post_id=flag.post_id)}}">{{flag.post_id}}</a></td>
+                    <td>{{flag.content}}</td>
+                    <td><a href="{{url_for('user', username=flag.reporter_id)}}">{{flag.username}}</a></td>
+                    <td>{{flag.reason}}</td>
+                    <td>{{flag.flagged_date}}</td>
+                    <td>{{flag.mod_aprroved}}</td>
+                </tr>
+            </div>
+        {%endfor%}
+    </table>
+
+{%endif%}
+
+{% endblock %}
+====================== templates/post.html =====================
+{% extends "base-bs.html" %}
+
+{% block main_content %}
+    <div style = 'background-color: rgb(246, 246, 246);'>
+    {% import "postTemplateJS.html" as postComp%}
+        {{postComp.post_temp(post=post)}}
+    </div>
+    <div class="d-flex align-items-end align-items-sm-center row">
+    <div class = 'comment-form'>
+        <form action="{{url_for('post', post_id = post.post_id)}}" method="POST">              
+                    <textarea class="mx-4 mb-0" name="comment-content" rows="4" style="width: 45vw; min-width: 400px"></textarea>
+                    <input type="submit" class="btn rounded-pill btn-dark m-4 mt-2" value="Comment">
+                    <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
+                    <input type="hidden" name="gaggle_name" value="{{gaggle.gaggle_name}}">
+        </form>    
+    </div>
+</div>
+
+
+    <div class = 'replies'>
+        {% import "commentTemplateJS.html" as commentComp%}
+        {% for comment in comments %}
+            {{commentComp.comment_temp(comment=comment, user_id = user_id)}}
+        {% endfor %}
+    </div>
+
+
+
+{% endblock %}
+
+====================== templates/post_template.html =====================
+{% macro post_temp(post) -%}
+    <div class="post" id="{{post['post_id']}}">
+        <div class="header">
+            <!-- three dot menu -->
+            <div class="dropdown">
+            <!-- three dots -->
+            <ul class="dropbtn icons btn-right showLeft" onclick="showDropdown('{{post.post_id}}')">
+                <li></li>
+                <li></li>
+                <li></li>
+            </ul>
+            <!-- menu -->
+            <div id="myDropdown_{{post.post_id}}" class="dropdown-content">
+                {% if post.canDelete %}
+                <a href="{{url_for('deletePost', post_id=post['post_id'], author_id=post['poster_id'], gaggle_name=post['gaggle'])}}">Delete Post</a>
+                {% endif %}
+                {% if not post.canDelete %}
+                <a href="{{url_for('flagPost', post_id = post.post_id, author_id=post.poster_id, gaggle_name=post['gaggle'])}}">Report Post</a>
+                {% endif %}
+            </div>
+            </div>
+        </div>
+        <p><a href="{{url_for('post', post_id=post.post_id)}}">Post_id: {{post.post_id}}</a>
+        <p>author: <a href="{{url_for('user', username=post['author'])}}">{{post['author']}}</a> gaggle: <a href="{{url_for('gaggle',gaggle_name=post['gaggle'])}}">{{post['gaggle']}}</a></p>
+        <p>{{post['content']}}</p>
+        <p><a href="{{url_for('post', post_id=post.post_id)}}">Comments</a> </p>
+        <p>likes: {{post['likes']}}</p>
+        <p>dislikes: {{post['dislikes']}}</p>
+        <p>{{post['posted_date']}}</p>    
+    </div>
+{%- endmacro -%}
+====================== templates/postTemplateJS.html =====================
+{% macro post_temp(post) -%}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+<style>
+img {
+  max-width:100%;
+}
+.avator {
+  width:48px;
+  height:48px;
+  margin-right: 15px;
+  clip-path: circle(48px);
+}
+.img-profile{
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+  border-radius:50%;
+}
+
+.post-wrap {
+  max-width:100%;
+  /* background: #fff; */
+  background: none;
+  border-radius:3px;
+  padding: 20px;
+  border-bottom: 1px solid #e6ecf0;
+  border-top: 1px solid #e6ecf0;
+}
+.post-wrap:hover{
+    background-color: rgb(246, 246, 246);
+}
+.post-header {
+  display: flex;
+  align-items:flex-start;
+  /* align-items:stretch; */
+  font-size:14px;
+}
+.post-header-info {
+  font-family: 'Poppins', sans-serif;
+}
+.post-header-info span posted-date {
+  color:#657786;
+  font-size:12px;
+  margin-left: 20px;
+}
+
+.post-img-wrap {
+  margin-top: 10px;
+  padding-left: 60px;
+  min-height: 10vh;
+}
+
+.post-info-counts {
+  display: flex;
+  margin-left: 60px;
+  margin-top: 10px;
+  border-top: #657786 1px;
+}
+.post-info-counts div {
+  display: flex;
+  margin-right: 20px;
+}
+.post-info-counts div button {
+  color:#4b5b68;
+  margin-right: 10px;
+  background:none;
+  border:none;
+}
+.post-info-counts div button:hover {
+  color:#c2a3cc;
+}
+
+.post-info-counts div .selected {
+    color:#9e47b8;
+  }
+
+@media screen and (max-width:430px){
+  body {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  .post-header {
+    flex-direction:column;
+  }
+  .post-header img {
+    margin-bottom: 20px;
+  }
+  .post-header-info p {
+    margin-bottom: 30px;
+    padding-left:20px;
+  }
+  .post-img-wrap {
+    min-height:20%;
+    padding-left: 0;
+  }
+  .post-info-counts {
+  display: flex;
+  margin-left: 0;
+}
+.post-info-counts div {
+  margin-right: 10px;
+}
+}
+</style>
+
+<div class="post-wrap">
+    <div class="post-header">
+        <div class = 'avator'>
+          <img src="{{url_for('profilePic',user_id=post.poster_id)}}" alt="{{post.poster_id}}" class = 'img-profile'>
+        </div>
+      <div class="post-header-info">
+        <div class = 'gaggle-name'> <a href="{{url_for('user', username=post.username)}}"><span>@{{post.username}}</span></a>   <span class = 'posted-date'> @{{post.posted_date}}</span>      </div> 
+        <div><a href="{{url_for('gaggle',gaggle_name=post.gaggle_name)}}"> 🐣 {{post.gaggle_name}}</a> </div>
+        
+      </div>      
+    </div>
+
+    <div class="post-img-wrap" onclick= "window.location.href = '{{url_for('post', post_id=post.post_id)}}';">
+      <p> {{post.content}}</p>
+
+    </div>
+
+    <div class="post-info-counts">
+
+      <div class="posts">
+        <a href = "{{url_for('post', post_id = post.post_id)}}">
+        <button>
+        <svg class="feather feather-message-circle sc-dnqmqq jxshSx" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+        </button></a>
+        <div class="post-count">{{post.replies}}</div>
+      </div>
+
+
+      <form class = 'like-dislike-post' method=post action="{{url_for('likePost')}}" >     
+
+        <div class="likes">
+          {% if post.isLiked %}
+          <button class = 'selected' id = 'post-Like{{post.post_id}}' onclick ="likePost('{{post.post_id}}','Unlike')">
+            <svg class="feather feather-heart sc-dnqmqq jxshSx" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+            </button>
+
+          {% else %}
+          <button id = 'post-Like{{post.post_id}}' onclick ="likePost('{{post.post_id}}','Like')">
+            <svg class="feather feather-heart sc-dnqmqq jxshSx" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+            </button>
+
+          {% endif %}          
+          <div><span id="post-likes-count-{{post.post_id}}">{{post.likes}}</span></div>
+        </div> 
+
+      </form>
+
+
+     
+      <div class="action">
+        <button onclick="showDropdown('{{post.post_id}}')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-three-dots" viewBox="0 0 16 16">
+            <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
+          </svg>
+        </button>
+        <div id="myDropdown_{{post.post_id}}" class="dropdown-content">
+          {% if post.canDelete %}
+          <a href="{{url_for('deletePost', post_id=post['post_id'], author_id=post['poster_id'], gaggle_name=post['gaggle'])}}">Delete Post</a>
+          {% endif %}
+          {% if not post.canDelete %}
+          <a href="{{url_for('flagPost', post_id = post.post_id, author_id=post.poster_id, gaggle_name=post['gaggle'])}}">Report Post</a>
+          {% endif %}
+        </div> 
+      </div>
+
+  </div>
+</div>
+
+<script>
+        function likePost(post_id, kind) {
+            console.log(post_id);
+            if (kind =='Like') {
+              document.getElementById("post-Like"+post_id).classList.toggle("selected");
+            }
+            else if (kind == 'Unlike'){
+                document.getElementById("post-Like"+post_id).classList.remove('selected');
+            };  
+            $.ajax({
+                    type: "POST",
+                    url: "/likePost/",
+                    data: JSON.stringify({'post_id': post_id, 'kind': kind}),
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    async: true,
+                    success: function (resp) {
+                        console.log(resp);
+                        var post_id = resp.post_id;
+                        var likes = resp.likes;
+                        var dislikes = resp.dislikes;
+                        console.log("New likes for post "+post_id+" is "+likes +" and new dislikes is "+dislikes);
+                        $("#post-likes-count-"+post_id).text(likes);
+                        $("#post-dislikes-count-"+post_id).text(dislikes);
+                    }
+                });  event.preventDefault();
+        }
+
+        function changeLanguage(language) {
+            var element = document.getElementById("url");
+            element.value = language;
+            element.innerHTML = language;
+        }
+        function showDropdown(pid) {
+            document.getElementById("myDropdown_"+pid).classList.toggle("dropdown-content-show");
+            console.log(document.getElementById("myDropdown_"+pid));
+        }
+
+
+        // Close the dropdown if the user clicks outside of it
+        window.onclick = function(event) {
+            if (!event.target.matches('.dropbtn')) {
+                var dropdowns = document.getElementsByClassName("dropdown-content");
+                var i;
+                for (i = 0; i < dropdowns.length; i++) {
+                    var openDropdown = dropdowns[i];
+                    if (openDropdown.classList.contains('show')) {
+                        openDropdown.classList.remove('show');
+                    }
+                }
+            }}
+        </script>
+    
+{%- endmacro -%}
+====================== templates/register.html =====================
+<!DOCTYPE html>
+
+<!-- =========================================================
+* Sneat - Bootstrap 5 HTML Admin Template - Pro | v1.0.0
+==============================================================
+
+* Product Page: https://themeselection.com/products/sneat-bootstrap-html-admin-template/
+* Created by: ThemeSelection
+* License: You must have a valid license purchased in order to legally use the theme for your project.
+* Copyright ThemeSelection (https://themeselection.com)
+
+=========================================================
+ -->
+<!-- beautify ignore:start -->
+<html
+  lang="en"
+  class="light-style customizer-hide"
+  dir="ltr"
+  data-theme="theme-default"
+  data-assets-path="/static/"
+  data-template="vertical-menu-template-free"
+>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"
+    />
+
+    <title>Register | Waggle</title>
+
+    <meta name="description" content="" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/img/favicon/favicon.ico" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Icons. Uncomment required icon fonts -->
+    <link rel="stylesheet" href="/static/vendor/fonts/boxicons.css" />
+
+    <!-- Core CSS -->
+    <link rel="stylesheet" href="/static/vendor/css/core.css" class="template-customizer-core-css" />
+    <link rel="stylesheet" href="/static/vendor/css/theme-default.css" class="template-customizer-theme-css" />
+    <link rel="stylesheet" href="/static/css/demo.css" />
+
+    <!-- Vendors CSS -->
+    <link rel="stylesheet" href="/static/vendor/libs/perfect-scrollbar/perfect-scrollbar.css" />
+
+    <!-- Page CSS -->
+    <!-- Page -->
+    <link rel="stylesheet" href="/static/vendor/css/pages/page-auth.css" />
+    <!-- Helpers -->
+    <script src="/static/vendor/js/helpers.js"></script>
+
+    <!--! Template customizer & Theme config files MUST be included after core stylesheets and helpers.js in the <head> section -->
+    <!--? Config:  Mandatory theme config file contain global vars & default theme options, Set your preferred theme option in this file.  -->
+    <script src="/static/js/config.js"></script>
+  </head>
+
+  <body>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for msg in messages %}
+          <div class="alert alert-primary alert-dismissible" role="alert">
+            {{msg}}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Content -->
+
+    <div class="container-xxl">
+      <div class="authentication-wrapper authentication-basic container-p-y">
+        <div class="authentication-inner">
+          <!-- Register Card -->
+          <div class="card">
+            <div class="card-body">
+              <!-- Logo -->
+              <div class="app-brand justify-content-center">
+                  <span class="app-brand-text demo text-body fw-bolder">Waggle</span>
+              </div>
+              <!-- /Logo -->
+              <form id="formAuthentication" class="mb-3" action="{{url_for('signup')}}" method="POST">
+                <div class="mb-3">
+                  <label for="first_name" class="form-label">First Name</label>
+                  <input type="text" class="form-control" id="first_name" name="first_name" value="{{first_name}}" placeholder="ex. Wendy" />
+                </div>
+                <div class="mb-3">
+                  <label for="last_name" class="form-label">Last Name</label>
+                  <input type="text" class="form-control" id="last_name" name="last_name" value="{{last_name}}" placeholder="ex. Wellesley" />
+                </div>
+                <div class="mb-3">
+                  <label for="class_year" class="form-label">Class Year</label>
+                  <input type="text" class="form-control" id="class_year" name="class_year" value="{{class_year}}" placeholder="ex. 2024" />
+                </div>
+                <div class="mb-3">
+                  <label for="email" class="form-label">Wellesley Email</label>
+                  <input type="text" class="form-control" id="email" name="email" value="{{email}}" placeholder="ex. ww100@wellesley.edu" />
+                </div>
+                <div class="mb-3">
+                  <label for="username" class="form-label">Create Username</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="username"
+                    name="username"
+                    placeholder="Create username"
+                    autofocus
+                  />
+                </div>
+                <div class="mb-3 form-password-toggle">
+                  <label class="form-label" for="password">Create Password</label>
+                  <div class="input-group input-group-merge">
+                    <input
+                      type="password"
+                      id="password"
+                      class="form-control"
+                      name="password"
+                      placeholder="&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;"
+                      aria-describedby="password"
+                    />
+                    <span class="input-group-text cursor-pointer"><i class="bx bx-hide"></i></span>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="terms-conditions" name="terms" />
+                    <label class="form-check-label" for="terms-conditions">
+                      I agree to
+                      <a href="javascript:void(0);">privacy policy & terms</a>
+                    </label>
+                  </div>
+                </div>
+                <button class="btn btn-primary d-grid w-100">Sign up</button>
+              </form>
+
+              <p class="text-center">
+                <span>Already have an account?</span>
+                <a href="{{url_for('login')}}">
+                  <span>Sign in</span>
+                </a>
+              </p>
+            </div>
+          </div>
+          <!-- Register Card -->
+        </div>
+      </div>
+    </div>
+
+    <!-- / Content -->
+
+    <!-- Core JS -->
+    <!-- build:js assets/vendor/js/core.js -->
+    <script src="/static/vendor/libs/jquery/jquery.js"></script>
+    <script src="/static/vendor/libs/popper/popper.js"></script>
+    <script src="/static/vendor/js/bootstrap.js"></script>
+    <script src="/static/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
+
+    <script src="/static/vendor/js/menu.js"></script>
+    <!-- endbuild -->
+
+    <!-- Vendors JS -->
+
+    <!-- Main JS -->
+    <script src="/static/js/main.js"></script>
+
+    <!-- Page JS -->
+
+    <!-- Place this tag in your head or just before your close body tag. -->
+    <script async defer src="https://buttons.github.io/buttons.js"></script>
+  </body>
+</html>
+
+====================== templates/reply.html =====================
+{% extends "baseTemplate.html" %}
+
+{% block main_content %}
+
+
+        <!-- previous replies -->  
+        <div class = 'comment-thread'>
+
+               
+            <a  class="comment-border-link"></a>
+            {% import "postTemplateJS.html" as postComp%}
+            {{postComp.post_temp(post=post)}}
+            {% import "commentTemplateJS.html" as commentComp%}
+                {% for comment in comment_chain %}
+                    {{commentComp.comment_temp(comment=comment, user_id=user_id)}}
+                {% endfor %}
+        </div>
+
+        <!-- main comment -->  
+        <div style = 'background-color: rgb(246, 246, 246);' >  
+            {{commentComp.comment_temp(comment=parent_comment, user_id=user_id)}}
+        </div>  
+
+        <!-- Replies section-->  
+        <div class = 'replies'>
+            {% for comment in replies %}  
+                {{commentComp.comment_temp(comment=comment, user_id=user_id)}}
+            {% endfor %}
+        </div>
+
+
+{% endblock %}
+
+====================== templates/search_results.html =====================
+{% extends "base-bs.html" %}
+
+{% block main_content %}
+<body>
+    <div class = 'search-kind'>
+                <form method=get action="{{url_for('search')}}" >       
+                        <button type="submit" id = 'gg-btn' class = 'search-filter' name="submit" value="Gaggles">GAGGLES</button>
+                        <button type="submit" id = 'pst-btn' class = 'search-filter' name="submit" value="Posts">POSTS</button>
+                        <button type="submit" id = 'cmt-btn' class = 'search-filter' name="submit" value="Comments">COMMENTS</button>
+                        <button type="submit" id = 'gsl-btn' class = 'search-filter' name="submit" value="Goslings">GOSLINGS</button>
+                        <input type="hidden" name="query" value="{{query}}">
+                </form>
+    </div>
+
+    <div class = 'search-result'>  
+    Results matching {{query}}:
+
+    {% if kind == 'Posts' %}
+        {% import "postTemplateJS.html" as postComp%}
+        {% for post in results %}
+            {{postComp.post_temp(post=post)}}
+        {% endfor %} 
+
+    {% elif kind == 'Comments' %}
+    {% import "commentTemplateJS.html" as commentComp%}
+        {% for comment in results %}
+            {{commentComp.comment_temp(comment=comment, user_id = user_id)}}
+        {% endfor %}       
+
+    {% elif kind == 'Goslings' %}
+        {% for user in results %}
+        <p> 
+             Gosling:   <a href="{{url_for('user', username=user.username)}}">{{user.username}}</a>
+        </p>    
+        {% endfor %}  
+
+    {% else %}
+        {% for gaggle in results %}
+        <p> 
+        <a href="{{ url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a>
+        </p>
+        {% endfor %}      
+    {% endif %}
+    </div>       
+</body>
+
+
+{% endblock %}
+
+====================== templates/show_my_gaggles.html =====================
+{% extends "super_base.html" %}
+    
+{% block main_content %}
+<h1>Gaggles created by {{username}}</h1>
+
+<form action="url_for(showMyGaggles)" method="POST">
+    <ul>
+        {% for gaggle in gaggles %}
+        <div class="inputs">
+            <li><a href="{{url_for('gaggle', gaggle_name= gaggle['gaggle_name'])}}">{{gaggle['gaggle_name']}}</a> <input type="submit" name="{{gaggle['gaggle_id']}}" value="Delete Gaggle"></li>
+            
+        </div>
+        {% endfor %}
+        <p> Assign moderators: <a href="{{url_for('inviteMod')}}">Go to moderator assignment dashboard</a> </p> 
+        <p> Someone might need your help: <a href="{{url_for('response_invite')}}"> View moderator invitation lists</a> </p> 
+    </ul>
+</form>
+
+<a href="{{url_for('createGaggle')}}">Create a new gaggle</a>
+{% endblock %}
+====================== templates/signup.html =====================
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waggle</title>
+    <link rel='stylesheet' href="{{url_for('static', filename = 'style.css')}}">
+</head>
+<body>
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <div id="messages">
+    {% for msg in messages %}
+    <p>{{msg}}</p>
+    {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <div>
+        <p>Signup Page</p>
+        <form action="{{url_for('signup')}}" method="POST">
+        <table>
+            <tr>
+                <td><label for="email">Wellesley email*</label></td>
+                <td><input id="email" name='email' value="{{email}}"></td> 
+            </tr>
+            <tr>
+                <td><label for="username">Username*</label></td>
+                <td><input id="username" name='username' value="{{username}}"></td>
+            </tr>            
+            <tr>
+                <td><label for="password">Password*</label></td>
+                <td><input id="password" name='password' value="{{password}}"></td>
+            </tr>
+            <tr>
+                <td><label for="first_name">First name*</label></td>
+                <td><input id="first_name" name='first_name' value="{{first_name}}"></td>
+            </tr>
+            <tr>
+                <td><label for="last_name">Last name*</label></td>
+                <td><input id="last_name" name='last_name' value="{{last_name}}"></td>
+            </tr>
+            <tr>
+                <td><label for="class_year">Class year</label></td>
+                <td><input id="class_year" name='class_year' value={{class_year}}></td>
+            </tr>
+            <tr>
+                <td><label for="bio_text">Bio</label></td>
+                <td><input id="bio_text" name='bio_text' value="{{bio_text}}"></td>
+            </tr>
+            </table>
+            <input type="submit" name="submit" value="Sign up">
+        </form>
+
+    <p>*: Required </p>
+    
+    </div>
+</body>
+</html>
+
+
+
+====================== templates/super_base.html =====================
+<!doctype html>
+<html lang='en'>
+<head>
+    <meta charset='utf-8'>
+    <!-- for mobile-friendly pages -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name=author content="">
+    <title>{{ page_title }}</title>
+    <link rel='stylesheet' href="{{url_for('static', filename = 'style.css')}}">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    
+    {% block head_stuff %} {% endblock %}
+</head>
+<body>
+  
+<ul class="menu">
+  <li><a class="active" href="{{url_for('homepage')}}">Home</a></li>
+  <li><a href="{{url_for('user', username = username)}}">Profile</a></li>
+  <li><a href="{{url_for('history', username = username)}}">History</a></li>
+  <li><a href="{{url_for('dashboard')}}">Dashboard</a></li>
+  <li><a href="{{url_for('logout')}}">Log out</a></li>
+</ul>
+
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+<div id="messages">
+  {% for msg in messages %}
+  <p>{{msg}}</p>
+  {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+{% block searchbar %}
+
+{% endblock %}
+
+
+{% block nav %}
+{% endblock %}
+
+{% block main_content %}
+
+{% endblock %}
+
+  <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+  {% block end_scripts %}
+  {% endblock %}
+  
+</body>
+</html>
+
+====================== templates/testform.html =====================
+{% extends "base-bs.html" %}
+
+{% block main_content %}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+<body>
+    <div class = 'search-kind'>
+                <form method=get action="{{url_for('search')}}" >       
+                        <button type="submit" id = 'gg-btn' class = 'search-filter' name="submit" value="Gaggles">GAGGLES</button>
+                        <button type="submit" id = 'pst-btn' class = 'search-filter' name="submit" value="Posts">POSTS</button>
+                        <button type="submit" id = 'cmt-btn' class = 'search-filter' name="submit" value="Comments">COMMENTS</button>
+                        <button type="submit" id = 'gsl-btn' class = 'search-filter' name="submit" value="Goslings">GOSLINGS</button>
+                        <input type="hidden" name="query" value="{{query}}">
+                </form>
+    </div>
+
+    <div class = 'search-result'>  
+    Results matching {{query}}:
+
+    {% if kind == 'Posts' %}
+        {% import "postTemplateJS.html" as postComp%}
+        {% for post in results %}
+            {{postComp.post_temp(post=post)}}
+        {% endfor %} 
+
+    {% elif kind == 'Comments' %}
+    {% import "commentTemplateJS.html" as commentComp%}
+        {% for comment in results %}
+            {{commentComp.comment_temp(comment=comment, user_id = user_id)}}
+        {% endfor %}       
+
+    {% elif kind == 'Goslings' %}
+        {% for user in results %}
+        <p> 
+             Gosling:   <a href="{{url_for('user', username=user.username)}}">{{user.username}}</a>
+        </p>    
+        {% endfor %}  
+
+    {% else %}
+        {% for gaggle in results %}
+        <p> 
+        <a href="{{ url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a>
+        </p>
+        {% endfor %}      
+    {% endif %}
+    </div>       
+</body>
+
+<script>
+var btn1 = document.querySelector('#gg-btn');
+var btn2 = document.querySelector('#pst-btn');
+var btn3 = document.querySelector('pst-btn');
+var btn4 = document.querySelector('#gsl-btn');
+
+const buttons = ["gg-btn", "pst-btn","pst-btn", "gsl-btn"]
+
+window.addEventListener("load", function() {  
+  for (let x in buttons) {
+    let btn = document.getElementById("btn");
+    let val = btn.value;
+    console.log(val)
+    if (val== "{{kind}}") {
+        x.classList.toggle('is-selected');
+    };
+  }
+});
+
+</script>
+
+
+
+{% endblock %}
+
+====================== templates/testGroup.html =====================
+{% extends "base.html" %}
+
+{% block main_content %}
+    <p>welcome to {{gaggle.gaggle_name}} </p>
+    <p>created by <a href="{{url_for('user', username=gaggle.username)}}">{{gaggle.username}}</a></p>
+    <p>about:  {{gaggle.description}}</p>
+    <p><a href="{{url_for('gaggleMembers', gaggle_name = gaggle.gaggle_name)}}">View members</a></p>
+
+    <div class="join_group">
+        <form name="write_post" action="{{url_for('joinGaggle', gaggle_name = gaggle.gaggle_name, gaggle_id = gaggle.gaggle_id)}}" method="POST">
+            <input type="submit" value="Join">
+        </form>
+    </div>
+
+    <div class="add_post_form">
+        <form name="write_post" action="{{url_for('addPost', gaggle_name = gaggle.gaggle_name, gaggle_id = gaggle.gaggle_id)}}" method="POST">
+            <textarea name="content" rows="4" cols="50"></textarea>
+            <input type="submit" value="Post">
+        </form>
+    </div>
+    
+    {% for post in posts %}
+    <div class="post" id="{{post['post_id']}}">
+        <p><a href="{{url_for('post', post_id=post.post_id)}}">Post_id: {{post.post_id}}</a>
+        <p>author: <a href="{{url_for('user', username=post['author'])}}">{{post['author']}}</a> gaggle: <a href="{{url_for('gaggle',gaggle_name=post['gaggle'])}}">{{post['gaggle']}}</a></p>
+        <p>content: {{post['content']}}</p>
+        <p><a href="{{url_for('post', post_id=post.post_id)}}">Comments</a> </p>
+        <p>likes: {{post['likes']}}</p>
+        <p>dislikes: {{post['dislikes']}}</p>
+        <p>{{post['posted_date']}}</p>  
+        <form method="post" action="{{url_for('deletePost', post_id=post['post_id'], author_id=post['poster_id'])}}">
+            <input type="submit" name="delete" value="Delete Post">
+        </form>
+    </div>
+    {% endfor %}
+
+{% endblock %}
+
+====================== templates/trialanderror.html =====================
+<div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark" style="width: 280px;">
+    <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
+      <span class="fs-4">Sidebar</span>
+    </a>
+    <hr>
+    <ul class="nav nav-pills flex-column mb-auto">
+      <li class="nav-item">
+        <a href="#" class="nav-link active" aria-current="page">Home</a>
+      </li>
+      <li>
+        <a href="#" class="nav-link text-white">Profile</a>
+      </li>
+      <li>
+        <a href="#" class="nav-link text-white">Orders</a>
+      </li>
+      <li>
+        <a href="#" class="nav-link text-white">
+          <svg class="bi me-2" width="16" height="16"><use xlink:href="#grid"/></svg>
+          Products
+        </a>
+      </li>
+      <li>
+        <a href="#" class="nav-link text-white">
+          <svg class="bi me-2" width="16" height="16"><use xlink:href="#people-circle"/></svg>
+          Customers
+        </a>
+      </li>
+    </ul>
+    <hr>
+    <div class="dropdown">
+      <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
+        <img src="https://github.com/mdo.png" alt="" width="32" height="32" class="rounded-circle me-2">
+        <strong>mdo</strong>
+      </a>
+      <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
+        <li><a class="dropdown-item" href="#">New project...</a></li>
+        <li><a class="dropdown-item" href="#">Settings</a></li>
+        <li><a class="dropdown-item" href="#">Profile</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="#">Sign out</a></li>
+      </ul>
+    </div>
+  </div>
+
+<!-- BASIC SIDEBAR HTML -->
+  <!-- Side navigation -->
+<div class="sidenav">
+    <a href="{{url_for('homepage')}}">Home</a>
+    <a href="{{url_for('editMyPage')}}">Profile</a>
+    <a href="{{url_for('showMyGaggles')}}">My Gaggles</a>
+    <a href="{{url_for('logout')}}">Logout</a>
+  </div>
+
+<!-- BASIC SIDEBAR CSS -->
+/* The sidebar menu */
+.sidenav {
+    height: 100%; /* Full-height: remove this if you want "auto" height */
+    width: 160px; /* Set the width of the sidebar */
+    position: fixed; /* Fixed Sidebar (stay in place on scroll) */
+    z-index: 1; /* Stay on top */
+    top: 0; /* Stay at the top */
+    left: 0;
+    background-color: #90baad;
+    overflow-x: hidden; /* Disable horizontal scroll */
+    padding-top: 20px;
+  }
+  
+  /* The navigation menu links */
+  .sidenav a {
+    padding: 6px 8px 6px 16px;
+    text-decoration: none;
+    font-size: 25px;
+    color: black;
+    display: block;
+  }
+  
+  /* When you mouse over the navigation links, change their color */
+  .sidenav a:hover {
+    color: #f1f1f1;
+  }
+  
+  /* Style page content */
+  .main {
+    margin-left: 160px; /* Same as the width of the sidebar */
+    padding: 0px 10px;
+  }
+  
+  /* On smaller screens, where height is less than 450px, change the style of the sidebar (less padding and a smaller font size) */
+  @media screen and (max-height: 450px) {
+    .sidenav {padding-top: 15px;}
+    .sidenav a {font-size: 18px;}
+  }
+
+
+====================== templates/user-bs.html =====================
+{% extends "base-bs.html" %}
+
+{% block main_content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <!-- HEADER -->
+    <div class="row">
+        <div class="col-lg-12 mb-4">
+            <div class="card card-header bg-secondary text-white">
+                <div class="d-flex align-items-end align-items-sm-center row">
+                    <div class="col-sm-2">
+                        <div class="card-body px-md-4 py-3">
+                            <img src="{{url_for('profilePic',user_id=user_id)}}" alt="{{url_for('profilePic',user_id=3)}}" alt class="w-vw-10 miw-px-75 h-auto rounded-circle">
+                        </div>
+                    </div>
+                    <div class="col-sm-8">
+                        <div class="card-body py-3">
+                            <h1 class="card-title text-white">{{username}}</h1>
+                            <h4 class="text-white">{{userInformation.first_name}} {{userInformation.last_name}}</h4>
+                            <h4 class="text-white">Class of {{userInformation.class_year}}</h4>
+                            <p>{{userInformation.bio_text}}</p>
+                        </div>
+                    </div>
+                    <div class="col-sm-2">
+                        {% if isPersonal %}
+                        <div class="card-body py-3 px-0">
+                            <a href="{{url_for('deactivateAccount')}}"><button type="submit" class="btn rounded-pill btn-dark">Deactivate</button></a>
+                        </div>
+                        <div class="card-body py-3 px-0">
+                            <a href="{{url_for('editMyPage')}}"><button type="submit" class="btn rounded-pill btn-dark">Edit Profile</button></a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <h4 class="fw-bold py-3 mb-4">Joined Gaggles</h4>
+        <div class="d-flex flex-wrap" id="icons-container">
+            {% for gaggle in gagglesJoined %}
+            {% if gaggle.isAuthor == False %}
+            <div class="card icon-card cursor-pointer text-center mb-4 mx-2">
+                <div class="card-body">
+                    <p class="icon-name text-truncate mb-0"><a href="{{url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a></p>
+                    {% if isPersonal %}
+                    <form method="post" action="{{url_for('unJoinGaggle', username=username,gaggle_name=gaggle['gaggle_name'], gaggle_id=gaggle['gaggle_id'])}}">
+                        <input type="submit" class="btn btn-sm rounded-pill btn-outline-dark mt-2" name="visit" value="Unjoin">
+                    </form> 
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div> 
+        <h4 class="fw-bold py-3 mb-4">Created Gaggles</h4>
+        <div class="d-flex flex-wrap" id="icons-container">
+            {% for gaggle in gagglesCreated %}
+            <div class="card icon-card cursor-pointer text-center mb-4 mx-2">
+                <div class="card-body">
+                    <p class="icon-name text-truncate mb-0"><a href="{{url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a></p>
+                    {% if isPersonal %}
+                    <form method="post" action="{{url_for('deleteGaggle', gaggle_id=gaggle['gaggle_id'])}}">
+                        <input type="submit" class="btn btn-sm rounded-pill btn-outline-danger mt-2" name="delete" value="Delete">
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div> 
+    </div>
+</div>
+{% endblock %}
+
+====================== templates/user.html =====================
+{% extends "base.html" %}
+
+{% block main_content %}
+ 
+<img class= "userPic" src="{{url_for('profilePic',user_id=user_id)}}" alt="{{user_id}}">
+<div class="userInfo">
+    <p>{{userInformation.first_name}} {{userInformation.last_name}}</p>
+    <p>{{userInformation.class_year}}</p>
+    <p>{{userInformation.bio_text}}</p>
+</div>
+
+<p>Creator of the following Gaggles:</p>
+{% for gaggle in gagglesCreated %}
+<div class="gaggle" id="{{gaggle['gaggle_id']}}">
+    <p>Gaggle: {{gaggle.gaggle_name}}</p>
+    <p>Description: {{gaggle.description}}</p>
+    {% if isPersonal %}
+    <form  method="post" action="{{url_for('deleteGaggle', gaggle_id=gaggle['gaggle_id'])}}">
+        <input type="submit" name="delete" value="Delete Gaggle">
+    </form> 
+    {% endif %}
+</div>
+{% endfor %}
+
+
+<p>Member of the following Gaggles:</p>
+{% for gaggle in gagglesJoined %}
+<div class="gaggle" id="{{gaggle['gaggle_id']}}">
+    <p>Gaggle: {{gaggle.gaggle_name}}</p>
+    <p>Description: {{gaggle.description}}</p>
+    {% if isPersonal %}
+    <form method="post" action="{{url_for('unJoinGaggle', username=username,gaggle_name=gaggle['gaggle_name'], gaggle_id=gaggle['gaggle_id'])}}">
+        <input type="submit" name="visit" value="Unjoin Gaggle">
+    </form> 
+    {% endif %}
+</div>
+{% endfor %}
+
+
+{% if isPersonal %}
+<form action="{{url_for('editMyPage')}}">
+    <button type="submit">Edit Profile</button>
+</form> 
+<form action="{{url_for('deactivateAccount')}}">
+    <button type="submit">Deactivate Account</button>
+</form> 
+<div class = "create_gaggle"> 
+    <form name="create_gaggle" action="{{url_for('createGaggle')}}" method="POST">
+        <p> Create new gaggle</p>
+        <p> Gaggle name</p>
+        <p> 
+            <textarea name="gaggle_name" rows="1" cols="30"></textarea>
+        </p>
+        <p> Gaggle description </p>
+        <p>
+            <textarea name="description" rows="1" cols="30"></textarea>
+            <input type="submit" name = "submit" value="Create">
+        </p>
+    </form>  
+</div>
+{% else %}
+<form action="{{url_for('blockUser', username=username)}}">
+    <button type="submit">Block User</button>
+</form> 
+{% endif %}
+
+{% endblock %}
+====================== static/dropdown_menu.js =====================
+function changeLanguage(language) {
+    var element = document.getElementById("url");
+    element.value = language;
+    element.innerHTML = language;
+}
+  
+function showDropdown(pid) {
+    document.getElementById("myDropdown_"+pid).classList.toggle("show");
+}
+  
+  // Close the dropdown if the user clicks outside of it
+window.onclick = function(event) {
+    if (!event.target.matches(".dropbtn")) {
+      var dropdowns = document.getElementsByClassName("dropdown-content");
+      var i;
+      for (i = 0; i < dropdowns.length; i++) {
+        var openDropdown = dropdowns[i];
+        if (openDropdown.classList.contains("show")) {
+          openDropdown.classList.remove("show");
+        }
+      }
+    }
+};
+====================== static/style.css =====================
+/* the --color-header and others are CSS variables, which we access later. 
+*/
+
+HTML {
+    --color-header: #007ea9;  /* color for H1-H6 and others. was deepskyblue but poor contrast. */
+    --color-hilite: #b50000;  /* was red, but this avoids WAVE contrast errors */ 
+    --color-focus: #56B929;
+}
+
+/* side bar*/
+/* Google Fonts Import Link */
+/* side bar*/
+/* Google Font Import - Poppins */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+:root{
+    /* ===== Colors ===== */
+    --body-color: #ffffff;
+    --sidebar-color: #FFF;
+    --primary-color: #695CFE;
+    --primary-color-light: #F6F5FF;
+    --toggle-color: #DDD;
+    --text-color: #707070;
+
+    /* ====== Transition ====== */
+    --tran-03: all 0.2s ease;
+    --tran-03: all 0.3s ease;
+    --tran-04: all 0.3s ease;
+    --tran-05: all 0.3s ease;
+}
+
+body{
+    min-height: 100vh;
+    background-color: var(--body-color);
+    transition: var(--tran-05);
+}
+
+::selection{
+    background-color: var(--primary-color);
+    color: #fff;
+}
+
+body.dark{
+    --body-color: #18191a;
+    --sidebar-color: #242526;
+    --primary-color: #3a3b3c;
+    --primary-color-light: #3a3b3c;
+    --toggle-color: #fff;
+    --text-color: #ccc;
+}
+
+/* ===== Sidebar ===== */
+ .sidebar{
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 250px;
+    padding: 10px 14px;
+    background: var(--sidebar-color);
+    transition: var(--tran-05);
+    z-index: 100; 
+    border-right: solid #695CFE 1px; 
+}
+.sidebar.close{
+    width: 88px;
+}
+
+/* ===== Reusable code - Here ===== */
+.sidebar li{
+    height: 50px;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.sidebar header .image,
+.sidebar .icon{
+    min-width: 60px;
+    border-radius: 6px;
+}
+
+.sidebar .icon{
+    min-width: 60px;
+    border-radius: 6px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+
+.sidebar .text,
+.sidebar .icon{
+    color: var(--text-color);
+    transition: var(--tran-03);
+}
+
+.sidebar .text{
+    font-size: 17px;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 1;
+}
+.sidebar.close .text{
+    opacity: 0;
+}
+/* =========================== */
+
+.sidebar header{
+    position: relative;
+}
+
+.sidebar header .image-text{
+    display: flex;
+    align-items: center;
+}
+.sidebar header .logo-text{
+    display: flex;
+    flex-direction: column;
+}
+header .image-text .name {
+    margin-top: 2px;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+header .image-text .profession{
+    font-size: 16px;
+    margin-top: -2px;
+    display: block;
+}
+
+.sidebar header .image{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sidebar header .image img{
+    width: 40px;
+    border-radius: 6px;
+}
+
+.sidebar header .toggle{
+    position: absolute;
+    top: 50%;
+    right: -25px;
+    transform: translateY(-50%) rotate(180deg);
+    height: 25px;
+    width: 25px;
+    background-color: var(--primary-color);
+    color: var(--sidebar-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    cursor: pointer;
+    transition: var(--tran-05);
+}
+
+body.dark .sidebar header .toggle{
+    color: var(--text-color);
+}
+
+.sidebar.close .toggle{
+    transform: translateY(-50%) rotate(0deg);
+}
+
+.sidebar .menu{
+    margin-top: 40px;
+}
+
+.sidebar li.search-box{
+    border-radius: 6px;
+    background-color: var(--primary-color-light);
+    cursor: pointer;
+    transition: var(--tran-05);
+}
+
+.sidebar li.search-box input{
+    height: 100%;
+    width: 100%;
+    outline: none;
+    border: none;
+    background-color: var(--primary-color-light);
+    color: var(--text-color);
+    border-radius: 6px;
+    font-size: 17px;
+    font-weight: 500;
+    transition: var(--tran-05);
+}
+.sidebar li a{
+    list-style: none;
+    height: 100%;
+    background-color: transparent;
+    display: flex;
+    align-items: center;
+    height: 100%;
+    width: 100%;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: var(--tran-03);
+}
+
+.sidebar li a:hover{
+    background-color: var(--primary-color);
+}
+.sidebar li a:hover .icon,
+.sidebar li a:hover .text{
+    color: var(--sidebar-color);
+}
+body.dark .sidebar li a:hover .icon,
+body.dark .sidebar li a:hover .text{
+    color: var(--text-color);
+}
+
+.sidebar .menu-bar{
+    height: calc(100% - 55px);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow-y: scroll;
+}
+.menu-bar::-webkit-scrollbar{
+    display: none;
+}
+.sidebar .menu-bar .mode{
+    border-radius: 6px;
+    background-color: var(--primary-color-light);
+    position: relative;
+    transition: var(--tran-05);
+}
+
+.menu-bar .mode .sun-moon{
+    height: 50px;
+    width: 60px;
+}
+
+.mode .sun-moon i{
+    position: absolute;
+}
+.mode .sun-moon i.sun{
+    opacity: 0;
+}
+body.dark .mode .sun-moon i.sun{
+    opacity: 1;
+}
+body.dark .mode .sun-moon i.moon{
+    opacity: 0;
+}
+
+.menu-bar .bottom-content .toggle-switch{
+    position: absolute;
+    right: 0;
+    height: 100%;
+    min-width: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.toggle-switch .switch{
+    position: relative;
+    height: 22px;
+    width: 40px;
+    border-radius: 25px;
+    background-color: var(--toggle-color);
+    transition: var(--tran-05);
+}
+
+.switch::before{
+    content: '';
+    position: absolute;
+    height: 15px;
+    width: 15px;
+    border-radius: 50%;
+    top: 50%;
+    left: 5px;
+    transform: translateY(-50%);
+    background-color: var(--sidebar-color);
+    transition: var(--tran-04);
+}
+
+body.dark .switch::before{
+    left: 20px;
+}
+
+.home{
+    position: absolute;
+    top: 0;
+    top: 0;
+    left: 250px;
+    height: 100vh;
+    width: calc(100% - 250px);
+    background-color: var(--body-color);
+    transition: var(--tran-05);
+}
+.home .text{
+    font-size: 30px;
+    font-weight: 500;
+    color: var(--text-color);
+    padding: 12px 60px;
+}
+
+.sidebar.close ~ .home{
+    left: 78px;
+    height: 100vh;
+    width: calc(100% - 78px);
+}
+body.dark .home .text{
+    color: var(--text-color);
+}
+
+/* search form   */
+
+
+
+/* For flashed messages; make them stand out using red and italics */
+
+#messages {
+    color: var(--color-hilite);
+    font-style: italic;
+}
+
+.edit_form{
+    margin: 20px;
+}
+
+.input-search{
+    position: fixed;
+    height: 40px;
+    width: 20%;
+    padding: 15px;
+    background: #f9f5ff;
+    margin-left: 20px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    border: solid #f5efff 1px;
+    border-radius: 20px;
+}
+
+
+/* search form   */
+
+
+
+/* For flashed messages; make them stand out using red and italics */
+
+#messages {
+    color: var(--color-hilite);
+    font-style: italic;
+}
+
+.edit_form{
+    margin: 20px;
+}
+
+.quick-gaggle{
+    width: 15%;
+    padding: 15px;
+    background: #f9f5ff;
+    margin-left: 65%;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    border: solid #f5efff 1px;
+    border-radius: 12px;    
+}
+
+.inputs{
+    margin-top: 20px;
+}
+
+h1 {
+    font-size: 200%;
+    color: var(--color-header);
+}
+
+h2, h3 {
+    color: var(--color-header);
+}
+
+/* main body */
+.col-sm-6{
+    padding: 0% !important;
+    height: 100vw !important;
+}
+.main-body{
+    border-left: solid #695CFE 1px;
+    height: 100vw;
+}
+.main-header{
+    position: -webkit-sticky; /* for Safari */
+    position: sticky;
+    top: 0;
+    align-self: flex-start; /* <-- this is the fix */
+    margin: auto;
+    padding: 20px;
+    padding-left: 30px;
+    /* border-bottom: solid #695CFE 1px; */
+    background-color: #FFF;
+    opacity: 80%;
+    z-index: 30px !important
+}
+
+.main-content {
+    /* padding: 20px; */
+    height: 100vw;
+}
+
+.main-content{
+    padding-top: 0;
+    border-left:#c1c1c1 2px; 
+    border-right: #c1c1c1 2px ;
+}
+
+.input-search:hover {
+    border: solid #8b70e3 1px;
+}
+/* for the filter button in search result  */
+.search-filter{
+    margin: 10px;
+    padding: 10px;
+    font-size: 12px;
+    border: none;
+    border-radius: 12px;
+    background: #bdb2e0;
+    color:#111;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+}
+.search-filter:hover {
+    background-color: #bca2e3 !important;
+    color: #ffffff
+}
+
+.is-selected{
+    background-color: #bca2e3 !important;
+    color: #ffffff    
+}
+.right-content{
+    padding-top: 20%;
+}
+.gaggle-list {
+    position: -webkit-sticky; /* for Safari */
+    position: sticky !important;
+    top: 0;
+    align-self: flex-start; /* <-- this is the fix */
+    padding: 15px;
+    width: 90%;
+    margin-left: 20px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    border-radius: 20px;    
+    background: #f9f5ff;
+}
+
+/* formatting post */
+img {
+    max-width:100%;
+  }
+  .avator {
+    width:48px;
+    height:48px;
+    margin-right: 15px;
+    clip-path: circle(48px);
+  }
+  .img-profile{
+    object-fit: cover;
+    width: 100%;
+    height: 100%;
+    border-radius:50%;
+  }
+  
+  .post-wrap {
+    max-width:100%;
+    background: #fff;
+    border-radius:3px;
+    padding: 20px;
+    border-bottom: 1px solid #e6ecf0;
+    border-top: 1px solid #e6ecf0;
+  }
+  .post-wrap:hover{
+      background-color: rgb(246, 246, 246);
+  }
+  .post-header {
+    display: flex;
+    align-items:flex-start;
+    /* align-items:stretch; */
+    font-size:14px;
+  }
+  .post-header-info {
+    font-family: 'Poppins', sans-serif;
+  }
+  .post-header-info span posted-date {
+    color:#657786;
+    font-size:12px;
+    margin-left: 20px;
+  }
+  
+  .post-img-wrap {
+    margin-top: 10px;
+    padding-left: 60px;
+    min-height: 10vh;
+  }
+  
+  .post-info-counts {
+    display: flex;
+    margin-left: 60px;
+    margin-top: 10px;
+    border-top: #657786 1px;
+  }
+  .post-info-counts div {
+    display: flex;
+    margin-right: 20px;
+  }
+  .post-info-counts div button {
+    color:#4b5b68;
+    margin-right: 10px;
+    background:none;
+    border:none;
+  }
+  .post-info-counts div button:hover {
+    color:#c2a3cc;
+  }
+  
+  .selected {
+    color:#f8e2ff;
+    background-color: #c2a3cc;
+    clip-path: circle(20px)
+  }
+  
+  @media screen and (max-width:430px){
+    body {
+      padding-left: 20px;
+      padding-right: 20px;
+    }
+    .post-header {
+      flex-direction:column;
+    }
+    .post-header img {
+      margin-bottom: 20px;
+    }
+    .post-header-info p {
+      margin-bottom: 30px;
+      padding-left:20px;
+    }
+    .post-img-wrap {
+      min-height:20%;
+      padding-left: 0;
+    }
+    .post-info-counts {
+    display: flex;
+    margin-left: 0;
+  }
+  .post-info-counts div {
+    margin-right: 10px;
+  }
+}
+/* comment */
+
+
+.add_post_form{
+    margin: 20px;
+    padding: 10px;
+    border-style: solid;
+    border-width: 2px;
+    border-color: #007ea9;
+    width: 700px;
+}
+
+textarea {
+    border: solid #b5b5b5 1px; 
+    border-radius: 15px;
+    font-family: 'Nunito Sans', sans-serif;
+}
+.comment-form{
+    border-bottom: 1px solid #e6ecf0;
+    padding: 20px;
+}
+/* like animation  */
+
+
+
+
+/* Comment */
+button:hover {
+    color: rgba(102, 99, 155, 0.3);
+}
+
+.comment {
+    padding-left: 60px;
+}
+/* comment layout */
+
+
+/* comment effect */
+.comment:hover {
+    background-color: rgb(246, 246, 246);
+}
+
+.author {
+    color: rgba(0, 0, 0, 0.85)!important;
+    font-size: 14px;
+    font-weight: bold !important;
+    font-family: 'Poppins', sans-serif !important;
+    text-decoration: none;
+    margin-left: 0 !important;
+}
+
+
+.metric-num{
+    position: relative;
+    font-size:10px;
+    padding-bottom:4px;
+}
+.thread-chain{
+    display: block;
+    position: absolute;
+    top: 50px;
+    left: 0;
+    width: 12px;
+    height: calc(100% - 50px);
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    background-color: rgba(0, 0, 0, 0.1);
+    background-clip: padding-box;
+}
+/* display reply */
+.dropdown-reply{
+    display: none !important;
+
+}
+
+.showReply{
+    display: block !important;
+}
+/* comment thread */
+.main-comment{
+    margin-top: 30px;
+    border: solid #8b70e3 1px;
+    padding: 20px;    
+}
+.reply-text-area{
+    width:80%;
+}
+.replies{
+    margin-left: 60px;
+}
+
+
+.reply-form {
+    margin-left: 20px;
+    display: none;
+}
+
+.comment-content{
+    margin:10px;
+} 
+
+.posted-date{
+    font-size: 10px;
+    color:#3d3d3d !important;
+}
+
+.write-text{
+    padding: 10px;
+    width: 100%;
+    border:none;
+    border-radius: 12px;
+    overflow-wrap: break-word;
+}
+
+.comment-thread{
+    position: relative;
+    width: 100%;
+
+}
+
+.comment-border-link {
+    display: flex;
+    position: absolute;
+    margin-top:20px;
+    margin-left:35px;
+    left: 0;
+    width: 10px;
+    height: calc(100% + 20px);
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    background-color: rgba(0, 0, 0, 0.1);
+    background-clip: padding-box;
+}
+
+/* post-format */
+.gaggle-name{
+    font-size: 16px;
+    color:#333;
+    font-weight: 600;
+}
+.post-info{
+    margin-bottom:none !important;
+}
+.container-post {  display: grid;
+    grid-template-columns: 0.9fr 1fr 1fr 1fr;
+    grid-template-rows: 1.2fr 2.6fr;
+    gap: 0px 0px;
+    grid-auto-flow: row;
+    grid-template-areas:
+      "profile post-info post-info post-info"
+      "post-content post-content post-content post-content";
+  }
+  
+  .profile { grid-area: profile; }
+  
+  .post-info { grid-area: post-info; }
+  
+  .post-content { grid-area: post-content; }    
+
+/* Dropdown menu for posts */  
+.dropdown-content {
+    display: none !important;
+    margin-left:20px;
+    position: absolute;
+    background-color: #f9f9f9;
+    min-width: 100px;
+    overflow: auto;
+    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    /* z-index: 10; */
+}
+  
+.dropdown-content a {
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    font-size:12px;
+    display: block;
+    border: none;
+    background-color: #f9f9f9;
+}
+   
+.dropdown-content-show {
+    display: block!important;
+}
+
+/* Modqueue.html */
+
+.modqueue {
+    margin: 20px;
+    font-family: Arial, Helvetica, sans-serif;
+    border-collapse: collapse;
+    width: 900px;
+  }
+  
+.modqueue td, .modqueue th {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+  
+.modqueue tr:nth-child(even){background-color: #f2f2f2;}
+  
+.modqueue tr:hover {background-color: #ddd;}
+  
+.modqueue th {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    text-align: left;
+    background-color: #04AA6D;
+    color: white;
+}
+
+/* comment metric */
+
+
+.userPic {
+    display: block;
+    width: 200px;
+    height: 175px;
+    border-radius: 50%;
+    margin-left: auto;
+    margin-right: auto;
+  
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;
+  }
+
+.userInfo {
+    padding: 2%;
+    font-size: 16px;
+    font-weight: 600;
+    text-align:center
+}
+
+.gaggle {
+    padding: 2%;
+    margin: 5px;
+    border: 3px solid rgb(20, 11, 11);
+    float: left;
+    width: 180px;
+}
+
