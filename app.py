@@ -165,6 +165,7 @@ def getRepliesThread(comment_id, thread):
         parent_comment_id = parent_comment[0]['parent_comment_id'] 
         thread.append(parent_comment_id)
         return getRepliesThread(parent_comment_id, thread)
+
 ####_____Homepage Functions_____####
 
 @app.route('/')
@@ -381,10 +382,7 @@ def flagPost(post_id, author_id, gaggle_name):
         return redirect(url_for('gaggle', gaggle_name=gaggle_name))
 
 
-
-
 ####_____Comment/Replies Functions_____####
-
 
 @app.route('/likePost/', methods=['POST'])
 def likePost():
@@ -405,7 +403,6 @@ def likePost():
             waggle.likePost(conn, post_id, user_id, kind)
         metric = waggle.getPostMetric(conn, post_id)
         return jsonify(metric)
-
 
 
 @app.route('/reply/<comment_id>', methods=['GET', 'POST'])
@@ -442,7 +439,6 @@ def addReply(comment_id):
         content = request.form['comment_content']  
         add_comment = waggle.addComment(conn, post_id, parent_comment_id, content, user_id, posted_date)
         return redirect( url_for('addReply', comment_id = comment_id )) 
-
 
 
 ####_____User Profile Functions_____#### 
@@ -502,7 +498,7 @@ def editMyPage():
 @app.route('/upload/', methods=["GET", "POST"])
 def file_upload():
     '''
-    Allow user to upload their file and insert it into the database
+    Allow user to upload their file and insert it into the database (profile picture specifically)
     '''
     user_id = session.get('user_id', '')
     if user_id == '':
@@ -555,13 +551,15 @@ def profile():
 
 @app.route('/pic/<user_id>')
 def profilePic(user_id):
+    """
+    Retrieves the profile pic of the user from the database or the default photo
+    """
     conn = dbi.connect()
     profilePic = waggle.getProfilePic(conn, user_id)
-    if(profilePic is None):
+    if(profilePic is None): #sets the default photo if user's profile pic doesn't exist
         filename = '0.jpeg'
     else: 
         filename = profilePic['filename']
-
     return send_from_directory(app.config['UPLOADS'],filename)
     
 def getRepliesThread(comment_id, thread):  
@@ -702,7 +700,7 @@ def myGaggle(gaggle_name):
 @app.route('/delete/<gaggle_id>', methods=['GET', 'POST'])
 def deleteGaggle(gaggle_id):
     '''
-    Create gaggle.
+    Deletes gaggle.
     '''
     user_id = isLoggedIn()
     username = session.get('username',)
@@ -726,7 +724,7 @@ def createGaggle():
     conn = dbi.connect() 
     username = session.get('username')
     if request.method == 'GET':
-        return redirect(url_for('user', username = username)) #change to profile
+        return render_template('createGaggleForm.html')
     else:
         gaggle_name = request.form.get('gaggle_name')           
         description = request.form.get('description') 
@@ -738,13 +736,16 @@ def createGaggle():
                 return redirect(url_for('gaggle', gaggle_name = gaggle_name))  
             else:
                 flash("gaggle name already existed")
-                return redirect(url_for('createGaggle'))
+                return render_template('createGaggleForm.html')
         else:
             flash('gaggle name cannot be empty')
-            return redirect(url_for('createGaggle'))
+            return render_template('createGaggleForm.html')
 
 @app.route('/unjoinGaggle/<username>/<gaggle_id>/<gaggle_name>', methods=['POST'])
 def unJoinGaggle(username,gaggle_id, gaggle_name):
+    """
+    Removes user from the Gaggle member list
+    """
     conn = dbi.connect()
     user_id = session.get('user_id', '')
     logged = session.get('logged_in', False)
@@ -870,7 +871,7 @@ def dashboard():
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'ldau_db' 
+    db_to_use = 'hs1_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 

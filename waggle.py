@@ -600,13 +600,16 @@ def getCommentGaggle(conn, comment_id):
 
 def getGagglesCreated(conn, user_id):
     '''
-    
+    Returns the gaggles that the user_id has created
     '''
     curs = dbi.dict_cursor(conn) 
     curs.execute('''select * from gaggle where author_id = %s''', [user_id])
     return curs.fetchall() 
 
 def getGagglesJoined(conn, user_id):
+    '''
+    Returns the gaggles that the user_id is apart of 
+    '''
     curs = dbi.dict_cursor(conn)     
     curs.execute('''
         select * from gosling inner join gaggle
@@ -707,7 +710,7 @@ def getProfilePic(conn, user_id):
 
 def insertProfilePic(conn, user_id, filename):
     '''
-    Insert new pic into user's profile
+    Insert new pic into user's profile table
     '''
     curs = dbi.dict_cursor(conn)
     curs.execute(

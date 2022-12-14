@@ -23,6 +23,9 @@
                     <div class="col-sm-2">
                         {% if isPersonal %}
                         <div class="card-body py-3 px-0">
+                            <a href="{{url_for('deactivateAccount')}}"><button type="submit" class="btn rounded-pill btn-dark">Deactivate</button></a>
+                        </div>
+                        <div class="card-body py-3 px-0">
                             <a href="{{url_for('editMyPage')}}"><button type="submit" class="btn rounded-pill btn-dark">Edit Profile</button></a>
                         </div>
                         {% endif %}
@@ -40,7 +43,7 @@
                 <div class="card-body">
                     <p class="icon-name text-truncate mb-0"><a href="{{url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a></p>
                     {% if isPersonal %}
-                    <form method="get" action="{{url_for('unJoinGaggle', username=username,gaggle_name=gaggle['gaggle_name'], gaggle_id=gaggle['gaggle_id'])}}">
+                    <form method="post" action="{{url_for('unJoinGaggle', username=username,gaggle_name=gaggle['gaggle_name'], gaggle_id=gaggle['gaggle_id'])}}">
                         <input type="submit" class="btn btn-sm rounded-pill btn-outline-dark mt-2" name="visit" value="Unjoin">
                     </form> 
                     {% endif %}
@@ -56,7 +59,7 @@
                 <div class="card-body">
                     <p class="icon-name text-truncate mb-0"><a href="{{url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a></p>
                     {% if isPersonal %}
-                    <form method="get" action="{{url_for('deleteGaggle', gaggle_id=gaggle['gaggle_id'])}}">
+                    <form method="post" action="{{url_for('deleteGaggle', gaggle_id=gaggle['gaggle_id'])}}">
                         <input type="submit" class="btn btn-sm rounded-pill btn-outline-danger mt-2" name="delete" value="Delete">
                     </form>
                     {% endif %}
