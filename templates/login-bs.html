@@ -92,7 +92,7 @@
 
               <form id="formAuthentication" class="mb-3" action="{{url_for('login')}}" method="POST">
                 <div class="mb-3">
-                  <label class="form-label">Username</label>
+                  <label for='username' class="form-label">Username
                   <input
                     type="text"
                     class="form-control"
@@ -100,11 +100,11 @@
                     name="username"
                     placeholder="Enter your username"
                     autofocus
-                  />
+                  /></label>
                 </div>
                 <div class="mb-3 form-password-toggle">
                   <div class="d-flex justify-content-between">
-                    <label class="form-label" for="password">Password</label>
+                    <label id = 'password' class="form-label" for="password">Password</label>
                     <a href="auth-forgot-password-basic.html">
                       <small>Forgot Password?</small>
                     </a>

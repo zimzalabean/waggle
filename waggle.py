@@ -73,13 +73,6 @@ def getGaggle(conn, gaggle_name):
                  [gaggle_name])
     return curs.fetchone()      
 
-def getGagglesOfAuthor(conn, user_id):
-    '''returns all gaggles that a user has created'''
-    curs = dbi.dict_cursor(conn)
-    curs.execute('''
-        select * from gaggle where author_id = %s''', [user_id])
-    return curs.fetchall()
-
 def getPosts(conn):
     '''returns the latest 20 posts for homepage feed'''
     curs = dbi.dict_cursor(conn)
@@ -119,11 +112,11 @@ def getGaggleID(conn, gaggle_name):
         FROM gaggle 
         WHERE gaggle_name = %s''',
                  [gaggle_name])
-    return curs.fetchall()  
+    return curs.fetchone()  
 
 def getGagglePosts(conn, gaggle_name):
     '''returns all posts in a gaggle based on gaggle_name sorted by latest'''
-    gaggle_id = getGaggleID(conn, gaggle_name)[0]['gaggle_id']
+    gaggle_id = getGaggleID(conn, gaggle_name)['gaggle_id']
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         SELECT a.*,  b.username, CONCAT(b.first_name,' ',b.last_name) as full_name, c.gaggle_name  
@@ -272,7 +265,7 @@ def likeComment(conn, comment_id, user_id, kind):
 def getMembers(conn, gaggle_name):
     '''returns all members of a gaggle based on the gaggle_name'''    
     curs = dbi.dict_cursor(conn)
-    gaggle_id = getGaggleID(conn, gaggle_name)[0]['gaggle_id']
+    gaggle_id = getGaggleID(conn, gaggle_name)['gaggle_id']
     curs.execute('''
         SELECT username
         FROM gosling 
@@ -606,6 +599,9 @@ def getCommentGaggle(conn, comment_id):
     return result[0]['gaggle_id']
 
 def getGagglesCreated(conn, user_id):
+    '''
+    
+    '''
     curs = dbi.dict_cursor(conn) 
     curs.execute('''select * from gaggle where author_id = %s''', [user_id])
     return curs.fetchall() 
@@ -630,6 +626,9 @@ def updateBio(conn, gaggle_id, new_group_bio):
     return gaggle_id 
 
 def createGaggle(conn, user_id, gaggle_name, description):
+    '''
+    Check if gaggle name is available, if so insert new gaggle in gaggle table
+    '''
     curs = dbi.dict_cursor(conn)
     result = getGaggle(conn, gaggle_name)
     if result is None:
@@ -642,6 +641,7 @@ def createGaggle(conn, user_id, gaggle_name, description):
     else:
         valid = False
     return valid
+
 def getMyModGaggles(conn, user_id):
     '''
     Gets gaggles of which user_id is a mod of
@@ -655,49 +655,10 @@ def getMyModGaggles(conn, user_id):
         ''', [user_id])
     return curs.fetchall()
 
-def get_flagged_posts(conn, gaggle_id):
-    curs = dbi.dict_cursor(conn)
-    curs.execute('''
-        select a.*, b.content, c.username, c.user_id
-        from flag_post a
-        left join post b using (post_id)
-        left join user c on a.reporter_id = c.user_id
-        where b.gaggle_id = %s
-        order by a.flagged_date desc
-        ''', [gaggle_id])
-    return curs.fetchall()
-
-def increment_flag(conn, post_id):
-    curs = dbi.dict_cursor(conn)
-    curs.execute('''
-        update post
-        set flags = flags+1
-        where post_id = %s
-    ''', [post_id])
-    conn.commit()
-
-def increment_strikes(conn, user_id):
-    curs = dbi.dict_cursor(conn)
-    curs.execute('''
-        select strike
-        from user
-        where user_id = %s
-    ''', [user_id])
-    curr_strikes = curs.fetchone()['strike']
-    res = ''
-    if curr_strikes < 2:
-        res = 'strike'
-    else:
-        res = 'ban'
-    curs.execute('''
-        update user
-        set strike = strike+1
-        where user_id = %s
-    ''', [user_id])
-    conn.commit()
-    return res
-
 def deleteGaggle(conn, gaggle_id):
+    '''
+    Delete gaggle based on its gaggle_id
+    '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         DELETE FROM 
@@ -707,6 +668,9 @@ def deleteGaggle(conn, gaggle_id):
 
 
 def getCommentMetric(conn, comment_id):
+    '''
+    Return metrics of a comment based on its comment_id
+    '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         SELECT comment_id, dislikes, likes 
@@ -718,6 +682,9 @@ def getCommentMetric(conn, comment_id):
     return result
 
 def getPostMetric(conn, post_id):
+    '''
+    Return metrics of a post based on its post_id
+    '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         SELECT post_id, dislikes, likes 
@@ -725,8 +692,12 @@ def getPostMetric(conn, post_id):
         WHERE post_id = %s''', 
                 [post_id])   
     result = curs.fetchone()  
-    return result   
+    return result  
+
 def getProfilePic(conn, user_id):
+    '''
+    Get user profile pic filename on their user_id 
+    '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         SELECT filename FROM picfile 
@@ -735,6 +706,9 @@ def getProfilePic(conn, user_id):
     return curs.fetchone()
 
 def insertProfilePic(conn, user_id, filename):
+    '''
+    Insert new pic into user's profile
+    '''
     curs = dbi.dict_cursor(conn)
     curs.execute(
                 '''insert into picfile(user_id,filename) values (%s,%s)
@@ -743,6 +717,9 @@ def insertProfilePic(conn, user_id, filename):
     conn.commit()
 
 def deactivateAccount(conn, user_id):
+    '''
+    Deactivate account and delete all data of a user based on their user_id
+    '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         DELETE FROM 
@@ -751,6 +728,9 @@ def deactivateAccount(conn, user_id):
     conn.commit()
 
 def isAuthor(conn, user_id, gaggle_id):
+    '''
+    Check if this user is the author of this gaggle based on its gaggle_id
+    '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         SELECT gaggle_id FROM gaggle
@@ -763,6 +743,9 @@ def isAuthor(conn, user_id, gaggle_id):
         return True   
 
 def hasLikedCmt(conn, user_id, comment_id):
+    '''
+    Check if a user has liked this comment based on its comment_id
+    '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         SELECT comment_id 
@@ -777,6 +760,9 @@ def hasLikedCmt(conn, user_id, comment_id):
         return True       
 
 def hasLikedPost(conn, user_id, post_id):
+    '''
+    Check if user with this user_id has liked post based on its post_id 
+    '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         SELECT post_id
@@ -791,7 +777,8 @@ def hasLikedPost(conn, user_id, post_id):
         return True  
 
 def unlikeComment(conn, user_id, comment_id):
-    '''Remove a user into a gaggle member list'''
+    '''Remove a user's like of a comment based on its comment_id
+    and update like count '''
     curs = dbi.dict_cursor(conn)
     print(comment_id)
     kind = 'Like'
@@ -811,20 +798,92 @@ def unlikeComment(conn, user_id, comment_id):
                 [comment_id])
     conn.commit()
     print('decreases likes')
-    return "Unliked"        
+    return "Unliked"  
+
+def unlikePost(conn, user_id, post_id):
+    '''Remove a user's like of a post based on its post_id
+    and update like count '''
+    curs = dbi.dict_cursor(conn)
+    kind = 'Like'
+    curs.execute('''
+        DELETE FROM post_like
+        WHERE 
+        kind = %s
+        AND user_id = %s
+        AND post_id = %s''', 
+                [kind, user_id, post_id])
+    conn.commit()  # need this!   
+    print('inserted')
+    curs.execute('''
+        UPDATE post
+        SET likes = likes - 1
+        WHERE post_id = %s''',
+                [post_id])
+    conn.commit()
+    print('decreases likes')
+    return "Unliked"           
 
 def getUserComments(conn, user_id):
     '''returns all of user's comments sorted by latest'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.*, b.username, c.gaggle_name
-        FROM post a
-        LEFT JOIN user b
-        ON (a.poster_id = b.user_id)
-        LEFT JOIN gaggle c
-        ON (a.gaggle_id = c.gaggle_id)
-        WHERE poster_id = %s
-        order by posted_date DESC''',
+        SELECT * 
+        FROM comment
+        WHERE commentor_id = %s
+        ORDER BY posted_date desc''',
                  [user_id])
     all_posts = curs.fetchall()
     return all_posts
+
+####_____To be used Functions for beta not yet tested_____#### 
+
+def get_flagged_posts(conn, gaggle_id):
+    '''
+    Get flagged posts in a gaggle based on its gaggle_id
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        select a.*, b.content, c.username, c.user_id
+        from flag_post a
+        left join post b using (post_id)
+        left join user c on a.reporter_id = c.user_id
+        where b.gaggle_id = %s
+        order by a.flagged_date desc
+        ''', [gaggle_id])
+    return curs.fetchall()
+
+def increment_flag(conn, post_id):
+    '''
+    Increment flag count for a post 
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        update post
+        set flags = flags+1
+        where post_id = %s
+    ''', [post_id])
+    conn.commit()
+
+def increment_strikes(conn, user_id):
+    '''
+    Increment strikes count for a post
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        select strike
+        from user
+        where user_id = %s
+    ''', [user_id])
+    curr_strikes = curs.fetchone()['strike']
+    res = ''
+    if curr_strikes < 2:
+        res = 'strike'
+    else:
+        res = 'ban'
+    curs.execute('''
+        update user
+        set strike = strike+1
+        where user_id = %s
+    ''', [user_id])
+    conn.commit()
+    return res    

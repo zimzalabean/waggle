@@ -71,11 +71,9 @@ img {
   color:#c2a3cc;
 }
 
-.selected {
-  color:#f8e2ff;
-  background-color: #c2a3cc;
-  clip-path: circle(20px)
-}
+.post-info-counts div .selected {
+    color:#9e47b8;
+  }
 
 @media screen and (max-width:430px){
   body {
@@ -125,31 +123,34 @@ img {
 
     <div class="post-info-counts">
 
-      <div class="comments">
+      <div class="posts">
         <a href = "{{url_for('post', post_id = post.post_id)}}">
         <button>
         <svg class="feather feather-message-circle sc-dnqmqq jxshSx" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
         </button></a>
-        <div class="comment-count">{{post.replies}}</div>
+        <div class="post-count">{{post.replies}}</div>
       </div>
 
-      <form class = 'like-dislike-post' method=post action="{{url_for('likePost')}}" ></form>      
 
-        <div class="dislikes">
-          <button id = 'post-Dislike{{post.post_id}}' onclick ="likePost('{{post.post_id}}','Dislike')">
-            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="css-i6dzq1"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path></svg>
-        </button>
-          <div> <span id="post-dislikes-count-{{post.post_id}}">{{post.dislikes}}</span></div>        
-        </div>
-        
+      <form class = 'like-dislike-post' method=post action="{{url_for('likePost')}}" >     
+
         <div class="likes">
-          <button  id = 'post-Like{{post.post_id}}' onclick ="likePost('{{post.post_id}}','Like')">
-          <svg class="feather feather-heart sc-dnqmqq jxshSx" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-          </button>
+          {% if post.isLiked %}
+          <button class = 'selected' id = 'post-Like{{post.post_id}}' onclick ="likePost('{{post.post_id}}','Unlike')">
+            <svg class="feather feather-heart sc-dnqmqq jxshSx" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+            </button>
+
+          {% else %}
+          <button id = 'post-Like{{post.post_id}}' onclick ="likePost('{{post.post_id}}','Like')">
+            <svg class="feather feather-heart sc-dnqmqq jxshSx" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+            </button>
+
+          {% endif %}          
           <div><span id="post-likes-count-{{post.post_id}}">{{post.likes}}</span></div>
         </div> 
 
       </form>
+
 
      
       <div class="action">
@@ -167,19 +168,18 @@ img {
           {% endif %}
         </div> 
       </div>
-    </div>
 
+  </div>
 </div>
 
 <script>
         function likePost(post_id, kind) {
             console.log(post_id);
-            document.getElementById("post-"+kind+post_id).classList.toggle("selected");
-            if (kind=='Like') {
-            document.getElementById("comment-Dislike"+comment_id).classList.remove('selected');
+            if (kind =='Like') {
+              document.getElementById("post-Like"+post_id).classList.toggle("selected");
             }
-            else if (kind == 'Dislike'){
-                document.getElementById("comment-Like"+comment_id).classList.remove('selected');
+            else if (kind == 'Unlike'){
+                document.getElementById("post-Like"+post_id).classList.remove('selected');
             };  
             $.ajax({
                     type: "POST",

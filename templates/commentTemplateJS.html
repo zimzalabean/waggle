@@ -126,7 +126,7 @@
         <div class="comment-count">{{comment.replies}}</div>
       </div>
 
-      <form class = 'like-dislike-comment' method=comment action="{{url_for('likeComment')}}" ></form>      
+      <form class = 'like-dislike-comment' method=comment action="{{url_for('likeComment')}}" >     
 
         <div class="likes">
           {% if comment.isLiked %}

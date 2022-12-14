@@ -1,7 +1,6 @@
 {% extends "base-bs.html" %}
 
 {% block main_content %}
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
 <body>
     <div class = 'search-kind'>
                 <form method=get action="{{url_for('search')}}" >       
@@ -44,28 +43,6 @@
     {% endif %}
     </div>       
 </body>
-
-<script>
-var btn1 = document.querySelector('#gg-btn');
-var btn2 = document.querySelector('#pst-btn');
-var btn3 = document.querySelector('pst-btn');
-var btn4 = document.querySelector('#gsl-btn');
-
-const buttons = ["gg-btn", "pst-btn","pst-btn", "gsl-btn"]
-
-window.addEventListener("load", function() {  
-  for (let x in buttons) {
-    let btn = document.getElementById("btn");
-    let val = btn.value;
-    console.log(val)
-    if (val== "{{kind}}") {
-        x.classList.toggle('is-selected');
-    };
-  }
-});
-
-</script>
-
 
 
 {% endblock %}
