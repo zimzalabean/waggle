@@ -871,11 +871,7 @@ def dashboard():
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-<<<<<<< HEAD
     db_to_use = 'mp2_db' 
-=======
-    db_to_use = 'waggle_db' 
->>>>>>> bd25ade953a1cd6e34b745afb4c7f7787e2ff21a
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 
