@@ -1,41 +1,49 @@
 {% extends "base-bs.html" %}
     
 {% block main_content %}
+<div name = "edit_user_info" style = 'padding-left: 60px; padding-top: 30px;'>
+    {% if user_id != ''%}
+    <p>Current Photo:</p>
 
-{% if user_id != ''%}
-<p>Current Photo:</p>
-<img src="{{url_for('profilePic',user_id=user_id)}}" style="height:150px">
-{% endif %}
 
-<p>Upload New Photo:
-<form method="post" action="{{url_for('file_upload')}}" enctype="multipart/form-data">
-        <p><label>Pic: <input type="file" name="pic"></label></p>
-        <p><input type="submit" value="upload"></p>
-</form>
-
-<form class="edit_form" action="{{url_for('editMyPage')}}" method="POST">
-    <div>
-        <div class="inputs">
-            <div>Current First Name: {{user['first_name']}}</div>
-            <label>New First Name: <input name="first_name"></input></label>
-        </div>
-        
-        <div class="inputs">
-            <div>Current Last Name: {{user['last_name']}}</div>
-            <label>New Last Name: <input name="last_name"></input></label>
-        </div>
-        
-        <div class="inputs">
-            <div>Current Class Year: {{user['class_year']}}</div>
-            <label>New Class Year: <input name="class_year"></input></label>
-        </div>
-        
-        <div class="inputs">
-            <div>Current Bio: {{user['bio_text']}}</div>
-            <label>New Bio: <textarea name="bio_text" rows="1" cols="10"></textarea></label>  
-        </div>
-        
-        <div class="inputs"><input type="submit" value="Update"></div>
+    <div class="post-header" style = 'margin-bottom: 20px;'>
+        <div class = 'avator' style = 'width:100px; height:100px;margin-right: 15%; clip-path: circle(100px);'>
+        <img src="{{url_for('profilePic',user_id=user_id)}}"  class = 'img-profile' style = "  object-fit: cover; width: 100%; height: 100%; border-radius:50%;">
+        </div>      
     </div>
-</form>
+
+    {% endif %}
+
+    <p>Upload New Photo:
+    <form method="post" action="{{url_for('file_upload')}}" enctype="multipart/form-data">
+            <p><label>Pic: <input type="file" name="pic"></label>
+            <input type="submit" value="upload"></p>
+    </form>
+
+    <form class="edit_form" action="{{url_for('editMyPage')}}" method="POST">
+        <div>
+            <div class="inputs">
+                <div>Current First Name: {{user['first_name']}}</div>
+                <label>New First Name: <input name="first_name"></input></label>
+            </div>
+            
+            <div class="inputs">
+                <div>Current Last Name: {{user['last_name']}}</div>
+                <label>New Last Name: <input name="last_name"></input></label>
+            </div>
+            
+            <div class="inputs">
+                <div>Current Class Year: {{user['class_year']}}</div>
+                <label>New Class Year: <input name="class_year"></input></label>
+            </div>
+            
+            <div class="inputs">
+                <div>Current Bio: {{user['bio_text']}}</div>
+                <label>New Bio: <textarea name="bio_text" rows="1" cols="10"></textarea></label>  
+            </div>
+            
+            <div class="inputs"><input type="submit" value="Update"></div>
+        </div>
+    </form>
+</div>
 {% endblock %}

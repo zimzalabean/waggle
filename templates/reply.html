@@ -1,12 +1,10 @@
-{% extends "baseTemplate.html" %}
+{% extends "base-bs.html" %}
 
 {% block main_content %}
 
-
+<div class = 'thread-wrap'>
         <!-- previous replies -->  
-        <div class = 'comment-thread'>
-
-               
+        <div class = 'comment-thread'>               
             <a  class="comment-border-link"></a>
             {% import "postTemplateJS.html" as postComp%}
             {{postComp.post_temp(post=post)}}
@@ -17,7 +15,7 @@
         </div>
 
         <!-- main comment -->  
-        <div style = 'background-color: rgb(246, 246, 246);' >  
+        <div class = 'main-comment'>  
             {{commentComp.comment_temp(comment=parent_comment, user_id=user_id)}}
         </div>  
 
@@ -27,6 +25,6 @@
                 {{commentComp.comment_temp(comment=comment, user_id=user_id)}}
             {% endfor %}
         </div>
-
+</div>
 
 {% endblock %}
