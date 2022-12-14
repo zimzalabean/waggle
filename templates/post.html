@@ -6,7 +6,7 @@
         <h3> Post </h3>
     <div>   
     {% import "postTemplateJS.html" as postComp%}
-        {{postComp.post_temp(post=post)}}
+        {{postComp.post_temp(post=post, pageIsNotPost = false)}}
     </div> 
 
     <div class = 'comment-form'>
@@ -23,7 +23,7 @@
     <div class = 'replies'>
         {% import "commentTemplateJS.html" as commentComp%}
         {% for comment in comments %}
-            {{commentComp.comment_temp(comment=comment, user_id = user_id)}}
+            {{commentComp.comment_temp(comment=comment, user_id = user_id, pageIsNotPost = false)}}
         {% endfor %}
     </div>
 

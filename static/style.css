@@ -495,7 +495,6 @@ img {
   .post-header {
     display: flex;
     align-items:flex-start;
-    /* align-items:stretch; */
     font-size:14px;
   }
   .post-header-info {

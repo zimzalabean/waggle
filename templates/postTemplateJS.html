@@ -1,4 +1,4 @@
-{% macro post_temp(post) -%}
+{% macro post_temp(post, pageIsNotPost) -%}
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 
 
@@ -8,19 +8,17 @@
           <img src="{{url_for('profilePic',user_id=post.poster_id)}}" alt="{{post.poster_id}}" class = 'img-profile'>
         </div>
       <div class="post-header-info">
-        <div class = 'gaggle-name'> <a href="{{url_for('user', username=post.username)}}"><span>@{{post.username}}</span></a>   <span class = 'posted-date'> @{{post.posted_date}}</span>      </div> 
+        <div class = 'gaggle-name'> <a href="{{url_for('user', username=post.username)}}"><span>@{{post.username}}</span></a></div> 
+        <div><span class = 'posted-date'> @{{post.posted_date}}</span></div>
         <div><a href="{{url_for('gaggle',gaggle_name=post.gaggle_name)}}"> 🐣 {{post.gaggle_name}}</a> </div>
-        
       </div>      
     </div>
 
     <div class="post-img-wrap" onclick= "window.location.href = '{{url_for('post', post_id=post.post_id)}}';">
       <p> {{post.content}}</p>
-
     </div>
 
     <div class="post-info-counts">
-
       <div class="posts">
         <a href = "{{url_for('post', post_id = post.post_id)}}">
         <button>
@@ -28,45 +26,41 @@
         </button></a>
         <div class="post-count">{{post.replies}}</div>
       </div>
-
-
       <form class = 'like-dislike-post' method=post action="{{url_for('likePost')}}" >     
-
         <div class="likes">
           {% if post.isLiked %}
           <button class = 'selected' id = 'post-Like{{post.post_id}}' onclick ="likePost('{{post.post_id}}','Unlike')">
             <svg class="feather feather-heart sc-dnqmqq jxshSx" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
             </button>
-
           {% else %}
           <button id = 'post-Like{{post.post_id}}' onclick ="likePost('{{post.post_id}}','Like')">
             <svg class="feather feather-heart sc-dnqmqq jxshSx" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
             </button>
-
           {% endif %}          
           <div><span id="post-likes-count-{{post.post_id}}">{{post.likes}}</span></div>
         </div> 
-
       </form>
-
-
-     
       <div class="action">
         <button onclick="showDropdown('{{post.post_id}}')">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-three-dots" viewBox="0 0 16 16">
             <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
           </svg>
         </button>
-        <div id="myDropdown_{{post.post_id}}" class="dropdown-content">
-          {% if post.canDelete %}
-          <a href="{{url_for('deletePost', post_id=post['post_id'], author_id=post['poster_id'], gaggle_name=post['gaggle'])}}">Delete Post</a>
-          {% endif %}
-          {% if not post.canDelete %}
-          <a href="{{url_for('flagPost', post_id = post.post_id, author_id=post.poster_id, gaggle_name=post['gaggle'])}}">Report Post</a>
-          {% endif %}
-        </div> 
       </div>
-
+      <div id="myDropdown_{{post.post_id}}" class="dropdown-content">
+        {% if post.canDelete %}
+        <form method="get" action="{{url_for('deletePost', post_id=post['post_id'], author_id=post['poster_id'], gaggle_name=post['gaggle'])}}">
+          <input type="submit" class="btn btn-sm btn-outline-danger mt-2" name="delete" value="Delete Post">
+        </form>
+        <!-- <a href="{{url_for('deletePost', post_id=post['post_id'], author_id=post['poster_id'], gaggle_name=post['gaggle'])}}">Delete Post</a> -->
+        {% endif %}
+        {% if not post.canDelete %}
+        <a href="{{url_for('flagPost', post_id = post.post_id, author_id=post.poster_id, gaggle_name=post['gaggle'])}}">Report Post</a>
+        {% endif %}
+      </div>
+      {% if pageIsNotPost %}
+      <a href="{{url_for('post', post_id=post.post_id)}}" class="btn btn-sm btn-outline-primary" style="float:right">View Post</a>
+      {% endif %}
   </div>
 </div>
 
