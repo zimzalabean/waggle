@@ -119,11 +119,11 @@ def getGaggleID(conn, gaggle_name):
         FROM gaggle 
         WHERE gaggle_name = %s''',
                  [gaggle_name])
-    return curs.fetchall()  
+    return curs.fetchone()  
 
 def getGagglePosts(conn, gaggle_name):
     '''returns all posts in a gaggle based on gaggle_name sorted by latest'''
-    gaggle_id = getGaggleID(conn, gaggle_name)[0]['gaggle_id']
+    gaggle_id = getGaggleID(conn, gaggle_name)['gaggle_id']
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         SELECT a.*,  b.username, CONCAT(b.first_name,' ',b.last_name) as full_name, c.gaggle_name  
@@ -272,7 +272,7 @@ def likeComment(conn, comment_id, user_id, kind):
 def getMembers(conn, gaggle_name):
     '''returns all members of a gaggle based on the gaggle_name'''    
     curs = dbi.dict_cursor(conn)
-    gaggle_id = getGaggleID(conn, gaggle_name)[0]['gaggle_id']
+    gaggle_id = getGaggleID(conn, gaggle_name)['gaggle_id']
     curs.execute('''
         SELECT username
         FROM gosling 

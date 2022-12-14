@@ -104,7 +104,7 @@ def signup():
         valid = waggle.insertUser(conn, email, hashed_pass, username, first_name, last_name, class_year, bio_text, strike)
         if valid:
             user_id = waggle.getUserID(conn, username)
-            # default_file = '3.jpeg'
+            # default_file = '0.jpeg'
             # curs = dbi.dict_cursor(conn)
             # curs.execute(
             #     '''insert into picfile(user_id,filename) values (%s,%s)''',
@@ -474,32 +474,30 @@ def user(username):
     gagglesCreated = waggle.getGagglesCreated(conn, uid)
     gagglesJoined = waggle.getGagglesJoined(conn, uid)
     userInfo = waggle.getUserInfo(conn, uid)
-    isPersonal = False
     if user_id == uid:
-        return redirect(url_for('profile'))
+        isPersonal = True
     else: 
-        return render_template('user.html', username=username, gagglesCreated=gagglesCreated, gagglesJoined=gagglesJoined, isPersonal = isPersonal, userInformation=userInfo, user_id=uid)
+        isPersonal = False
+    return render_template('user.html', username=username, gagglesCreated=gagglesCreated, gagglesJoined=gagglesJoined, isPersonal = isPersonal, userInformation=userInfo, user_id=uid)
 
 @app.route('/profile/')
 def profile():
     """
     Returns the profile page of the user logged in
     """
-    conn = dbi.connect()
-    username = session.get('username', '')
-    uid = session.get('user_id', '')
-    gagglesCreated = waggle.getGagglesCreated(conn, uid)
-    gagglesJoined = waggle.getGagglesJoined(conn, uid)
-    userInfo = waggle.getUserInfo(conn, uid) 
-    isPersonal = True
-    return render_template('user.html', username=username, gagglesCreated=gagglesCreated, gagglesJoined=gagglesJoined, isPersonal = isPersonal, userInformation=userInfo, user_id=uid)
-
+    username = session.get('username')
+    return redirect(url_for('user', username=username))
 
 @app.route('/pic/<user_id>')
 def profilePic(user_id):
     conn = dbi.connect()
     profilePic = waggle.getProfilePic(conn, user_id)
-    return send_from_directory(app.config['UPLOADS'],profilePic['filename'])
+    if(profilePic is None):
+        filename = '0.jpeg'
+    else: 
+        filename = profilePic['filename']
+
+    return send_from_directory(app.config['UPLOADS'],filename)
     
 def getRepliesThread(comment_id, thread):  
     '''Helper function to get all the previous comment_id of the input comment_id.'''
@@ -554,7 +552,7 @@ def gaggle(gaggle_name):
         for post in posts:
             post_id = post['post_id']
             post['canDelete'] = canDeletePost(post_id, user_id)
-        gaggle_id = waggle.getGaggleID(conn, gaggle_name)[0]['gaggle_id']
+        gaggle_id = waggle.getGaggleID(conn, gaggle_name)['gaggle_id']
         joined  = waggle.isGosling(conn, user_id, gaggle_id)
         isAuthor = waggle.isAuthor(conn,user_id, gaggle_id)
         return render_template('group.html', gaggle = gaggle, posts = posts, joined = joined, isAuthor = isAuthor, username=username)
@@ -601,7 +599,7 @@ def myGaggle(gaggle_name):
     gaggles = waggle.getGagglesCreated(conn, user_id)
     hasGaggle = False   
     if len(gaggles) > 0:
-        gaggle_id = waggle.getGaggleID(conn, gaggle_name)[0]['gaggle_id']
+        gaggle_id = waggle.getGaggleID(conn, gaggle_name)['gaggle_id']
         invitees = waggle.getInvitees(conn, gaggle_id)
         gaggle = waggle.getGaggle(conn, gaggle_name)
         hasGaggle = True
@@ -650,15 +648,15 @@ def createGaggle():
     conn = dbi.connect() 
     username = session.get('username')
     if request.method == 'GET':
-        return redirect(url_for('user', username = username))
+        return redirect(url_for('user', username = username)) #change to profile
     else:
         gaggle_name = request.form.get('gaggle_name')           
         description = request.form.get('description') 
         if len(gaggle_name) > 0: 
             valid = waggle.createGaggle(conn, user_id, gaggle_name, description)
             if valid:
-                gaggle_id = waggle.getGaggleID(conn, gaggle_name)[0]['gaggle_id']
-                joinGaggle(conn, user_id, gaggle_id)
+                gaggle_id = waggle.getGaggleID(conn, gaggle_name)['gaggle_id']
+                action = waggle.joinGaggle(conn, user_id, gaggle_id)
                 return redirect(url_for('gaggle', gaggle_name = gaggle_name))  
             else:
                 flash("gaggle name already existed")
@@ -821,7 +819,7 @@ def search():
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'ldau_db' 
+    db_to_use = 'hs1_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 
