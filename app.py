@@ -297,6 +297,27 @@ def addPost():
             flash('You have been logged out.')
             return redirect(url_for('login'))
 
+@app.route('/addPost/', methods=["POST"])
+def postGroup():
+    """
+    Called when user clicks the 'post' button on a Gaggle page. Inserts a new row
+    in the 'post' table in the database.
+    """
+    conn = dbi.connect()
+    data = request.get_json()
+    content = data['content']
+    gaggle_id = data['gaggle_id']
+    now = datetime.now()
+    posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
+    if len(content) != 0:
+        poster_id = session.get('user_id', '')
+        post_id = waggle.addPost(conn, gaggle_id, poster_id, content, None, posted_date)
+        post = waggle.getPost(conn, post_id)
+        print(post)
+        return jsonify({'new_post': render_template('new_post.html', new_post=post)})
+        # return render_template('postTemplateJS.html', new_post=post)
+         
+
 @app.route('/post/<post_id>/', methods=['GET', 'POST']) #add hyperlink from group-bs.html to post
 def post(post_id):
     """
@@ -664,6 +685,24 @@ def joinGaggle(gaggle_name):
             action = waggle.unjoinGaggle(conn, user_id, gaggle_id)             
         return redirect(url_for('gaggle', gaggle_name=gaggle_name))
 
+@app.route('/gaggle/join/', methods=['POST'])
+def joinGroup():
+    """
+    Called when a user clicks on the 'join' button on a Gaggle page. Inserts a new row
+    in the gosling table in the database. If user is already a member, then the
+    button functions as an 'unjoin'.
+    """
+    conn = dbi.connect() 
+    user_id = isLoggedIn()    
+    data = request.get_json()
+    print(data)
+    gaggle_id = data['gaggle_id']
+    print(gaggle_id)
+    if waggle.isGosling(conn, user_id, gaggle_id):
+        action = waggle.unjoinGaggle(conn, user_id, gaggle_id) 
+    else: 
+        action = waggle.joinGaggle(conn, user_id, gaggle_id)           
+    return jsonify(action)
 
 @app.route('/creator/<gaggle_name>', methods=['GET', 'POST'])
 def myGaggle(gaggle_name):
@@ -871,11 +910,7 @@ def dashboard():
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-<<<<<<< HEAD
-    db_to_use = 'mp2_db' 
-=======
-    db_to_use = 'waggle_db' 
->>>>>>> bd25ade953a1cd6e34b745afb4c7f7787e2ff21a
+    db_to_use = 'ldau_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 

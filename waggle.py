@@ -326,7 +326,7 @@ def joinGaggle(conn, user_id, gaggle_id):
         VALUES (%s,%s) ''', 
                 [user_id, gaggle_id])
     conn.commit()  # need this!   
-    return "Joined "
+    return {'gaggle_id':gaggle_id, 'result': 'UNJOIN'}
 
 def unjoinGaggle(conn, user_id, gaggle_id):
     '''Remove a user into a gaggle member list'''
@@ -337,7 +337,7 @@ def unjoinGaggle(conn, user_id, gaggle_id):
         AND gaggle_id = %s''', 
                 [ user_id, gaggle_id])
     conn.commit()  # need this!   
-    return "Unjoined"
+    return {'gaggle_id':gaggle_id, 'result': 'JOIN'}
 
 def isGosling(conn, user_id, gaggle_id):  
     '''Check if a user is in a gaggle member list'''  
@@ -363,7 +363,10 @@ def addPost(conn, gaggle_id, poster_id, content, tag_id, posted_date):
         VALUES(%s, %s, %s, %s, %s, 0, 0, 0, 0)''',
         [gaggle_id, poster_id, content, tag_id, posted_date])
     conn.commit()
-    return poster_id 
+    curs.execute('SELECT last_insert_id() as new_post_id') #retrieve new post_id
+    row = curs.fetchone()
+    post_id = row['new_post_id']
+    return post_id 
 
 
 def getComment(conn, comment_id):

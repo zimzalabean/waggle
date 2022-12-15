@@ -1,7 +1,4 @@
 {% macro post_temp(post) -%}
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-
-
 <div class="post-wrap">
     <div class="post-header">
         <div class = 'avator'>
@@ -70,57 +67,6 @@
   </div>
 </div>
 
-<script>
-        function likePost(post_id, kind) {
-            console.log(post_id);
-            if (kind =='Like') {
-              document.getElementById("post-Like"+post_id).classList.toggle("selected");
-            }
-            else if (kind == 'Unlike'){
-                document.getElementById("post-Like"+post_id).classList.remove('selected');
-            };  
-            $.ajax({
-                    type: "POST",
-                    url: "/likePost/",
-                    data: JSON.stringify({'post_id': post_id, 'kind': kind}),
-                    contentType: 'application/json; charset=utf-8',
-                    dataType: 'json',
-                    async: true,
-                    success: function (resp) {
-                        console.log(resp);
-                        var post_id = resp.post_id;
-                        var likes = resp.likes;
-                        var dislikes = resp.dislikes;
-                        console.log("New likes for post "+post_id+" is "+likes +" and new dislikes is "+dislikes);
-                        $("#post-likes-count-"+post_id).text(likes);
-                        $("#post-dislikes-count-"+post_id).text(dislikes);
-                    }
-                });  event.preventDefault();
-        }
 
-        function changeLanguage(language) {
-            var element = document.getElementById("url");
-            element.value = language;
-            element.innerHTML = language;
-        }
-        function showDropdown(pid) {
-            document.getElementById("myDropdown_"+pid).classList.toggle("dropdown-content-show");
-            console.log(document.getElementById("myDropdown_"+pid));
-        }
-
-
-        // Close the dropdown if the user clicks outside of it
-        window.onclick = function(event) {
-            if (!event.target.matches('.dropbtn')) {
-                var dropdowns = document.getElementsByClassName("dropdown-content");
-                var i;
-                for (i = 0; i < dropdowns.length; i++) {
-                    var openDropdown = dropdowns[i];
-                    if (openDropdown.classList.contains('show')) {
-                        openDropdown.classList.remove('show');
-                    }
-                }
-            }}
-        </script>
     
 {%- endmacro -%}

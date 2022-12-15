@@ -1,6 +1,22 @@
 {% extends "base-bs.html" %}
 
 {% block main_content %}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<style>
+.post-form-hidden{
+    display: none;
+}
+
+.display{
+    display: block !important;
+}
+
+.hidden {
+    display: none;
+}
+</style>
+
+
 <div class="container-xxl flex-grow-1 container-p-y">
     <!-- HEADER -->
     <div class="row">
@@ -23,9 +39,9 @@
                                 {% if isAuthor %}                                
                                 <a href = "{{url_for('myGaggle', gaggle_name = gaggle.gaggle_name)}}"><button class = "btn btn-lg rounded-pill btn-secondary">EDIT GROUP</button></a> 
                                 {% elif joined %}
-                                <input type="submit" class="btn btn-lg rounded-pill btn-secondary" name="submit" value="Unjoin">
+                                <button id = 'btn-{{gaggle.gaggle_id}}' type="submit" class="btn btn-lg rounded-pill btn-secondary" name="submit" onclick ="joinGroup('{{gaggle.gaggle_id}}')"> UNJOIN</button>
                                 {% else %}
-                                <input type="submit" class="btn btn-lg rounded-pill btn-dark" name="submit" value="Join">
+                                <button id = 'btn-{{gaggle.gaggle_id}}' type="submit" class="btn btn-lg rounded-pill btn-secondary" name="submit" onclick ="joinGroup('{{gaggle.gaggle_id}}')">JOIN</button>
                                 {% endif %}
                                 <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
                             </form>
@@ -45,7 +61,8 @@
                         <img src="/static/img/avatars/1.png" alt class="w-vw-5 m-3 py-0 h-auto rounded-circle" />
                     </div> -->
                     <div class="col-sm-9 py-0">
-                        <h3>{{gaggle.gaggle_name}}</h3>
+                        <div style="margin-top:20px; margin-left: 20px;"> 
+                        <h3>{{gaggle.gaggle_name}}</h3></div>
                     </div>
                 </div>
                 <hr/>
@@ -70,29 +87,137 @@
         </div>
         <!-- LEFT COLUMN -->
         <div class="col-lg-8 mb-4 order-0">
-            <!-- CREATE POST -->
-            {% if joined %}
-            <div class="card mb-4">
-                <div class="d-flex align-items-end align-items-sm-center row">
-                    <h4 class="m-3">Create Post:</h4>
-                    <form name="write_post" action="{{url_for('addPost')}}" method="POST">
-                        <textarea class="mx-4 mb-0" name="content" rows="4" style="width: 45vw; min-width: 400px"></textarea>
-                        <input type="submit" class="btn rounded-pill btn-dark m-4 mt-2" value="Post">
-                        <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
-                        <input type="hidden" name="gaggle_name" value="{{gaggle.gaggle_name}}">
-                    </form>
-                </div>
-            </div>
-            {% endif %}
             {% block sub_content %}
+            <!-- CREATE POST -->
+                <div id ='post-to-{{gaggle.gaggle_id}}' class = "post-form {{'display' if joined else 'hidden'}}" >
+                    <div class="card mb-4">
+                        <div  class="d-flex align-items-end align-items-sm-center row">
+                            <h4 class="m-3">Create Post:</h4>
+                            <form name="write_post" action="{{url_for('postGroup')}}" method="POST">
+                                <textarea class="mx-4 mb-0" name="content" id = "content" rows="4" style="width: 45vw; min-width: 400px"></textarea>
+                                <input type="submit" class="btn rounded-pill btn-dark m-4 mt-2" value="Post" onclick ="postGroup('{{gaggle.gaggle_id}}')">
+                                <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
+                                <input type="hidden" name="gaggle_name" value="{{gaggle.gaggle_name}}">
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+
                 <!-- FEED -->
                 <h3>Feed</h3>
+                <div class = "feed" id = 'feed'>
                 {% import "postTemplateJS.html" as postComp%}
                 {% for post in posts %}
                     {{postComp.post_temp(post=post)}}
                 {% endfor %}
+                </div>
             {% endblock %}
         </div>
     </div>
 </div>
+
+<script>
+    function joinGroup(gaggle_id) {
+        console.log(gaggle_id);
+        $.ajax({
+                type: "POST",
+                url: "/gaggle/join/",
+                data: JSON.stringify({'gaggle_id': gaggle_id}),
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                async: true,
+                success: function (resp) {
+                    console.log(resp);
+                    var gaggle_id = resp.gaggle_id;
+                    var result = resp.result;
+                    console.log(result);
+                    $("#btn-"+gaggle_id).text(result);
+                    if (result =='JOIN') {
+                        document.getElementById("post-to-"+gaggle_id).classList.remove('display');
+                        document.getElementById("post-to-"+gaggle_id).classList.toggle("hidden");
+                    }
+                    else if (result == 'UNJOIN'){
+                        document.getElementById("post-to-"+gaggle_id).classList.remove('hidden');
+                        document.getElementById("post-to-"+gaggle_id).classList.toggle('display');
+                    };
+                    }
+            });  event.preventDefault();
+    }
+
+
+    function postGroup(gaggle_id) {
+        console.log(gaggle_id);
+        var content = $('textarea#content').val();
+        console.log(content);
+        $.ajax({
+                type: "POST",
+                url: "/addPost/",
+                data: JSON.stringify({'gaggle_id': gaggle_id, 'content': content}),
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                async: true,
+                success: function(resp){
+                    var new_post = resp['new_post']
+                    $('#feed').prepend(new_post);
+                    $('textarea#content').val('');
+                }
+            });  event.preventDefault();
+    }    
+
+
+        function likePost(post_id, kind) {
+            console.log(post_id);
+            if (kind =='Like') {
+              document.getElementById("post-Like"+post_id).classList.toggle("selected");
+            }
+            else if (kind == 'Unlike'){
+                document.getElementById("post-Like"+post_id).classList.remove('selected');
+            };  
+            $.ajax({
+                    type: "POST",
+                    url: "/likePost/",
+                    data: JSON.stringify({'post_id': post_id, 'kind': kind}),
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    async: true,
+                    success: function (resp) {
+                        console.log(resp);
+                        var post_id = resp.post_id;
+                        var likes = resp.likes;
+                        var dislikes = resp.dislikes;
+                        console.log("New likes for post "+post_id+" is "+likes +" and new dislikes is "+dislikes);
+                        $("#post-likes-count-"+post_id).text(likes);
+                        $("#post-dislikes-count-"+post_id).text(dislikes);
+                    }
+                });  event.preventDefault();
+        }
+
+        function changeLanguage(language) {
+            var element = document.getElementById("url");
+            element.value = language;
+            element.innerHTML = language;
+        }
+        function showDropdown(pid) {
+            document.getElementById("myDropdown_"+pid).classList.toggle("dropdown-content-show");
+            console.log(document.getElementById("myDropdown_"+pid));
+        }
+
+
+        // Close the dropdown if the user clicks outside of it
+        window.onclick = function(event) {
+            if (!event.target.matches('.dropbtn')) {
+                var dropdowns = document.getElementsByClassName("dropdown-content");
+                var i;
+                for (i = 0; i < dropdowns.length; i++) {
+                    var openDropdown = dropdowns[i];
+                    if (openDropdown.classList.contains('show')) {
+                        openDropdown.classList.remove('show');
+                    }
+                }
+            }}
+
+    </script>
+
+
 {% endblock %}
