@@ -304,6 +304,26 @@ def postGroup():
     in the 'post' table in the database.
     """
     conn = dbi.connect()
+    user_id = isLoggedIn()
+    data = request.get_json()
+    content = data['content']
+    gaggle_id = data['gaggle_id']
+    now = datetime.now()
+    posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
+    if len(content) != 0:
+        poster_id = session.get('user_id', '')
+        post_id = waggle.addPost(conn, gaggle_id, poster_id, content, None, posted_date)
+        post = waggle.getPost(conn, post_id)
+        post['canDelete'] = canDeletePost(post_id, user_id)
+        return jsonify({'new_post': render_template('new_post.html', new_post=post)})
+
+@app.route('/addComment/', methods=["POST"])
+def addComment():
+    """
+    Called when user clicks the 'post' button on a Gaggle page. Inserts a new row
+    in the 'post' table in the database.
+    """
+    conn = dbi.connect()
     data = request.get_json()
     content = data['content']
     gaggle_id = data['gaggle_id']
@@ -314,9 +334,7 @@ def postGroup():
         post_id = waggle.addPost(conn, gaggle_id, poster_id, content, None, posted_date)
         post = waggle.getPost(conn, post_id)
         print(post)
-        return jsonify({'new_post': render_template('new_post.html', new_post=post)})
-        # return render_template('postTemplateJS.html', new_post=post)
-         
+        return jsonify({'new_post': render_template('new_post.html', new_post=post)})         
 
 @app.route('/post/<post_id>/', methods=['GET', 'POST']) #add hyperlink from group-bs.html to post
 def post(post_id):
