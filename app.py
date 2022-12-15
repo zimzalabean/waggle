@@ -653,7 +653,8 @@ def gaggle(gaggle_name):
         gaggle_id = waggle.getGaggleID(conn, gaggle_name)['gaggle_id']
         joined  = waggle.isGosling(conn, user_id, gaggle_id)
         isAuthor = waggle.isAuthor(conn,user_id, gaggle_id)
-        return render_template('group-bs.html', gaggle = gaggle, posts = posts, joined = joined, isAuthor = isAuthor, username=username, user_id = user_id)
+        mods = waggle.getModOfGaggles(conn, gaggle_id)
+        return render_template('group-bs.html', gaggle = gaggle, posts = posts, joined = joined, isAuthor = isAuthor, username=username, user_id = user_id, mods=mods)
 
 @app.route('/gaggle/<gaggle_name>/members/')
 def gaggleMembers(gaggle_name):
@@ -824,13 +825,11 @@ def modqueue():
     if logged_in != False:
         username = session.get('username')
         user_id = session.get('user_id')
-        gaggle_id = 'None'
+        
         conn = dbi.connect()
         gaggles = waggle.getMyModGaggles(conn, user_id)
-        if request.method == 'GET':
-            return render_template('modqueue.html', gaggles=gaggles, gaggle_id=gaggle_id, pending = [], approved = [], username=username, user_id = user_id)
-        else:
-            gaggle_id = request.form.get('chosen_gaggle')
+        if len(gaggles) > 0:
+            gaggle_id = gaggles[0]['gaggle_id']
             flagged = waggle.get_flagged_posts(conn, gaggle_id)
             pending, approved = [], []
             for flag in flagged:
@@ -838,7 +837,21 @@ def modqueue():
                     pending.append(flag)
                 else:
                     approved.append(flag)
-            return render_template('modqueue.html', gaggles=gaggles, gaggle_id=gaggle_id, pending = pending, approved = approved, username=username, user_id = user_id)
+            if request.method == 'POST':
+                gaggle_id, gaggle_name = request.form.get('chosen_gaggle').split('_')[0], request.form.get('chosen_gaggle').split('_')[1]
+                flagged = waggle.get_flagged_posts(conn, gaggle_id)
+                pending, approved = [], []
+                for flag in flagged:
+                    if flag['mod_aprroved']=='Pending':
+                        pending.append(flag)
+                    else:
+                        approved.append(flag)
+            else:
+                gaggle_name = gaggles[0]['gaggle_name']
+            return render_template('modqueue.html', gaggles=gaggles, gaggle_id=gaggle_id, pending = pending, approved = approved, username=username, user_id = user_id, chosenGaggle = gaggle_name)
+        else:
+            flash('You are not a moderator yet')
+            return redirect(request.referrer)
     else:
         flash('You are not logged in. Please login or join.')
         return redirect(url_for('login'))
@@ -900,6 +913,9 @@ def dashboard():
         gaggle_id = gaggle['gaggle_id']         
         invitees = waggle.getInvitees(conn, gaggle_id)
         hasGaggle = True
+    else:
+        flash('You are not a creator of any gaggles yet. Want to create one?')
+        return redirect(url_for('createGaggle'))
     if request.method == 'GET':
         return render_template('gaggleDashboard.html', hasGaggle = hasGaggle, gaggles = gaggles, gaggle = gaggle, invitees = invitees, user_id = user_id)
 

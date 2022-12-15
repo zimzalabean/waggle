@@ -77,7 +77,11 @@
                 </div>
                 <hr/>
                 <div class="d-flex align-items-end align-items-sm-center row">
-                    <p class="mx-3"><strong>Moderators: </strong></p>
+                    <p class="mx-3"><strong>Moderators: </strong>
+                        {% for mod in mods%}
+                        <a href="{{url_for('user', username=mod['username'])}}">{{mod['username']}}</a>
+                        {%endfor%}
+                    </p>
                 </div>
                 <hr/>
                 <div class="d-flex align-items-end align-items-sm-center row">

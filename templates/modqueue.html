@@ -6,9 +6,8 @@
     <form method="POST" action="{{url_for('modqueue')}}">
         <label>Mod Queue for gaggle:</label>
         <select name="chosen_gaggle">
-            <option value="">gaggle</option>
             {%for gaggle in gaggles%}
-            <option value="{{gaggle.gaggle_id}}">{{gaggle.gaggle_name}}</option>
+            <option value="{{gaggle.gaggle_id}}_{{gaggle.gaggle_name}}">{{gaggle.gaggle_name}}</option>
             {%endfor%}
         </select>
         <input type="submit" value="Change">
@@ -16,6 +15,9 @@
 </div>
 
 {% if gaggle_id != None %}
+
+<h2>Gaggle: <a href="{{url_for('gaggle', gaggle_name = chosenGaggle)}}">{{chosenGaggle}}</a></h2>
+
 
 <p>Pending Flag Requests:</p>
     <table class="modqueue">
