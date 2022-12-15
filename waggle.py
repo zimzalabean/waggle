@@ -889,4 +889,14 @@ def increment_strikes(conn, user_id):
         where user_id = %s
     ''', [user_id])
     conn.commit()
-    return res    
+    return res   
+
+def getModOfGaggles(conn, gaggle_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        select a.user_id, b.username
+        from moderator a
+        left join user b using (user_id)
+        where gaggle_id = %s
+    ''', [gaggle_id])
+    return curs.fetchall()

@@ -632,7 +632,8 @@ def gaggle(gaggle_name):
         gaggle_id = waggle.getGaggleID(conn, gaggle_name)['gaggle_id']
         joined  = waggle.isGosling(conn, user_id, gaggle_id)
         isAuthor = waggle.isAuthor(conn,user_id, gaggle_id)
-        return render_template('group-bs.html', gaggle = gaggle, posts = posts, joined = joined, isAuthor = isAuthor, username=username, user_id = user_id)
+        mods = waggle.getModOfGaggles(conn, gaggle_id)
+        return render_template('group-bs.html', gaggle = gaggle, posts = posts, joined = joined, isAuthor = isAuthor, username=username, user_id = user_id, mods=mods)
 
 @app.route('/gaggle/<gaggle_name>/members/')
 def gaggleMembers(gaggle_name):
