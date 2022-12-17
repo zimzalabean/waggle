@@ -10,9 +10,9 @@
     </div> 
 
     <div class = 'comment-form'>
-        <form action="{{url_for('post', post_id = post.post_id)}}" method="POST"> 
+        <form action="{{url_for('addComment')}}" method="POST"> 
             <div class="d-flex align-items-end align-items-sm-center">             
-                <div><textarea class="mx-4 mb-0" name="content" rows="2" style="width: 30vw; border: solid rgb(210, 210, 210) 1px;"></textarea></div> 
+                <div><textarea class="mx-4 mb-0" name="content" id="comment-content"  rows="2" style="width: 30vw; border: solid rgb(210, 210, 210) 1px;"></textarea></div> 
                 <div><input type="submit" class="btn rounded-pill btn-dark" value="Comment"></div> 
                     <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
                     <input type="hidden" name="gaggle_name" value="{{gaggle.gaggle_name}}">
@@ -20,7 +20,7 @@
         </form>    
     </div>
 
-    <div class = 'replies'>
+    <div class = 'replies' id = 'replies'>
         {% import "commentTemplateJS.html" as commentComp%}
         {% for comment in comments %}
             {{commentComp.comment_temp(comment=comment, user_id = user_id)}}
@@ -28,5 +28,26 @@
     </div>
 
 </div>
+<script>
+    function postGroup(post_id) {
+        console.log(post_id);
+        var content = $('textarea#comment-content').val();
+        console.log(content);
+        $.ajax({
+                type: "POST",
+                url: "/addComment/",
+                data: JSON.stringify({'post_id': post_id, 'content': content}),
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                async: true,
+                success: function(resp){
+                    var new_post = resp['new_post']
+                    $('#feed').prepend(new_post);
+                    $('textarea#content').val('');
+                }
+            });  event.preventDefault();
+    } 
 
+
+</script>
 {% endblock %}
