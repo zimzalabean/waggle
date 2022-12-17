@@ -449,9 +449,10 @@ def likeComment(): #if comment isn't liked then insert like else unlike
             commentor_id = data['commentor_id']
             notif = f"{username} has liked your reply."
             noti_time = str(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            noti_kind = 'liked'
             source = 'comment'
             status = 'pending'
-            waggle.addNotif(conn, commentor_id, notif, source, comment_id, noti_time, status)
+            waggle.addNotif(conn, commentor_id, notif, noti_kind, source, comment_id, noti_time, status)
         metric = waggle.getCommentMetric(conn, comment_id)
         metric['kind'] = kind
         print(metric)
@@ -544,9 +545,10 @@ def likePost():
             waggle.likePost(conn, post_id, user_id, kind)
             notif = f"{username} has liked your post."
             noti_time = str(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            noti_kind = 'liked'
             source = 'post'
             status = 'pending'
-            waggle.addNotif(conn, poster_id, notif, source, post_id, noti_time, status)
+            waggle.addNotif(conn, poster_id, notif, noti_kind, source, post_id, noti_time, status)
         metric = waggle.getPostMetric(conn, post_id)
         metric['kind'] = kind
         return jsonify(metric)

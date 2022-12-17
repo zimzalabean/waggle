@@ -913,16 +913,16 @@ def getModOfGaggles(conn, gaggle_id):
     return curs.fetchall()
 
 
-def addNotif(conn, user_id, content, kind, id, noti_time, status):
+def addNotif(conn, user_id, content, kind, source, id, noti_time, status):
     '''
     add notifications
     '''
     status = 'pending'
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        INSERT INTO notifs(user_id, content, kind, id, noti_time, status)
-        VALUES(%s,%s,%s,%s,%s,%s)''',
-                [user_id, content, kind, id, noti_time, status])
+        INSERT INTO notifs(user_id, content, kind, source, id, noti_time, status)
+        VALUES(%s,%s,%s,%s,%s,%s,%s)''',
+                [user_id, content, kind, source, id, noti_time, status])
     conn.commit()
 
 def updateNotifStatus(conn, notif_id):
