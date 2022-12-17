@@ -912,29 +912,6 @@ def getModOfGaggles(conn, gaggle_id):
     ''', [gaggle_id])
     return curs.fetchall()
 
-def userBlock(conn, user_id, blocked_user_id):
-    '''
-    if gaggle_id is null its blocked gaggle from user else its user
-    '''
-    curs = dbi.dict_cursor(conn)
-    curs.execute('''
-        INSERT INTO blocked(user_id, blocked_user_id)
-        VALUES(%s,%s)''',
-                [user_id, blocked_user_id])
-    conn.commit()
-    return {'result':blocked_user_id}
-
-# def groupBlock(conn, gaggle_id, blocked_user_id):
-#     '''
-#     if gaggle_id is null its blocked gaggle from user else its user
-#     '''
-#     curs = dbi.dict_cursor(conn)
-#     curs.execute('''
-#         INSERT INTO blocked(user_id, blocked_user_id)
-#         VALUES(%s,%s)''',
-#                 [user_id, blocked_user_id])
-#     conn.commit()
-#     return {'result':blocked_user_id}
 
 def addNotif(conn, user_id, content, kind, id, noti_time, status):
     '''

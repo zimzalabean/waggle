@@ -432,9 +432,11 @@ def likeComment(): #if comment isn't liked then insert like else unlike
     AJAX send a data with comment_id and "kind" that indicate this is a Like or Unlike request
     """    
     user_id = isLoggedIn()
+    username = session.get('username','')
     conn = dbi.connect()  
     if request.method == 'POST': 
         data = request.get_json()
+        print(data)
         comment_id = data['comment_id']
         unliking = waggle.hasLikedCmt(conn, user_id, comment_id)
         if unliking: #User has liked a comment and is unliking it
@@ -444,7 +446,12 @@ def likeComment(): #if comment isn't liked then insert like else unlike
         else:
             kind = 'Like'
             waggle.likeComment(conn, comment_id, user_id, kind)
-            print(kind)
+            commentor_id = data['commentor_id']
+            notif = f"{username} has liked your reply."
+            noti_time = str(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            source = 'comment'
+            status = 'pending'
+            waggle.addNotif(conn, commentor_id, notif, source, comment_id, noti_time, status)
         metric = waggle.getCommentMetric(conn, comment_id)
         metric['kind'] = kind
         print(metric)
@@ -1033,17 +1040,6 @@ def response_invite():
         gaggle_id = request.form.get('gaggle_id')
         responded =  waggle.responseInvite(conn, gaggle_id, user_id, response)
         return redirect(url_for('response_invite'))  
-
-@app.route('/block/', methods=['POST'])
-def ban():
-    '''Block/ban user from viewing your group either permanently or for a set time'''
-    user_id = isLoggedIn()
-    conn = dbi.connect() 
-    data = request.get_json()
-    blocked_username = data['username']
-    blocked_user_id = waggle.getUserID(conn, blocked_username)
-    blocked = waggle.userBlock(conn, user_id, blocked_user_id)
-    return 'ok'
 
 @app.route('/notif/', methods=['GET','POST'])
 def notif():
