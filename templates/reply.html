@@ -15,7 +15,7 @@
         </div>
 
         <!-- main comment -->  
-        <div class = 'main-comment'>  
+        <div id = 'main-comment'>  
             {{commentComp.comment_temp(comment=parent_comment, user_id=user_id)}}
         </div>  
 
@@ -26,5 +26,6 @@
             {% endfor %}
         </div>
 </div>
+
 
 {% endblock %}

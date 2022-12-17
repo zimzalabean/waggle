@@ -157,6 +157,9 @@ def addComment(conn, post_id, parent_comment_id, content, commentor_id, posted_d
         VALUES (%s,%s,%s,%s,%s,0,0,0,0) ''', 
                 [post_id, parent_comment_id, content, commentor_id, posted_date])
     conn.commit()  # need this!   
+    curs.execute('SELECT last_insert_id() as new_comment_id') #retrieve new post_id
+    row = curs.fetchone()
+    comment_id = row['new_comment_id']
     #if this is a reply to a post
     if parent_comment_id is None:
         curs.execute('''
@@ -173,7 +176,7 @@ def addComment(conn, post_id, parent_comment_id, content, commentor_id, posted_d
                     [parent_comment_id])                        
     conn.commit() 
     print('updated')        
-    return commentor_id
+    return comment_id
   
 def likePost(conn, post_id, user_id, kind):
     '''Record user's like/dislike of a post by 
