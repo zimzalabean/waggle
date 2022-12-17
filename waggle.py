@@ -911,3 +911,59 @@ def getModOfGaggles(conn, gaggle_id):
         where gaggle_id = %s
     ''', [gaggle_id])
     return curs.fetchall()
+
+def userBlock(conn, user_id, blocked_user_id):
+    '''
+    if gaggle_id is null its blocked gaggle from user else its user
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        INSERT INTO blocked(user_id, blocked_user_id)
+        VALUES(%s,%s)''',
+                [user_id, blocked_user_id])
+    conn.commit()
+    return {'result':blocked_user_id}
+
+# def groupBlock(conn, gaggle_id, blocked_user_id):
+#     '''
+#     if gaggle_id is null its blocked gaggle from user else its user
+#     '''
+#     curs = dbi.dict_cursor(conn)
+#     curs.execute('''
+#         INSERT INTO blocked(user_id, blocked_user_id)
+#         VALUES(%s,%s)''',
+#                 [user_id, blocked_user_id])
+#     conn.commit()
+#     return {'result':blocked_user_id}
+
+def addNotif(conn, user_id, content, kind, id, noti_time, status):
+    '''
+    add notifications
+    '''
+    status = 'pending'
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        INSERT INTO notifs(user_id, content, kind, id, noti_time, status)
+        VALUES(%s,%s,%s,%s,%s,%s)''',
+                [user_id, content, kind, id, noti_time, status])
+    conn.commit()
+
+def updateNotifStatus(conn, notif_id):
+    status = 'seen'
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        UPDATE notifs set status = %s 
+        WHERE notif_id = %s''',
+                [status, notif_id])
+    conn.commit()
+
+def getNotifs(conn, user_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT * 
+        FROM notifs
+        WHERE status = 'pending'
+        AND user_id = %s''',
+                [user_id])
+    return curs.fetchall()    
+

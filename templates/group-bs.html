@@ -82,8 +82,12 @@
                             <h4 class="m-3">Create Post:</h4>
                             <form id="write_post" name="write_post" action="{{url_for('postGroup')}}" method="POST" enctype="multipart/form-data">
                                 <textarea class="mx-4 mb-0" name="content" id = "content" rows="4" style="width: 45vw; min-width: 400px"></textarea>
-                                <input type="submit" class="btn rounded-pill btn-dark m-4 mt-2" value="Post" onclick ="postGroup('{{gaggle.gaggle_id}}')">
-                                <label>Upload picture: <input type="file" id= "uploadfile" name="pic"></label>
+                                <div style = 'margin: 20px; margin-right: 40px;'>
+                                <div  class="d-flex align-items-end align-items-sm-center justify-content-end">
+                                    <div class="d-flex align-items-end align-items-sm-center justify-content-end">
+                                    <label>Upload picture: <input type="file" id= "uploadfile" name="pic" style = 'max-width: 250px;'></label></div>
+                                    <input type="submit" class="btn rounded-pill btn-dark" value="Post" onclick ="postGroup('{{gaggle.gaggle_id}}')">
+                                </div></div>
                                 <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
                                 <input type="hidden" name="gaggle_name" value="{{gaggle.gaggle_name}}">
                             </form>
@@ -147,13 +151,10 @@
         $.ajax({
                 type: "POST",
                 url: "/addPost/",
-
                 data: form_data,
                 contentType: false,
                 cache: false,
                 processData: false,
-                // data: JSON.stringify({'gaggle_id': gaggle_id, 'content': content}),
-                // contentType: 'application/json; charset=utf-8',
                 dataType: 'json',
                 async: true,
                 success: function(resp){

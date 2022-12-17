@@ -521,10 +521,13 @@ def likePost():
     AJAX send a data with comment_id and "kind" that indicate this is a Like or Unlike request
     """
     user_id = isLoggedIn()
+    username = session.get('username','') #your username
     conn = dbi.connect()  
     if request.method == 'POST': 
         data = request.get_json()
+        print(data)
         post_id = data['post_id']
+        poster_id = data['poster_id']
         unliking = waggle.hasLikedPost(conn, user_id, post_id)
         if unliking: #User has liked a comment and is unliking it
             kind = 'Unlike'
@@ -532,6 +535,11 @@ def likePost():
         else:
             kind = 'Like'
             waggle.likePost(conn, post_id, user_id, kind)
+            notif = f"{username} has liked your post."
+            noti_time = str(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            source = 'post'
+            status = 'pending'
+            waggle.addNotif(conn, poster_id, notif, source, post_id, noti_time, status)
         metric = waggle.getPostMetric(conn, post_id)
         metric['kind'] = kind
         return jsonify(metric)
@@ -1026,6 +1034,40 @@ def response_invite():
         responded =  waggle.responseInvite(conn, gaggle_id, user_id, response)
         return redirect(url_for('response_invite'))  
 
+@app.route('/block/', methods=['POST'])
+def ban():
+    '''Block/ban user from viewing your group either permanently or for a set time'''
+    user_id = isLoggedIn()
+    conn = dbi.connect() 
+    data = request.get_json()
+    blocked_username = data['username']
+    blocked_user_id = waggle.getUserID(conn, blocked_username)
+    blocked = waggle.userBlock(conn, user_id, blocked_user_id)
+    return 'ok'
+
+@app.route('/notif/', methods=['GET','POST'])
+def notif():
+    ''' View notifications '''
+    user_id = isLoggedIn()
+    conn = dbi.connect() 
+    notifs = waggle.getNotifs(conn, user_id)
+    if request.method == 'GET':
+        return render_template('notifications.html', notifs = notifs)
+    else:
+        data = request.get_json()
+        notif_id = data['notif_id']
+        #check if notif is already seen in case duplicating
+        curs = dbi.dict_cursor(conn)
+        curs.execute('''
+        SELECT status from notifs
+        WHERE notif_id = %s''',
+                [notif_id])
+        result = curs.fetchone()
+        if result['status'] == 'pending':        
+            waggle.updateNotifStatus(conn, notif_id)
+            return jsonify({'result': 'updated', 'notif_id': notif_id})
+        else:
+            return 'ok'
 
 ####_____Moderator/Creator Functions_____####
 
@@ -1056,7 +1098,7 @@ def dashboard():
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'mp2_db' 
+    db_to_use = 'ldau_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 

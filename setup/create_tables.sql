@@ -240,3 +240,30 @@ CREATE TABLE flag_comment (
     on update no action
     on delete cascade
 ) ENGINE = InnoDB;
+
+CREATE TABLE group_blocked (
+  gaggle_id int,
+  blocked_user_id int,
+  ban_time datetime, 
+  unban_time datetime,
+  foreign key (gaggle_id) references gaggle(gaggle_id)
+    on update no action
+    on delete cascade,
+  foreign key (blocked_user_id) references user(user_id)  
+    on update no action
+    on delete cascade
+) ENGINE = InnoDB;
+
+CREATE TABLE notifs(
+  notif_id int not null auto_increment,
+  user_id int,
+  content varchar(500),
+  kind enum('post', 'comment'),
+  id int, 
+  noti_time datetime,
+  status enum('seen', 'pending'), 
+  primary key (notif_id),
+  foreign key (user_id) references user(user_id)
+    on update no action
+    on delete cascade
+) ENGINE = InnoDB;
