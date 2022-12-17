@@ -77,14 +77,15 @@ def getPosts(conn):
     '''returns the latest 20 posts for homepage feed'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        select a.*, b.username, CONCAT(b.first_name,' ',b.last_name) as full_name, c.gaggle_name 
+        select a.*, b.username, CONCAT(b.first_name,' ',b.last_name) as full_name, c.gaggle_name, d.filename as pic
         from post a
         left join user b
         on (a.poster_id = b.user_id)
         left join gaggle c
         on (a.gaggle_id = c.gaggle_id)
+        LEFT JOIN post_pics d
+        ON (a.post_id = d.post_id)
         order by posted_date DESC
-        limit 20 
     ''')
     return curs.fetchall()
 
@@ -93,12 +94,14 @@ def getPost(conn, post_id):
     '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.*, b.username, CONCAT(b.first_name,' ',b.last_name) as full_name, c.gaggle_name 
+        SELECT a.*, b.username, CONCAT(b.first_name,' ',b.last_name) as full_name, c.gaggle_name, d.filename as pic
         FROM post a
         LEFT JOIN user b
         ON (a.poster_id = b.user_id)
         LEFT JOIN gaggle c
         ON (a.gaggle_id = c.gaggle_id)
+        LEFT JOIN post_pics d
+        ON (a.post_id = d.post_id)
         WHERE a.post_id = %s''',
                  [post_id])
     result = curs.fetchone()
@@ -119,12 +122,14 @@ def getGagglePosts(conn, gaggle_name):
     gaggle_id = getGaggleID(conn, gaggle_name)['gaggle_id']
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.*,  b.username, CONCAT(b.first_name,' ',b.last_name) as full_name, c.gaggle_name  
+        SELECT a.*,  b.username, CONCAT(b.first_name,' ',b.last_name) as full_name, c.gaggle_name, d.filename as pic
         FROM post a
         LEFT JOIN user b
         ON (a.poster_id = b.user_id)
         LEFT JOIN gaggle c
         ON (a.gaggle_id = c.gaggle_id)
+        LEFT JOIN post_pics d
+        ON (a.post_id = d.post_id)
         WHERE c.gaggle_id = %s
         order by posted_date DESC''',
                  [gaggle_id])

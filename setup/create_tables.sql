@@ -11,6 +11,7 @@ drop table if exists tag;
 drop table if exists gosling;
 drop table if exists gaggle;
 drop table if exists picfile;
+drop table if exists post_pics;
 drop table if exists user;
 
 
@@ -96,6 +97,16 @@ CREATE TABLE post (
   foreign key (gaggle_id) references gaggle(gaggle_id)  
     on update no action
     on delete cascade
+) ENGINE = InnoDB;
+
+CREATE TABLE post_pics (
+  post_id int,
+  filename varchar(50),
+  primary key (post_id),
+  INDEX(post_id),
+  foreign key (post_id) references post(post_id)
+    on update no action
+    on delete cascade 
 ) ENGINE = InnoDB;
 
 CREATE TABLE comment (

@@ -13,7 +13,9 @@
 
     <div class="post-img-wrap" onclick= "window.location.href = '{{url_for('post', post_id=post.post_id)}}';">
       <p> {{post.content}}</p>
-
+      {% if post.pic != None %}
+        <div style="max-width: 200px;"><img src="{{url_for('postPic', filename = post.pic)}}" alt="{{post.pic}}"> </div>
+      {% endif %}
     </div>
 
     <div class="post-info-counts">

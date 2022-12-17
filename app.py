@@ -285,8 +285,20 @@ def addPost():
         if poster_id != '':
             if valid:
                 try:
-                    print(posted_date)
                     add = waggle.addPost(conn, gaggle_id, poster_id, content, None, posted_date)
+                    curs = dbi.dict_cursor(conn)
+                    print('last_post_id', add)
+                    f = request.files['pic']
+                    post_filename = f.filename
+                    ext = post_filename.split('.')[-1]
+                    filename = secure_filename('post_{}.{}'.format(add,ext))
+                    pathname = os.path.join(app.config['UPLOADS'],filename)
+                    f.save(pathname)
+                    curs.execute(
+                    '''insert into post_pics(post_id,filename) values (%s,%s)
+                    on duplicate key update filename = %s''',
+                    [add, filename, filename])
+                    conn.commit()
                 except Exception as e: 
                     print(e)
                     flash('Error:' +e)
@@ -304,14 +316,29 @@ def postGroup():
     in the 'post' table in the database.
     """
     conn = dbi.connect()
-    data = request.get_json()
-    content = data['content']
-    gaggle_id = data['gaggle_id']
+    content = request.form.get('content')
+    gaggle_id = request.form.get('gaggle_id')
+    fname = request.files['postFile']
     now = datetime.now()
     posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
     if len(content) != 0:
         poster_id = session.get('user_id', '')
         post_id = waggle.addPost(conn, gaggle_id, poster_id, content, None, posted_date)
+        ### ADD PIC ###
+        curs = dbi.dict_cursor(conn)
+        print('last_post_id', post_id)
+        print('fname', fname)
+        f = fname
+        post_filename = f.filename
+        ext = post_filename.split('.')[-1]
+        filename = secure_filename('post_{}.{}'.format(post_id,ext))
+        pathname = os.path.join(app.config['UPLOADS'],filename)
+        f.save(pathname)
+        curs.execute('''insert into post_pics(post_id,filename) values (%s,%s)
+                    on duplicate key update filename = %s''',
+                    [post_id, filename, filename])
+        conn.commit()
+        ###############
         post = waggle.getPost(conn, post_id)
         print(post)
         return jsonify({'new_post': render_template('new_post.html', new_post=post)})
@@ -582,6 +609,15 @@ def profilePic(user_id):
     else: 
         filename = profilePic['filename']
     return send_from_directory(app.config['UPLOADS'],filename)
+
+@app.route('/post_pic/<filename>')
+def postPic(filename):
+    """
+    Retrieves the profile pic of the user from the database or the default photo
+    """
+    conn = dbi.connect()
+    if filename is not None:
+        return send_from_directory(app.config['UPLOADS'],filename)
     
 def getRepliesThread(comment_id, thread):  
     '''Helper function to get all the previous comment_id of the input comment_id.'''
@@ -648,6 +684,7 @@ def gaggle(gaggle_name):
         gaggle = waggle.getGaggle(conn, gaggle_name)  
         posts = waggle.getGagglePosts(conn, gaggle_name)
         for post in posts:
+            #print(post)
             post_id = post['post_id']
             post['canDelete'] = canDeletePost(post_id, user_id)
         gaggle_id = waggle.getGaggleID(conn, gaggle_name)['gaggle_id']
@@ -926,7 +963,7 @@ def dashboard():
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'ldau_db' 
+    db_to_use = 'mp2_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 
