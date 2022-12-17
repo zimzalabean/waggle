@@ -5,8 +5,9 @@
     <!-- HEADER -->
     <div class="row">
         <div class="card card-header bg-secondary text-white" id = 'header'> Your new notifications </div>  
+            {% import "notifTemplate.html" as notifComp%}
             {% for notif in notifs %}
-                {% if notif.kind == 'post' %}
+                <!-- {% if notif.kind == 'post' %}
                 <div class = 'notif' id = '{{notif.notif_id}}' onclick= "window.location.href = '{{url_for('post', post_id = notif.id)}}';">
                     <div class = 'card'>{{notif.content}}</div>
                 </div>
@@ -14,7 +15,8 @@
                 <div class = 'notif'  id = '{{notif.notif_id}}' onclick= "window.location.href = '{{url_for('addReply', comment_id = notif.id)}}';">
                     <div class = 'card'>{{notif.content}}</div>
                 </div>    
-                {% endif %}
+                {% endif %} -->
+                {{notifComp.notif_temp(notif=notif)}}
             {% endfor %}
     </div>
     <div style = 'height:100vh;'></div>

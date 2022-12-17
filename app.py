@@ -447,7 +447,7 @@ def likeComment(): #if comment isn't liked then insert like else unlike
             kind = 'Like'
             waggle.likeComment(conn, comment_id, user_id, kind)
             commentor_id = data['commentor_id']
-            notif = f"{username} has liked your reply."
+            notif = f"{username} has liked your reply:"
             noti_time = str(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             noti_kind = 'liked'
             source = 'comment'
@@ -543,7 +543,7 @@ def likePost():
         else:
             kind = 'Like'
             waggle.likePost(conn, post_id, user_id, kind)
-            notif = f"{username} has liked your post."
+            notif = f"{username} has liked your post:"
             noti_time = str(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             noti_kind = 'liked'
             source = 'post'
@@ -1048,7 +1048,7 @@ def notif():
     ''' View notifications '''
     user_id = isLoggedIn()
     conn = dbi.connect() 
-    notifs = waggle.getNotifs(conn, user_id)
+    notifs = formatNotif(waggle.getNotifs(conn, user_id))
     if request.method == 'GET':
         return render_template('notifications.html', notifs = notifs)
     else:
@@ -1066,6 +1066,30 @@ def notif():
             return jsonify({'result': 'updated', 'notif_id': notif_id})
         else:
             return 'ok'
+
+
+def formatNotif(notifs):
+    conn = dbi.connect() 
+    for notif in notifs:
+        source = notif['source']
+        kind = notif['kind']
+        source_id = notif['id']
+        if kind == 'liked':
+            if source == 'comment':
+                comment = waggle.getComment(conn, source_id)
+                content = comment['content']
+            else:
+                post = waggle.getPost(conn, source_id)
+                content = post['content']
+        else: #has to be a comment       
+            reply = waggle.getComment(conn, source_id)
+            content = reply['content']
+        preview = content    
+        if len(content) > 280: #shorten preview
+            preview = content[:280] + "..."
+        notif['preview'] = preview
+    return notifs        
+
 
 ####_____Moderator/Creator Functions_____####
 
