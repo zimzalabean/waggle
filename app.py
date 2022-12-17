@@ -317,14 +317,29 @@ def postGroup():
     """
     conn = dbi.connect()
     user_id = isLoggedIn()
-    data = request.get_json()
-    content = data['content']
-    gaggle_id = data['gaggle_id']
+    #data = request.get_json()
+    content = request.form.get('content')
+    gaggle_id = request.form.get('gaggle_id')
+    fname = request.files.get('postFile')
     now = datetime.now()
     posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
     if len(content) != 0:
         poster_id = session.get('user_id', '')
         post_id = waggle.addPost(conn, gaggle_id, poster_id, content, None, posted_date)
+        ## ADD PIC ##
+        user_filename = fname.filename
+        ext = user_filename.split('.')[-1]
+        filename = secure_filename('{}.{}'.format(post_id,ext))
+        pathname = os.path.join(app.config['UPLOADS'],filename)
+        fname.save(pathname)
+        conn = dbi.connect()
+        curs = dbi.dict_cursor(conn)
+        curs.execute(
+                '''insert into post_pics(post_id,filename) values (%s,%s)
+                   on duplicate key update filename = %s''',
+                [post_id, filename, filename])
+        conn.commit()
+        #############
         post = waggle.getPost(conn, post_id)
         post['canDelete'] = canDeletePost(post_id, user_id)
         return jsonify({'new_post': render_template('new_post.html', new_post=post)})
