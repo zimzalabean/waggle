@@ -145,6 +145,8 @@
         console.log(gaggle_id);
         var content = $('textarea#content').val();
         var form_data = new FormData();
+        console.log(content)
+        console.log('postFile', $('#uploadfile').prop('files')[0])
         form_data.append('postFile', $('#uploadfile').prop('files')[0]);
         form_data.append('content', content);
         form_data.append('gaggle_id', gaggle_id);
