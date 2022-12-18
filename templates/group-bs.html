@@ -2,6 +2,7 @@
 
 {% block main_content %}
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="https://rawgit.com/theraot/emoji/master/emoji.js" charset="utf-8"></script>
 <style>
 
 </style>
@@ -86,6 +87,7 @@
                                 <div  class="d-flex align-items-end align-items-sm-center justify-content-end">
                                     <div class="d-flex align-items-end align-items-sm-center justify-content-end">
                                     <label>Upload picture: <input type="file" id= "uploadfile" name="pic" style = 'max-width: 250px;'></label></div>
+                                    <button type="button" class="btn rounded-pill btn-outline-info" onclick ="addEmoji('{{gaggle.gaggle_id}}')">Add emojis</button>
                                     <input type="submit" class="btn rounded-pill btn-dark" value="Post" onclick ="postGroup('{{gaggle.gaggle_id}}')">
                                 </div></div>
                                 <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
