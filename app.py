@@ -365,36 +365,20 @@ def postGroup():
 @app.route('/addComment/', methods=["POST"])
 def addComment():
     """
-    Called when user clicks the 'post' button on a Gaggle page. Inserts a new row
-    in the 'post' table in the database.
+    Called when user clicks the 'Comment' button on a Gaggle page. Inserts a new row
+    in the 'comment' table in the database.
     """
     conn = dbi.connect()
-    content = request.form.get('content')
-    gaggle_id = request.form.get('gaggle_id')
-    fname = request.files['postFile']
+    data = request.get_json()
+    content = data['content']
+    post_id = data['post_id']
     now = datetime.now()
     posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
     if len(content) != 0:
-        poster_id = session.get('user_id', '')
-        post_id = waggle.addPost(conn, gaggle_id, poster_id, content, None, posted_date)
-        ### ADD PIC ###
-        curs = dbi.dict_cursor(conn)
-        print('last_post_id', post_id)
-        print('fname', fname)
-        f = fname
-        post_filename = f.filename
-        ext = post_filename.split('.')[-1]
-        filename = secure_filename('post_{}.{}'.format(post_id,ext))
-        pathname = os.path.join(app.config['UPLOADS'],filename)
-        f.save(pathname)
-        curs.execute('''insert into post_pics(post_id,filename) values (%s,%s)
-                    on duplicate key update filename = %s''',
-                    [post_id, filename, filename])
-        conn.commit()
-        ###############
-        post = waggle.getPost(conn, post_id)
-        print(post)
-        return jsonify({'new_post': render_template('new_post.html', new_post=post)})         
+        commentor_id = session.get('user_id', '')
+        comment_id = waggle.addComment(conn, post_id, None, content, commentor_id, posted_date)
+        comment = waggle.getComment(conn, comment_id)
+        return jsonify({'new_comment': render_template('new_comment.html', comment=comment)})         
 
 @app.route('/post/<post_id>/', methods=['GET', 'POST']) #add hyperlink from group-bs.html to post
 def post(post_id):
