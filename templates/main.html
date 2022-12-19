@@ -40,11 +40,26 @@
 {% endblock %}
 <!-- display main feed -->
 {% block main_content %}
+<div class="row my-3"></div>
 
 <!-- most recent 20 posts -->
     {% import "postTemplateJS.html" as postComp%}
     {% for post in posts %}
-        {{postComp.post_temp(post=post)}}
+        <div class="row">
+            <div class="col-lg-1 mb-3 order-0"></div>
+            <div class="col-lg-10 mb-3 order-1">
+                <div class="card">
+                    <div class="d-flex align-items-end row">
+                        <div class="col-sm-12">
+                            <div class="card-body">
+                            {{postComp.post_temp(post=post, pageIsNotPost = true)}}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-1 mb-3 order-2"></div>
+        </div>
     {% endfor %}
 
 {% endblock %}
