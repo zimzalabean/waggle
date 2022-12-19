@@ -256,51 +256,6 @@ def personalHistory():
     username = session.get('username', '')
     return redirect(url_for('history', username = username))
 
-# @app.route('/newpost/', methods=["POST"])
-# def addPost():
-#     """
-#     Called when user clicks the 'post' button on a Gaggle page. Inserts a new row
-#     in the 'post' table in the database.
-#     """
-#     conn = dbi.connect()
-#     content = request.form.get('content')
-#     gaggle_id = request.form.get('gaggle_id')
-#     gaggle_name = request.form.get('gaggle_name')
-#     now = datetime.now()
-#     posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
-#     if len(content) == 0:
-#         flash('Please enter some content.')
-#         return redirect(url_for('gaggle', gaggle_name=gaggle_name))
-#     else:
-#         poster_id = session.get('user_id', '')
-#         valid = waggle.isGosling(conn, poster_id, gaggle_id)
-#         if poster_id != '':
-#             if valid:
-#                 try:
-#                     add = waggle.addPost(conn, gaggle_id, poster_id, content, None, posted_date)
-#                     curs = dbi.dict_cursor(conn)
-#                     print('last_post_id', add)
-#                     f = request.files['pic']
-#                     post_filename = f.filename
-#                     ext = post_filename.split('.')[-1]
-#                     filename = secure_filename('post_{}.{}'.format(add,ext))
-#                     pathname = os.path.join(app.config['UPLOADS'],filename)
-#                     f.save(pathname)
-#                     curs.execute(
-#                     '''insert into post_pics(post_id,filename) values (%s,%s)
-#                     on duplicate key update filename = %s''',
-#                     [add, filename, filename])
-#                     conn.commit()
-#                 except Exception as e: 
-#                     print(e)
-#                     flash('Error:' +e)
-#             else:
-#                 flash('You must be a gosling of this gaggle to perform this action.')
-#             return redirect(url_for('gaggle', gaggle_name=gaggle_name))    
-#         else:
-#             flash('You have been logged out.')
-#             return redirect(url_for('login'))
-
 @app.route('/addPost/', methods=["POST"])
 def postGroup():
     """
