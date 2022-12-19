@@ -8,7 +8,8 @@
     {% import "postTemplateJS.html" as postComp%}
         {{postComp.post_temp(post=post, pageIsNotPost = false)}}
     </div> 
-
+    
+    {% if valid %}
     <div class = 'comment-form'>
         <form action="{{url_for('addComment')}}" method="POST"> 
             <div class="d-flex align-items-end align-items-sm-center">             
@@ -19,6 +20,7 @@
             </div>
         </form>    
     </div>
+    {% endif %}
 
     <div class = 'replies' id = 'replies'>
         {% import "commentTemplateJS.html" as commentComp%}

@@ -84,14 +84,13 @@
                         <div  class="d-flex align-items-end align-items-sm-center row">
                             <h4 class="m-3">Create Post:</h4>
                             <form id="write_post" name="write_post" action="{{url_for('postGroup')}}" method="POST" enctype="multipart/form-data">
-                                <p class="emoji emoji-picker-container">
-                                <textarea  data-emojiable="true" data-emoji-input="unicode" name="content" id = "content" rows="4" style="width: 40vw; min-width: 350px"></textarea>
+                                <p class="emoji">
+                                <textarea name="content" id = "content" rows="4" style="width: 45vw; min-width: 400px"></textarea>
                                 </p>
                                 <div style = 'margin: 20px; margin-right: 40px;'>
                                 <div  class="d-flex align-items-end align-items-sm-center justify-content-end">
                                     <div class="d-flex align-items-end align-items-sm-center justify-content-end">
                                     <label>Upload picture: <input type="file" id= "uploadfile" name="pic" style = 'max-width: 250px;'></label></div>
-                                    <!-- <button type="button" class="btn rounded-pill btn-outline-info" onclick ="addEmoji('{{gaggle.gaggle_id}}')">Add emojis</button> -->
                                     <input type="submit" class="btn rounded-pill btn-dark" value="Post" onclick ="postGroup('{{gaggle.gaggle_id}}')">
                                 </div></div>
                                 <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">

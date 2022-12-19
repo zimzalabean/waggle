@@ -379,7 +379,7 @@ def getComment(conn, comment_id):
     '''
     curs = dbi.dict_cursor(conn)  
     curs.execute('''
-        SELECT a.*, b.username as full_name 
+        SELECT a.*, b.username
         FROM comment a
         LEFT JOIN user b
         ON a.commentor_id = b.user_id
@@ -969,23 +969,58 @@ def addConvo(conn, parent_comment_id, comment_id):
     #find all ancestors of parent and add ancestor-descendant relationship
     curs.execute('''    
     INSERT INTO convos(anc_id, des_id)    
-    SELECT anc_id, des_id FROM (
+    SELECT c.anc_id, c.des_id FROM (
         SELECT a.anc_id, b.des_id
         FROM convos a
         LEFT JOIN convos b
         ON a.des_id = b.anc_id
-        WHERE b.anc_id = %s''',
+        WHERE a.des_id = %s) c ''',
         [parent_comment_id])
     conn.commit()
 
 def getConvo(conn, comment_id):
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.anc_id, b.* 
+        SELECT a.anc_id, b.*, c.username 
         FROM convos a
         LEFT JOIN comment b
         ON a.anc_id = b.comment_id
+        LEFT JOIN user c
+        ON b.commentor_id = c.user_id
         WHERE a.des_id = %s
         ORDER BY posted_date asc''',
                 [comment_id])
-    return curs.fetchall()                 
+    return curs.fetchall()        
+
+def getLikedComments(conn, user_id):
+    curs = dbi.cursor(conn)
+    curs.execute('''
+        SELECT comment_id 
+        FROM comment_like
+        WHERE user_id = %s''',
+                [user_id])
+    result = curs.fetchall()
+    likes = [x[0] for x in result]
+    return likes                    
+
+def getLikedPosts(conn, user_id):
+    curs = dbi.cursor(conn)
+    curs.execute('''
+        SELECT post_id 
+        FROM post_like
+        WHERE user_id = %s''',
+                [user_id])
+    result = curs.fetchall()
+    likes = [x[0] for x in result]
+    return likes       
+
+def getOwnPosts(conn, user_id):
+    curs = dbi.cursor(conn)
+    curs.execute('''
+        SELECT post_id 
+        FROM post
+        WHERE poster_id = %s''',
+                [user_id])
+    result = curs.fetchall()
+    post_ids = [x[0] for x in result]
+    return post_ids     

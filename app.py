@@ -126,9 +126,10 @@ def likedComments(user_id, comments):
     Take in a list of comments and check if if this user has liked these comments
     '''
     conn = dbi.connect() 
+    likes = waggle.getLikedComments(conn, user_id)
     for comment in comments:
         comment_id = comment['comment_id']
-        comment['isLiked'] = waggle.hasLikedCmt(conn, user_id, comment_id)
+        comment['isLiked'] = (comment_id in likes)
     return comments
 
 def likedPosts(user_id, posts):
@@ -136,23 +137,23 @@ def likedPosts(user_id, posts):
     Take in a list of comments and check if if this user has liked these comments
     '''
     conn = dbi.connect() 
+    likes = waggle.getLikedPosts(conn, user_id)
     for post in posts:
         post_id = post['post_id']
-        post['isLiked'] = waggle.hasLikedPost(conn, user_id, post_id)
+        post['isLiked'] = (post_id in likes)
     return posts
 
-def canDeletePost(post_id, user_id):
+def canDeletePosts(posts, user_id):
     '''
     Helper function to determine if current user can delete a post.
     Check if user_id is the author the post_id.
     '''
     conn = dbi.connect() 
-    post = waggle.getPost(conn, post_id)
-    poster_id = post['poster_id']
-    if user_id == poster_id:
-        return True
-    else: 
-        return False
+    post_ids = waggle.getOwnPosts(conn, user_id)
+    for post in posts:
+        post_id = post['post_id']
+        post['canDelete'] = (post_id in post_ids)
+    return posts
 
 # def getRepliesThread(comment_id, thread):  
 #     '''Helper function to get all the parent comment_id of the input comment_id.'''
@@ -183,9 +184,7 @@ def homepage():
     else:
         gaggles = waggle.getUserGaggle(conn, username)
         posts_info = waggle.getPosts(conn)
-        for post in posts_info:
-            post['canDelete'] = canDeletePost(post['post_id'], user_id)
-        posts = likedPosts(user_id, posts_info)
+        posts = likedPosts(user_id, canDeletePosts(posts_info, user_id))
         return render_template('main.html',  gaggles = gaggles, username=username, posts=posts, user_id = user_id)
 
 ####_____Search Functions_____####
@@ -220,26 +219,6 @@ def search():
 
 ####_____Post Functions_____#### 
 
-@app.route('/deletePost/<post_id>/<author_id>/<gaggle_name>')
-def deletePost(post_id, author_id, gaggle_name):
-    """
-    Called when user presses "delete" button on a post. The post gets deleted from the database if 
-    the post was written by the logged in user.
-    """
-    username = session.get('username', '')
-    user_id = session.get('user_id', '')
-    logged = session.get('logged_in', False)
-    if logged == False:
-        flash('You are not logged in. Please log in or join')
-        return redirect(url_for('login'))
-    if user_id != int(author_id):
-        flash('You are not authorized to delete this post/comment.')
-        return redirect(url_for('homepage'))
-    conn = dbi.connect()    
-    deleted = waggle.deletePost(conn, post_id)
-    flash('Deleted post with post_id {pid}'.format(pid=post_id))
-    return redirect(url_for('gaggle', gaggle_name=gaggle_name)) #redirects back to the gaggle page
-
 @app.route('/delete/post', methods=["POST"])
 def removePost():
     """
@@ -262,10 +241,7 @@ def history(username):
     """
     conn = dbi.connect()
     user_id = session.get('user_id', '')
-    posts = waggle.getUserPosts(conn, username)
-    for post in posts:
-        post_id = post['post_id']
-        post['canDelete'] = canDeletePost(post_id, user_id)
+    posts = canDeletePosts(waggle.getUserPosts(conn, username),user_id)
     posts = likedPosts(user_id, posts)
     comments = likedComments(user_id,waggle.getUserComments(conn, user_id))
     return render_template('history.html', username = username, posts = posts, comments = comments, user_id=user_id)
@@ -280,50 +256,50 @@ def personalHistory():
     username = session.get('username', '')
     return redirect(url_for('history', username = username))
 
-@app.route('/newpost/', methods=["POST"])
-def addPost():
-    """
-    Called when user clicks the 'post' button on a Gaggle page. Inserts a new row
-    in the 'post' table in the database.
-    """
-    conn = dbi.connect()
-    content = request.form.get('content')
-    gaggle_id = request.form.get('gaggle_id')
-    gaggle_name = request.form.get('gaggle_name')
-    now = datetime.now()
-    posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
-    if len(content) == 0:
-        flash('Please enter some content.')
-        return redirect(url_for('gaggle', gaggle_name=gaggle_name))
-    else:
-        poster_id = session.get('user_id', '')
-        valid = waggle.isGosling(conn, poster_id, gaggle_id)
-        if poster_id != '':
-            if valid:
-                try:
-                    add = waggle.addPost(conn, gaggle_id, poster_id, content, None, posted_date)
-                    curs = dbi.dict_cursor(conn)
-                    print('last_post_id', add)
-                    f = request.files['pic']
-                    post_filename = f.filename
-                    ext = post_filename.split('.')[-1]
-                    filename = secure_filename('post_{}.{}'.format(add,ext))
-                    pathname = os.path.join(app.config['UPLOADS'],filename)
-                    f.save(pathname)
-                    curs.execute(
-                    '''insert into post_pics(post_id,filename) values (%s,%s)
-                    on duplicate key update filename = %s''',
-                    [add, filename, filename])
-                    conn.commit()
-                except Exception as e: 
-                    print(e)
-                    flash('Error:' +e)
-            else:
-                flash('You must be a gosling of this gaggle to perform this action.')
-            return redirect(url_for('gaggle', gaggle_name=gaggle_name))    
-        else:
-            flash('You have been logged out.')
-            return redirect(url_for('login'))
+# @app.route('/newpost/', methods=["POST"])
+# def addPost():
+#     """
+#     Called when user clicks the 'post' button on a Gaggle page. Inserts a new row
+#     in the 'post' table in the database.
+#     """
+#     conn = dbi.connect()
+#     content = request.form.get('content')
+#     gaggle_id = request.form.get('gaggle_id')
+#     gaggle_name = request.form.get('gaggle_name')
+#     now = datetime.now()
+#     posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
+#     if len(content) == 0:
+#         flash('Please enter some content.')
+#         return redirect(url_for('gaggle', gaggle_name=gaggle_name))
+#     else:
+#         poster_id = session.get('user_id', '')
+#         valid = waggle.isGosling(conn, poster_id, gaggle_id)
+#         if poster_id != '':
+#             if valid:
+#                 try:
+#                     add = waggle.addPost(conn, gaggle_id, poster_id, content, None, posted_date)
+#                     curs = dbi.dict_cursor(conn)
+#                     print('last_post_id', add)
+#                     f = request.files['pic']
+#                     post_filename = f.filename
+#                     ext = post_filename.split('.')[-1]
+#                     filename = secure_filename('post_{}.{}'.format(add,ext))
+#                     pathname = os.path.join(app.config['UPLOADS'],filename)
+#                     f.save(pathname)
+#                     curs.execute(
+#                     '''insert into post_pics(post_id,filename) values (%s,%s)
+#                     on duplicate key update filename = %s''',
+#                     [add, filename, filename])
+#                     conn.commit()
+#                 except Exception as e: 
+#                     print(e)
+#                     flash('Error:' +e)
+#             else:
+#                 flash('You must be a gosling of this gaggle to perform this action.')
+#             return redirect(url_for('gaggle', gaggle_name=gaggle_name))    
+#         else:
+#             flash('You have been logged out.')
+#             return redirect(url_for('login'))
 
 @app.route('/addPost/', methods=["POST"])
 def postGroup():
@@ -359,7 +335,7 @@ def postGroup():
             conn.commit()
         #############
         post = waggle.getPost(conn, post_id)
-        post['canDelete'] = canDeletePost(post_id, user_id)
+        post['canDelete'] = True
         return jsonify({'new_post': render_template('new_post.html', new_post=post)})
 
 @app.route('/addComment/', methods=["POST"])
@@ -380,133 +356,30 @@ def addComment():
         comment = waggle.getComment(conn, comment_id)
         return jsonify({'new_comment': render_template('new_comment.html', comment=comment)})         
 
-@app.route('/post/<post_id>/', methods=['GET', 'POST']) #add hyperlink from group-bs.html to post
+@app.route('/post/<post_id>/', methods=['GET']) #add hyperlink from group-bs.html to post
 def post(post_id):
     """
     Returns the page for the specific post with the given post_id.
     """
-    now = datetime.now()
-    posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
     user_id = isLoggedIn()   
     username = session.get('username')
     conn = dbi.connect() 
+    #get post infos and check user's previous interaction
     post = waggle.getPost(conn, post_id)
-    post['canDelete'] = canDeletePost(post_id, user_id)
+    post['canDelete'] = (user_id == post['poster_id'])
     post['isLiked'] = waggle.hasLikedPost(conn, user_id, post_id)
     gaggle_id = post['gaggle_id']
-    conn = dbi.connect()
+    #get gaggle from post
     curs = dbi.dict_cursor(conn)
     curs.execute('''SELECT *
                     FROM gaggle
                     WHERE gaggle_id = %s''',[gaggle_id])
     gaggle = curs.fetchone()
+    #get post comments
     comments = likedComments(user_id, waggle.getPostComments(conn, post_id))
-    valid = waggle.isGosling(conn, user_id, gaggle_id)
-    if request.method == 'GET':
-        return render_template('post.html', post = post, comments = comments, valid = valid, username=username, user_id=user_id, gaggle = gaggle)
-    else:
-        content = request.form.get('content') 
-        parent_comment_id = None  
-        add_comment = waggle.addComment(conn, post_id, parent_comment_id, content, user_id, posted_date)                   
-        return redirect(url_for('post', post_id = post_id ))
-    
-
-@app.route('/likeComment/', methods=['POST'])
-def likeComment(): #if comment isn't liked then insert like else unlike
-    """
-    Receive a request from AJAX to modify a like status with a comment.
-    AJAX send a data with comment_id and "kind" that indicate this is a Like or Unlike request
-    """    
-    user_id = isLoggedIn()
-    username = session.get('username','')
-    conn = dbi.connect()  
-    if request.method == 'POST': 
-        data = request.get_json()
-        print(data)
-        comment_id = data['comment_id']
-        unliking = waggle.hasLikedCmt(conn, user_id, comment_id)
-        if unliking: #User has liked a comment and is unliking it
-            kind = 'Unlike'
-            waggle.unlikeComment(conn, user_id, comment_id)
-            print(kind)
-        else:
-            kind = 'Like'
-            waggle.likeComment(conn, comment_id, user_id, kind)
-            commentor_id = data['commentor_id']
-            notif = f"{username} has liked your reply:"
-            noti_time = str(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-            noti_kind = 'liked'
-            source = 'comment'
-            status = 'pending'
-            waggle.addNotif(conn, commentor_id, notif, noti_kind, source, comment_id, noti_time, status)
-        metric = waggle.getCommentMetric(conn, comment_id)
-        metric['kind'] = kind
-        print(metric)
-        return jsonify(metric)
-
-@app.route('/flag_post/<post_id>/<author_id>/<gaggle_name>', methods=['GET', 'POST'])
-def flagPost(post_id, author_id, gaggle_name):
-    '''
-    If a user is logged in then the function checks if they already reported this post,
-    if not then it inserts a new flag into a flag_post table and updates
-    flags count for a post in post table.
-    '''
-    user_id = isLoggedIn()
-    username = session.get('username')
-    reporter_id = session.get('user_id')
-    conn = dbi.connect()
-    curs = dbi.dict_cursor(conn)
-    curs.execute('''SELECT *
-                    FROM flag_post
-                    WHERE post_id = %s and reporter_id = %s''',[post_id, reporter_id])
-    res = curs.fetchone()
-    if request.method == 'GET':
-        if res is not None:
-            flash('You have already reported this post')
-            return redirect(request.referrer)
-        else:
-            return render_template('flag_post.html', post_id=post_id, author_id=author_id, gaggle_name=gaggle_name, username=username, user_id = user_id)
-    else:
-        flagged_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        reason = request.form['reason']
-        #insert into flag_post table
-        curs.execute('''insert into flag_post (post_id, reporter_id, reason, flagged_date, mod_aprroved)
-                            values (%s,%s,%s,%s,'Pending')''',[post_id, reporter_id,reason,flagged_date])
-        #update post table
-        #curs.execute('''update post set flags=flags+1 where post_id=%s''', [post_id])
-        conn.commit()
-        flash('You have successfully reported a post {pid}'.format(pid=post_id))
-        return redirect(url_for('gaggle', gaggle_name=gaggle_name))
-
-@app.route('/report/', methods=['POST'])
-def report():
-    '''
-    If a user is logged in then the function checks if they already reported this post,
-    if not then it inserts a new flag into a flag_post table and updates
-    flags count for a post in post table.
-    '''
-    reporter_id = isLoggedIn()
-    username = session.get('username')
-    data = request.get_json()
-    post_id = data['post_id']
-    reason = data['reason']
-    print(reason)
-    conn = dbi.connect()
-    curs = dbi.dict_cursor(conn)
-    curs.execute('''SELECT *
-                    FROM flag_post
-                    WHERE post_id = %s and reporter_id = %s''',[post_id, reporter_id])
-    res = curs.fetchone()
-    # if res is not None: 
-    flagged_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    #insert into flag_post table
-    curs.execute('''insert into flag_post (post_id, reporter_id, reason, flagged_date, mod_aprroved)
-                        values (%s,%s,%s,%s,'Pending')''',[post_id, reporter_id,reason,flagged_date])
-    conn.commit()
-    print('reported')
-    return jsonify({'reported': post_id, 'reason': reason})
-
-####_____Comment/Replies Functions_____####
+    valid = waggle.isGosling(conn, user_id, gaggle_id) #can user reply to post
+    isAuthor = waggle.isAuthor(conn,user_id, gaggle_id)
+    return render_template('post.html', post = post, comments = comments, valid = valid, username=username, user_id=user_id, isAuthor = isAuthor, gaggle = gaggle)
 
 @app.route('/likePost/', methods=['POST'])
 def likePost():
@@ -539,6 +412,65 @@ def likePost():
         metric['kind'] = kind
         return jsonify(metric)
 
+@app.route('/report/', methods=['POST'])
+def report():
+    '''
+    If a user is logged in then the function checks if they already reported this post,
+    if not then it inserts a new flag into a flag_post table and updates
+    flags count for a post in post table.
+    '''
+    reporter_id = isLoggedIn()
+    username = session.get('username')
+    data = request.get_json()
+    post_id = data['post_id']
+    reason = data['reason']
+    print(reason)
+    conn = dbi.connect()
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''SELECT *
+                    FROM flag_post
+                    WHERE post_id = %s and reporter_id = %s''',[post_id, reporter_id])
+    res = curs.fetchone()
+    # if res is not None: 
+    flagged_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    #insert into flag_post table
+    curs.execute('''insert into flag_post (post_id, reporter_id, reason, flagged_date, mod_aprroved)
+                        values (%s,%s,%s,%s,'Pending')''',[post_id, reporter_id,reason,flagged_date])
+    conn.commit()
+    print('reported')
+    return jsonify({'reported': post_id, 'reason': reason})
+
+####_____Comment/Replies Functions_____####
+@app.route('/likeComment/', methods=['POST'])
+def likeComment(): #if comment isn't liked then insert like else unlike
+    """
+    Receive a request from AJAX to modify a like status with a comment.
+    AJAX send a data with comment_id and "kind" that indicate this is a Like or Unlike request
+    """    
+    user_id = isLoggedIn()
+    username = session.get('username','')
+    conn = dbi.connect()  
+    if request.method == 'POST': 
+        data = request.get_json()
+        comment_id = data['comment_id']
+        unliking = waggle.hasLikedCmt(conn, user_id, comment_id)
+        if unliking: #User has liked a comment and is unliking it
+            kind = 'Unlike'
+            waggle.unlikeComment(conn, user_id, comment_id)
+        else:
+            kind = 'Like'
+            waggle.likeComment(conn, comment_id, user_id, kind)
+            commentor_id = data['commentor_id']
+            notif = f"{username} has liked your reply:"
+            noti_time = str(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            noti_kind = 'liked'
+            source = 'comment'
+            status = 'pending'
+            waggle.addNotif(conn, commentor_id, notif, noti_kind, source, comment_id, noti_time, status)
+        metric = waggle.getCommentMetric(conn, comment_id)
+        metric['kind'] = kind
+        print(metric)
+        return jsonify(metric)
 
 @app.route('/reply/<comment_id>', methods=['GET', 'POST'])
 def addReply(comment_id):
@@ -546,8 +478,7 @@ def addReply(comment_id):
     Show original post and entire conversation thread of the comment you're replying to.
     Update the parent comment's replies when you reply. 
     """
-    now = datetime.now()
-    posted_date = now.strftime("%Y-%m-%d %H:%M:%S")
+    posted_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     user_id = isLoggedIn()   
     username = session.get('username')
     conn = dbi.connect() 
@@ -567,18 +498,12 @@ def addReply(comment_id):
         WHERE gaggle_id = %s''',
                  [gaggle_id]) 
     gaggle = curs.fetchone() 
+    isAuthor = waggle.isAuthor(conn,user_id, gaggle_id)
     #=============================================
-    # retrieve previous comments in the conversation if there is any  
-    # parent_comment_id = comment['comment_id']
-    # replies = likedComments(user_id, waggle.getReplies(conn, comment_id))
-    # thread = [parent_comment_id]
-    # chain = getRepliesThread(parent_comment_id, thread)
-    # comment_chain_id = [x for x in chain if x is not None][::-1]
-    # comment_chain = likedComments(user_id, [waggle.getComment(conn, id)for id in comment_chain_id[:-1]]) 
-    comment_chain = waggle.getConvo(conn, comment_id)        #this is the previous comment chain
-    replies = waggle.getReplies(conn, comment_id)
+    comment_chain = likedComments(user_id, waggle.getConvo(conn, comment_id)) #this is the previous comment chain
+    replies = likedComments(user_id, waggle.getReplies(conn, comment_id))
     if request.method == 'GET':
-        return render_template('reply.html', gaggle = gaggle, comment_chain = comment_chain, parent_comment = comment, replies = replies, post = post, username=username, user_id = user_id)
+        return render_template('reply.html', gaggle = gaggle, comment_chain = comment_chain, parent_comment = comment, replies = replies, post = post, username=username, user_id = user_id, isAuthor = isAuthor)
     else: #reply
         kind = request.form.get('submit')
         content = request.form['comment_content']  
@@ -719,18 +644,6 @@ def postPic(filename):
     if filename is not None:
         return send_from_directory(app.config['UPLOADS'],filename)
     
-def getRepliesThread(comment_id, thread):  
-    '''Helper function to get all the previous comment_id of the input comment_id.'''
-    conn = dbi.connect() 
-    parent_comment = waggle.getParentComment(conn, comment_id)
-    print("current_thread" + str(thread))
-    if len(parent_comment) == 0:
-        return thread 
-    else:
-        parent_comment_id = parent_comment[0]['parent_comment_id'] 
-        thread.append(parent_comment_id)
-        return getRepliesThread(parent_comment_id, thread)
-
 def canIntComment(comment_id, user_id):
     '''
     Helper function to determine if current user can interact with the comment.
@@ -782,11 +695,8 @@ def gaggle(gaggle_name):
     else: 
         conn = dbi.connect() 
         gaggle = waggle.getGaggle(conn, gaggle_name)  
-        posts = waggle.getGagglePosts(conn, gaggle_name)
-        for post in posts:
-            #print(post)
-            post_id = post['post_id']
-            post['canDelete'] = canDeletePost(post_id, user_id)
+        posts = likedPosts(user_id, waggle.getGagglePosts(conn, gaggle_name))
+        posts = canDeletePosts(posts, user_id)
         gaggle_id = waggle.getGaggleID(conn, gaggle_name)['gaggle_id']
         joined  = waggle.isGosling(conn, user_id, gaggle_id)
         isAuthor = waggle.isAuthor(conn,user_id, gaggle_id)
@@ -803,25 +713,6 @@ def gaggleMembers(gaggle_name):
     members = waggle.getMembers(conn, gaggle_name)  
     username = session.get('username')
     return render_template('groupMembers.html', gaggle_name = gaggle_name, members = members, username=username, user_id = user_id) 
-
-@app.route('/gaggle/<gaggle_name>/join/', methods=['GET', 'POST'])
-def joinGaggle(gaggle_name):
-    """
-    Called when a user clicks on the 'join' button on a Gaggle page. Inserts a new row
-    in the gosling table in the database. If user is already a member, then the
-    button functions as an 'unjoin'.
-    """
-    conn = dbi.connect() 
-    user_id = isLoggedIn()
-    if request.method == 'GET':
-        return redirect(url_for('gaggle', gaggle_name = gaggle_name))      
-    else:  
-        gaggle_id = request.form.get('gaggle_id')
-        if request.form.get('submit') == 'Join':
-            action = waggle.joinGaggle(conn, user_id, gaggle_id)
-        else: 
-            action = waggle.unjoinGaggle(conn, user_id, gaggle_id)             
-        return redirect(url_for('gaggle', gaggle_name=gaggle_name))
 
 @app.route('/gaggle/join/', methods=['POST'])
 def joinGroup():

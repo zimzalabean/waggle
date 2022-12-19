@@ -1,3 +1,4 @@
+drop table if exists notifs;
 drop table if exists moderator;
 drop table if exists mod_invite;
 drop table if exists bad_gosling;
@@ -5,6 +6,7 @@ drop table if exists comment_like;
 drop table if exists post_like;
 drop table if exists flag_post;
 drop table if exists flag_comment;
+drop table if exists convos;
 drop table if exists comment;
 drop table if exists post;
 drop table if exists tag;
@@ -272,10 +274,10 @@ CREATE TABLE notifs(
 CREATE table convos(
   anc_id int,
   des_id int,
-  foreign key convos(ancestor_id) references comment(comment_id)
+  foreign key (anc_id) references comment(comment_id)
       on update no action
     on delete cascade,
-  foreign key convos(descendant_id) references comment(comment_id)
+  foreign key (des_id) references comment(comment_id)
     on update no action
     on delete cascade
 ) ENGINE = InnoDB;
