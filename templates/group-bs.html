@@ -4,7 +4,9 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 <script src="https://rawgit.com/theraot/emoji/master/emoji.js" charset="utf-8"></script>
 <style>
-
+.emoji{
+    margin:20px;
+}
 </style>
 
 
@@ -82,12 +84,14 @@
                         <div  class="d-flex align-items-end align-items-sm-center row">
                             <h4 class="m-3">Create Post:</h4>
                             <form id="write_post" name="write_post" action="{{url_for('postGroup')}}" method="POST" enctype="multipart/form-data">
-                                <textarea class="mx-4 mb-0" name="content" id = "content" rows="4" style="width: 45vw; min-width: 400px"></textarea>
+                                <p class="emoji emoji-picker-container">
+                                <textarea  data-emojiable="true" data-emoji-input="unicode" name="content" id = "content" rows="4" style="width: 40vw; min-width: 350px"></textarea>
+                                </p>
                                 <div style = 'margin: 20px; margin-right: 40px;'>
                                 <div  class="d-flex align-items-end align-items-sm-center justify-content-end">
                                     <div class="d-flex align-items-end align-items-sm-center justify-content-end">
                                     <label>Upload picture: <input type="file" id= "uploadfile" name="pic" style = 'max-width: 250px;'></label></div>
-                                    <button type="button" class="btn rounded-pill btn-outline-info" onclick ="addEmoji('{{gaggle.gaggle_id}}')">Add emojis</button>
+                                    <!-- <button type="button" class="btn rounded-pill btn-outline-info" onclick ="addEmoji('{{gaggle.gaggle_id}}')">Add emojis</button> -->
                                     <input type="submit" class="btn rounded-pill btn-dark" value="Post" onclick ="postGroup('{{gaggle.gaggle_id}}')">
                                 </div></div>
                                 <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">

@@ -23,11 +23,11 @@ CREATE TABLE user (
   first_name varchar(30),
   last_name varchar(30),
   class_year varchar(4),
-  bio_text varchar(200),
+  bio_text varchar(200) COLLATE utf8_bin,
   strike int,
   unique(username),
   primary key (user_id)
-) ENGINE = InnoDB;
+) ENGINE = InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE picfile (
   user_id int,
@@ -43,13 +43,13 @@ CREATE TABLE gaggle (
   gaggle_id int not null auto_increment,
   gaggle_name varchar(20),
   author_id int,
-  description varchar(100),
+  description varchar(100) COLLATE utf8_bin,
   primary key(gaggle_id),
   INDEX(author_id),
   foreign key (author_id) references user(user_id) 
     on update no action
     on delete cascade
-)  ENGINE = InnoDB;
+)  ENGINE = InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE gosling (
   user_id int,
@@ -79,7 +79,7 @@ CREATE TABLE post (
   post_id int not null auto_increment,
   gaggle_id int,
   poster_id int,
-  content varchar(5000),
+  content varchar(5000) COLLATE utf8_bin,
   tag_id int,
   posted_date datetime,
   likes int,
@@ -97,7 +97,7 @@ CREATE TABLE post (
   foreign key (gaggle_id) references gaggle(gaggle_id)  
     on update no action
     on delete cascade
-) ENGINE = InnoDB;
+) ENGINE = InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE post_pics (
   post_id int,
@@ -114,7 +114,7 @@ CREATE TABLE comment (
     parent_comment_id int,
     post_id int,
     commentor_id int,
-    content varchar(5000),
+    content varchar(5000) COLLATE utf8_bin,
     posted_date datetime,
     likes int,
     dislikes int,
@@ -131,7 +131,7 @@ CREATE TABLE comment (
     foreign key (parent_comment_id) references comment(comment_id)
       on update no action
       on delete cascade
-) ENGINE = InnoDB;
+) ENGINE = InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE post_like (
   post_id int,
@@ -265,6 +265,17 @@ CREATE TABLE notifs(
   status enum('seen', 'pending'), 
   primary key (notif_id),
   foreign key (user_id) references user(user_id)
+    on update no action
+    on delete cascade
+) ENGINE = InnoDB;
+
+CREATE table convos(
+  anc_id int,
+  des_id int,
+  foreign key convos(ancestor_id) references comment(comment_id)
+      on update no action
+    on delete cascade,
+  foreign key convos(descendant_id) references comment(comment_id)
     on update no action
     on delete cascade
 ) ENGINE = InnoDB;

@@ -77,7 +77,7 @@ def getPosts(conn):
     '''returns the latest 20 posts for homepage feed'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        select a.*, b.username, CONCAT(b.first_name,' ',b.last_name) as full_name, c.gaggle_name, d.filename as pic
+        select a.*, b.username, c.gaggle_name, d.filename
         from post a
         left join user b
         on (a.poster_id = b.user_id)
@@ -94,7 +94,7 @@ def getPost(conn, post_id):
     '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.*, b.username, CONCAT(b.first_name,' ',b.last_name) as full_name, c.gaggle_name, d.filename as pic
+        SELECT a.*, b.username, c.gaggle_name, d.filename as pic
         FROM post a
         LEFT JOIN user b
         ON (a.poster_id = b.user_id)
@@ -122,7 +122,7 @@ def getGagglePosts(conn, gaggle_name):
     gaggle_id = getGaggleID(conn, gaggle_name)['gaggle_id']
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.*,  b.username, CONCAT(b.first_name,' ',b.last_name) as full_name, c.gaggle_name, d.filename as pic
+        SELECT a.*,  b.username, c.gaggle_name, d.filename as pic
         FROM post a
         LEFT JOIN user b
         ON (a.poster_id = b.user_id)
@@ -134,10 +134,6 @@ def getGagglePosts(conn, gaggle_name):
         order by posted_date DESC''',
                  [gaggle_id])
     all_posts = curs.fetchall()
-    #post_ids = [post['post_id'] for post in posts]
-    #all_posts = []
-    #for pid in post_ids:
-        #all_posts.append(getPost(conn, pid))
     return all_posts
 
 def getPostComments(conn, post_id):
@@ -162,7 +158,7 @@ def addComment(conn, post_id, parent_comment_id, content, commentor_id, posted_d
         VALUES (%s,%s,%s,%s,%s,0,0,0,0) ''', 
                 [post_id, parent_comment_id, content, commentor_id, posted_date])
     conn.commit()  # need this!   
-    curs.execute('SELECT last_insert_id() as new_comment_id') #retrieve new post_id
+    curs.execute('SELECT last_insert_id() as new_comment_id') #retrieve new comment_id
     row = curs.fetchone()
     comment_id = row['new_comment_id']
     #if this is a reply to a post
@@ -174,13 +170,13 @@ def addComment(conn, post_id, parent_comment_id, content, commentor_id, posted_d
                     [post_id])
     #else it is a reply to a comment                
     else:
+        addConvo(conn, parent_comment_id, comment_id)
         curs.execute('''
             UPDATE comment
             SET replies = replies + 1
             WHERE comment_id = %s''',
                     [parent_comment_id])                        
-    conn.commit() 
-    print('updated')        
+    conn.commit()       
     return comment_id
   
 def likePost(conn, post_id, user_id, kind):
@@ -228,7 +224,7 @@ def likePost(conn, post_id, user_id, kind):
     return valid   
 
 def likeComment(conn, comment_id, user_id, kind):
-    '''Record user's like/dislike of a comment by 
+    '''Record user's like of a comment by 
     inserting the interaction into the comment_like table'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
@@ -383,7 +379,7 @@ def getComment(conn, comment_id):
     '''
     curs = dbi.dict_cursor(conn)  
     curs.execute('''
-        SELECT a.*, b.username, CONCAT(b.first_name,' ', b.last_name) as full_name 
+        SELECT a.*, b.username as full_name 
         FROM comment a
         LEFT JOIN user b
         ON a.commentor_id = b.user_id
@@ -521,7 +517,10 @@ def searchPost(conn, query):
     '''returns all posts whose content match the query'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT * from post 
+        SELECT a.*,b.username 
+        from post a
+        LEFT JOIN user b
+        ON a.poster_id = b.user_id
         WHERE content LIKE %s''',
                  ['%'+query+'%']) 
     return curs.fetchall() 
@@ -530,8 +529,10 @@ def searchComment(conn, query):
     '''returns all comments whose content match the query'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT *
+        SELECT a.*, b.username
         FROM comment a
+        LEFT JOIN user b
+        ON a.commentor_id = b.user_id
         WHERE content LIKE %s''',
                  ["%"+query+"%"]) 
     return curs.fetchall()   
@@ -944,3 +945,34 @@ def getNotifs(conn, user_id):
                 [user_id])
     return curs.fetchall()    
 
+def addConvo(conn, parent_comment_id, comment_id):
+    curs = dbi.dict_cursor(conn)
+    #insert the first parent-child relationship
+    curs.execute('''    
+    INSERT INTO convos(anc_id, des_id)
+    VALUES (%s, %s)''',
+                [parent_comment_id, comment_id])
+    conn.commit()
+    #find all ancestors of parent and add ancestor-descendant relationship
+    curs.execute('''    
+    INSERT INTO convos(anc_id, des_id)    
+    SELECT anc_id, des_id FROM (
+        SELECT a.anc_id, b.des_id
+        FROM convos a
+        LEFT JOIN convos b
+        ON a.des_id = b.anc_id
+        WHERE b.anc_id = %s''',
+        [parent_comment_id])
+    conn.commit()
+
+def getConvo(conn, comment_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT a.anc_id, b.* 
+        FROM convos a
+        LEFT JOIN comment b
+        ON a.anc_id = b.comment_id
+        WHERE a.des_id = %s
+        ORDER BY posted_date asc''',
+                [comment_id])
+    return curs.fetchall()                 
