@@ -41,9 +41,37 @@
 
 {% block main_content %}
 <div class="container-xxl flex-grow-1 container-p-y">
-    <!-- HEADER -->
-    <div>
-        <p>Create Gaggle</p>
+    <h3 class="fw-bold py-2 mb-2">Create Gaggle</h3>
+    <div class="row">
+        <div class="col-md-12">
+          <div class="card mb-4">
+            <!-- Account -->
+            <div class="card-body">
+              <form action="{{url_for('createGaggle')}}" method="POST">
+                <div class="row">
+                  <div class="mb-3 col-md-6">
+                    <label for="gaggle_name" class="form-label">Gaggle Name*</label>
+                    <input class="form-control" type="text" id="gaggle_name" name="gaggle_name" value="{{gaggle_name}}" autofocus>
+                  </div>
+                </
+                  <div class="mb-3 col-md-6">
+                    <label for="description" class="form-label">Description</label>
+                    <textarea class="form-control" type="text" id="description" name="description"></textarea>
+                  </div>
+                </div>
+                <div class="mt-2">
+                  <button type="submit" class="btn btn-primary me-2">Create</button>
+                </div>
+              </form>
+              <p>*: Required, no space or special characters allowed.</p>
+            </div>
+            <!-- /Account -->
+          </div>
+        </div>
+
+
+
+    <!-- <div>
         <form action="{{url_for('createGaggle')}}" method="POST">
         <table>
             <tr>
@@ -60,6 +88,6 @@
 
     <p>*: Required, no space or special character (@, #, $, %) allowed </p>
     
-    </div>
+    </div> -->
 </div>
 {% endblock %}
