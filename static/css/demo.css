@@ -333,10 +333,10 @@ img {
     clip-path: circle(48px);
   }
   .img-profile{
-    object-fit: cover;
-    width: 100%;
-    height: 100%;
-    border-radius:50%;
+    object-fit: cover !important;
+    width: 100% !important;
+    height: 100% !important;
+    border-radius:50% !important;
   }
   
   .comment-header-info {

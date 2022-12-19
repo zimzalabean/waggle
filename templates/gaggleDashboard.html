@@ -1,10 +1,6 @@
 {% extends "dashboard.html" %}
 
-
-
-
 {% block sub_content %}  
-
 
 {% if hasGaggle %}
         <form name="update_gaggle" action="{{url_for('myGaggle', gaggle_name = gaggle.gaggle_name)}}" method="POST">

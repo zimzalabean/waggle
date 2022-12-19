@@ -600,7 +600,9 @@ def editMyPage():
     conn = dbi.connect()
     user_info = waggle.getUserInfo(conn, user_id)
     if request.method == 'GET':
-        return render_template('edit_user_info.html', user=user_info, username=username,user_id=user_id)
+        return render_template('edit_account_info-bs.html', user=user_info, username=username,user_id=user_id)
+        # return render_template('edit_user_info.html', user=user_info, username=username,user_id=user_id)
+
     else:
         new_fn, new_ln, new_cy, new_bio = '', '', '', ''
         if request.form['first_name'] != '':
@@ -660,10 +662,10 @@ def file_upload():
             pathname = os.path.join(app.config['UPLOADS'],filename)
             imageFile.save(pathname)
             waggle.insertProfilePic(conn, user_id, filename)
-            flash('Upload successful')
+            flash('Upload successful.')
             return redirect(url_for('editMyPage'))
         except Exception as err:
-            flash('Upload failed {why}'.format(why=err))
+            flash('Upload failed: {why}'.format(why=err))
             return redirect(url_for('editMyPage'))
    
 @app.route('/user/<username>')

@@ -1,0 +1,149 @@
+{% extends "base-bs.html" %}
+
+{% block main_content %}
+          <!-- Content wrapper -->
+          <div class="content-wrapper">
+            <!-- Content -->
+            <div class="container-xxl flex-grow-1 container-p-y">
+              <a href="{{url_for('user', username = username)}}"><h5 class="text-muted"><i class='bx bx-arrow-back'></i> Back</h5></a>
+              <h4 class="fw-bold py-3 mb-4">Edit Profile</h4>
+              <div class="row">
+                <div class="col-md-12">
+                  <div class="card mb-4">
+                    <h5 class="card-header">Profile Details</h5>
+                    <!-- Account -->
+                    <div class="card-body">
+                      <div class="d-flex align-items-start align-items-sm-center gap-4">
+                        <img
+                          src="{{url_for('profilePic',user_id=user_id)}}"
+                          alt="user-avatar"
+                          class="d-block rounded"
+                          style="width: 15vw; max-width: 120px; height: 15vw; max-height: 120px; clip-path: circle(15vw); object-fit: cover;"
+                          id="uploadedAvatar"
+                        />
+                        <div class="button-wrapper">
+                          <form method="post" action="{{url_for('file_upload')}}" enctype="multipart/form-data">
+                            <input
+                              type="file"
+                              name="pic"
+                            />
+                            <input type="submit" class="btn btn-primary" value="Upload"></button>
+                            <p class="text-muted mb-0 mt-1">Allowed JPG, GIF or PNG. Max size of 800K (is this true?)</p>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+                    <hr class="my-0" />
+                    <div class="card-body">
+                      <form action="{{url_for('editMyPage')}}" method="POST" id="formAccountSettings">
+                        <div class="row">
+                          <div class="mb-3 col-md-6">
+                            <label for="firstName" class="form-label">First Name</label>
+                            <input class="form-control" type="text" id="firstName" name="first_name" value="{{user.first_name}}" autofocus>
+                          </div>
+                          <div class="mb-3 col-md-6">
+                            <label for="lastName" class="form-label">Last Name</label>
+                            <input class="form-control" type="text" name="last_name" id="lastName" value="{{user.last_name}}">
+                          </div>
+                          <div class="mb-3 col-md-6">
+                            <label for="classYear" class="form-label">Class Year</label>
+                            <input class="form-control" type="text" id="classYear" name="class_year" value="{{user.class_year}}">
+                          </div>
+                          <div class="mb-3 col-md-6">
+                            <label for="bio" class="form-label">Bio</label>
+                            <textarea class="form-control" type="text" id="bio" name="bio_text">{{user.bio_text}}</textarea>
+                          </div>
+                        </div>
+                        <div class="mt-2">
+                          <button type="submit" class="btn btn-primary me-2">Save changes</button>
+                        </div>
+                      </form>
+                    </div>
+                    <!-- /Account -->
+                  </div>
+                  <div class="card">
+                    <h5 class="card-header">Delete Account</h5>
+                    <div class="card-body">
+                      <div class="mb-3 col-12 mb-0">
+                        <div class="alert alert-warning">
+                          <h6 class="alert-heading fw-bold mb-1">Are you sure you want to delete your account?</h6>
+                          <p class="mb-0">Once you delete your account, there is no going back. Please be certain.</p>
+                        </div>
+                      </div>
+                      <a href="{{url_for('deactivateAccount')}}"><button type="submit" class="btn btn-danger deactivate-account">Deactivate Account</button></a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- / Content -->
+            {% endblock %}
+
+
+            <!-- Footer -->
+            <footer class="content-footer footer bg-footer-theme">
+              <div class="container-xxl d-flex flex-wrap justify-content-between py-2 flex-md-row flex-column">
+                <div class="mb-2 mb-md-0">
+                  ©
+                  <script>
+                    document.write(new Date().getFullYear());
+                  </script>
+                  , made with ❤️ by
+                  <a href="https://themeselection.com" target="_blank" class="footer-link fw-bolder">ThemeSelection</a>
+                </div>
+                <div>
+                  <a href="https://themeselection.com/license/" class="footer-link me-4" target="_blank">License</a>
+                  <a href="https://themeselection.com/" target="_blank" class="footer-link me-4">More Themes</a>
+
+                  <a
+                    href="https://themeselection.com/demo/sneat-bootstrap-html-admin-template/documentation/"
+                    target="_blank"
+                    class="footer-link me-4"
+                    >Documentation</a
+                  >
+
+                  <a
+                    href="https://github.com/themeselection/sneat-html-admin-template-free/issues"
+                    target="_blank"
+                    class="footer-link me-4"
+                    >Support</a
+                  >
+                </div>
+              </div>
+            </footer>
+            <!-- / Footer -->
+
+            <div class="content-backdrop fade"></div>
+          </div>
+          <!-- Content wrapper -->
+        </div>
+        <!-- / Layout page -->
+      </div>
+
+      <!-- Overlay -->
+      <div class="layout-overlay layout-menu-toggle"></div>
+    </div>
+    <!-- / Layout wrapper -->
+
+    <!-- Core JS -->
+    <!-- build:js assets/vendor/js/core.js -->
+    <script src="../assets/vendor/libs/jquery/jquery.js"></script>
+    <script src="../assets/vendor/libs/popper/popper.js"></script>
+    <script src="../assets/vendor/js/bootstrap.js"></script>
+    <script src="../assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
+
+    <script src="../assets/vendor/js/menu.js"></script>
+    <!-- endbuild -->
+
+    <!-- Vendors JS -->
+
+    <!-- Main JS -->
+    <script src="../assets/js/main.js"></script>
+
+    <!-- Page JS -->
+    <script src="../assets/js/pages-account-settings-account.js"></script>
+
+    <!-- Place this tag in your head or just before your close body tag. -->
+    <script async defer src="https://buttons.github.io/buttons.js"></script>
+  </body>
+</html>
