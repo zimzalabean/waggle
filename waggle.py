@@ -330,7 +330,7 @@ def joinGaggle(conn, user_id, gaggle_id):
         VALUES (%s,%s) ''', 
                 [user_id, gaggle_id])
     conn.commit()  # need this!   
-    return {'gaggle_id':gaggle_id, 'result': 'UNJOIN'}
+    return {'gaggle_id':gaggle_id, 'result': 'Unjoin'}
 
 def unjoinGaggle(conn, user_id, gaggle_id):
     '''Remove a user into a gaggle member list'''
@@ -341,7 +341,7 @@ def unjoinGaggle(conn, user_id, gaggle_id):
         AND gaggle_id = %s''', 
                 [ user_id, gaggle_id])
     conn.commit()  # need this!   
-    return {'gaggle_id':gaggle_id, 'result': 'JOIN'}
+    return {'gaggle_id':gaggle_id, 'result': 'Join'}
 
 def isGosling(conn, user_id, gaggle_id):  
     '''Check if a user is in a gaggle member list'''  

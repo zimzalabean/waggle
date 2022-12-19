@@ -107,6 +107,10 @@
   background-color: #696cff !important;
 }
 
+.bg-primary-light {
+  background-color: #8b8dff !important;
+}
+
 a.bg-primary:hover, a.bg-primary:focus {
   background-color: #6467f2 !important;
 }
