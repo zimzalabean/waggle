@@ -3871,6 +3871,7 @@ textarea.form-control-lg {
   padding: 1.5rem 1.5rem;
 }
 
+
 .card-title {
   margin-bottom: 0.875rem;
 }
@@ -3894,6 +3895,7 @@ textarea.form-control-lg {
   background-color: transparent;
   border-bottom: 0 solid #d9dee3;
 }
+
 .card-header:first-child {
   border-radius: 0.5rem 0.5rem 0 0;
 }

@@ -40,42 +40,84 @@
 {% endblock %}
           
 {% block main_content %}
-<div class="container">
-  <nav>
-    <ul>
-      <li><a href="{{url_for('dashboard')}}">My Gaggle</a></li>
-      <li><a href="{{url_for('modqueue')}}">Moderator Queue</a></li>
-    </ul>
-  </nav>
-</div>
-
 <div class="container-xxl flex-grow-1 container-p-y">
-  <h3 class="fw-bold py-2 mb-2">Moderator Dashboard</h3>
-       <!-- Pills -->
+  <h3 class="fw-bold py-2 mb-2">Creator Dashboard</h3>
+    {% if hasGaggle %}
+       <!-- Tabs -->
       <div class="row">
         <div class="col-xl-12">
           <div class="nav-align-top mb-4">
-            <ul class="nav nav-pills mb-3 nav-fill" role="tablist">
-            {% for gaggle in gaggles %}
+            <ul class="nav nav-tabs nav-fill" role="tablist">
               <li class="nav-item">
                 <button
                   type="button"
                   class="nav-link active"
                   role="tab"
                   data-bs-toggle="tab"
-                  data-bs-target="#navs-pills-justified-{{gaggle.gaggle_name}}"
-                  aria-controls="navs-pills-justified-mygaggles"
+                  data-bs-target="#navs-justified-home"
+                  aria-controls="navs-justified-home"
+                  aria-selecte="false"
+                >
+                <strong>Home</strong>
+                </button>
+              </li>
+            {% for gaggle in gaggles %}
+              <li class="nav-item">
+                <button
+                  type="button"
+                  class="nav-link"
+                  role="tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#navs-justified-{{gaggle.gaggle_name}}"
+                  aria-controls="navs-justified-{{gaggle.gaggle_name}}"
                   aria-selected="false"
                 >
-                <i class='tf-icons bx bxs-book'></i> My Gaggles
+                <strong>{{gaggle.gaggle_name}}</strong>
                 </button>
               </li>
             {% endfor %}
             </ul>
             <div class="tab-content">
+              <div class="tab-pane fade show active" id="navs-justified-home" role="tabpanel">
+                <div class="card mb-3">
+                  <h3 class="card-header fw-bold">Main</h3>
+                  <div class="card-body">
+                    
+                  </div>
+                </div>
+              </div>
               {% for gaggle in gaggles %}
-              <div class="tab-pane fade show active" id="navs-pills-justified-{{gaggle.gaggle_name}}" role="tabpanel">
-                
+              <div class="tab-pane fade" id="navs-justified-{{gaggle.gaggle_name}}" role="tabpanel">
+                <div class="card mb-3">
+                  <h3 class="card-header fw-bold">Creator View for <a href="{{url_for('gaggle',gaggle_name=gaggle.gaggle_name)}}"><strong>{{gaggle.gaggle_name}}</strong></a></h3>
+                  <h5 class="card-header">Edit <strong>{{gaggle.gaggle_name}}</strong>'s Description:</h5>
+                  <div class="card-body">
+                    <div class="update_group">
+                      <textarea class="form-control" name="content">{{gaggle.description}}</textarea>
+                      <input type="submit" class="btn rounded-pill btn-dark my-2" value="Update">
+                    </div>
+                  </div>
+                  <hr class="my-0"/>
+                  <h5 class="card-header">Invite New Moderator to <strong>{{gaggle.gaggle_name}}</strong>:</h5>
+                  <div class="card-body">
+                    <div class="mod_invite">
+                      <div class="row d-flex align-items-center">
+                        <div class="mb-3 col-xl-4">
+                          <input class="form-control" type="text" name="invitee_username" placeholder="ex. ab6">
+                        </div>
+                        <div class="mb-3 col-xl-3">
+                          <input type="submit" class="btn rounded-pill btn-dark my-2" value="Invite">
+                        </div>
+                      </div>
+                      <div class="row">
+                        <h5>Invitation Responses:</h5>
+                        {% for invitee in invitees %}
+                          <p> Status for {{invitee.username}}: {{invitee.accepted}}</p>
+                        {% endfor %}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
               {% endfor %}
             </div>
@@ -83,11 +125,14 @@
           </div>
         </div>
       </div>
+      {% else %}
+        You haven't created any Gaggles.
+      {% endif %}
     </div>
-      <!-- Pills -->
+      <!-- Tabs -->
 
-  {% block sub_content %}
+  <!-- {% block sub_content %}
 
-  {% endblock %}
+  {% endblock %} -->
 
 {% endblock %}
