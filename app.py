@@ -154,17 +154,17 @@ def canDeletePost(post_id, user_id):
     else: 
         return False
 
-def getRepliesThread(comment_id, thread):  
-    '''Helper function to get all the parent comment_id of the input comment_id.'''
-    conn = dbi.connect() 
-    parent_comment = waggle.getParentComment(conn, comment_id)
-    print("current_thread" + str(thread))
-    if len(parent_comment) == 0:
-        return thread 
-    else:
-        parent_comment_id = parent_comment[0]['parent_comment_id'] 
-        thread.append(parent_comment_id)
-        return getRepliesThread(parent_comment_id, thread)
+# def getRepliesThread(comment_id, thread):  
+#     '''Helper function to get all the parent comment_id of the input comment_id.'''
+#     conn = dbi.connect() 
+#     parent_comment = waggle.getParentComment(conn, comment_id)
+#     print("current_thread" + str(thread))
+#     if len(parent_comment) == 0:
+#         return thread 
+#     else:
+#         parent_comment_id = parent_comment[0]['parent_comment_id'] 
+#         thread.append(parent_comment_id)
+#         return getRepliesThread(parent_comment_id, thread)
 
 ####_____Homepage Functions_____####
 
@@ -569,17 +569,20 @@ def addReply(comment_id):
     gaggle = curs.fetchone() 
     #=============================================
     # retrieve previous comments in the conversation if there is any  
-    parent_comment_id = comment['comment_id']
-    replies = likedComments(user_id, waggle.getReplies(conn, comment_id))
-    thread = [parent_comment_id]
-    chain = getRepliesThread(parent_comment_id, thread)
-    comment_chain_id = [x for x in chain if x is not None][::-1]
-    comment_chain = likedComments(user_id, [waggle.getComment(conn, id)for id in comment_chain_id[:-1]]) #this is the previous comment chain
+    # parent_comment_id = comment['comment_id']
+    # replies = likedComments(user_id, waggle.getReplies(conn, comment_id))
+    # thread = [parent_comment_id]
+    # chain = getRepliesThread(parent_comment_id, thread)
+    # comment_chain_id = [x for x in chain if x is not None][::-1]
+    # comment_chain = likedComments(user_id, [waggle.getComment(conn, id)for id in comment_chain_id[:-1]]) 
+    comment_chain = waggle.getConvo(conn, comment_id)        #this is the previous comment chain
+    replies = waggle.getReplies(conn, comment_id)
     if request.method == 'GET':
         return render_template('reply.html', gaggle = gaggle, comment_chain = comment_chain, parent_comment = comment, replies = replies, post = post, username=username, user_id = user_id)
     else: #reply
         kind = request.form.get('submit')
         content = request.form['comment_content']  
+        parent_comment_id = comment['comment_id']
         add_comment = waggle.addComment(conn, post_id, parent_comment_id, content, user_id, posted_date)
         return redirect( url_for('addReply', comment_id = comment_id )) 
 
@@ -1106,7 +1109,7 @@ def dashboard():
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'ab6_db' 
+    db_to_use = 'ldau_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 
