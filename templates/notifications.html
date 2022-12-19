@@ -1,0 +1,71 @@
+{% extends "base-bs.html" %}
+
+{% block main_content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <!-- HEADER -->
+    <div class="row">
+        <div class="card card-header bg-secondary text-white" id = 'header'> Your new notifications </div>  
+            {% import "notifTemplate.html" as notifComp%}
+            {% for notif in notifs %}
+                <!-- {% if notif.kind == 'post' %}
+                <div class = 'notif' id = '{{notif.notif_id}}' onclick= "window.location.href = '{{url_for('post', post_id = notif.id)}}';">
+                    <div class = 'card'>{{notif.content}}</div>
+                </div>
+                {% else %}
+                <div class = 'notif'  id = '{{notif.notif_id}}' onclick= "window.location.href = '{{url_for('addReply', comment_id = notif.id)}}';">
+                    <div class = 'card'>{{notif.content}}</div>
+                </div>    
+                {% endif %} -->
+                {{notifComp.notif_temp(notif=notif)}}
+            {% endfor %}
+    </div>
+    <div style = 'height:100vh;'></div>
+</div>
+
+<script>
+
+    function isInViewport(element) {
+        const rect = element.getBoundingClientRect();
+        return (
+            rect.top >= 0 &&
+            rect.left >= 0 &&
+            rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+            rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+        );
+    }
+
+    ["load", "scroll"].forEach(function (evt) {
+
+        window.addEventListener(evt, function () {
+            // let notifs = document.getElementsByClassName('notifs');
+            let notifs = document.querySelectorAll('div.notif');
+            notifs.forEach((notif) => {
+                console.log(notif);
+                let notif_id = notif.id;
+                console.log(notif_id)
+                if (isInViewport(notif)){ 
+                    console.log('in view' + notif_id)       
+                    $.ajax({
+                            type: "POST",
+                            url: "/notif/",
+                            data: JSON.stringify({'notif_id': notif_id}),
+                            contentType: 'application/json; charset=utf-8',
+                            dataType: 'json',
+                            async: true,
+                            success: function(resp){
+                                console.log(resp)
+                            }
+                        }); 
+                    }
+            })
+        }, {passive: true
+        });
+    })
+
+
+</script>
+
+
+
+
+{% endblock %}

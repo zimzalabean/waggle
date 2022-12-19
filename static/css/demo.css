@@ -107,6 +107,14 @@
 }
 
 /*
+* Universal styling
+******************************************************************************/
+/* .selected{
+  background-color: #7555bb;
+  color: azure;
+} */
+
+/*
 * Post
 ******************************************************************************/
 img {
@@ -122,12 +130,11 @@ img {
   object-fit: cover;
   width: 100%;
   height: 100%;
-  border-radius:50%;
 }
 
 .post-wrap {
   max-width:100%;
-  /* background: #fff; */
+  display: block;
   background: none;
   border-radius:3px;
   padding: 20px;
@@ -135,12 +142,11 @@ img {
   border-top: 1px solid #e6ecf0;
 }
 .post-wrap:hover{
-    background-color: rgb(246, 246, 246);
+    background-color:  rgb(243, 243, 243);
 }
 .post-header {
   display: flex;
   align-items:flex-start;
-  /* align-items:stretch; */
   font-size:14px;
 }
 .post-header-info {
@@ -166,21 +172,59 @@ img {
 }
 .post-info-counts div {
   display: flex;
-  margin-right: 20px;
-}
-.post-info-counts div button {
-  color:#4b5b68;
-  margin-right: 10px;
-  background:none;
-  border:none;
-}
-.post-info-counts div button:hover {
-  color:#c2a3cc;
+  margin-right: 40px;
+  font-size: 12px;
 }
 
-.post-info-counts div .selected {
-    color:#9e47b8;
-  }
+.replies-count button{
+  color:#657786 !important;
+}
+
+.small-circle{
+  clip-path: circle(50%);
+  margin-right:0px  !important;
+}
+.post-info-counts div button {  
+  color: inherit;
+  background:none;
+  border:none;
+  height: 40px;
+  width: 40px;
+  padding:0;
+  margin: 0;
+}
+.post-info-counts div button:hover {
+  color:#ff2194 !important;
+  background-color: #f9c7da;
+}
+
+.post-info-counts div:hover {
+  color:#ff2194 !important;
+}
+
+.post-info-counts div.selected {
+  color:#ff2194;
+}
+
+/* post dropdown content */
+.dropdown-content{
+  display: none !important;
+  position: absolute;
+  min-width: 100px;
+  margin-top: 40px;
+}
+
+.dropdown-content div{
+  color:#657786 !important;
+  padding: 10px !important;
+  margin: 0px !important;
+  border-radius: 4px;
+}
+
+.dropdown-content div:hover{
+  background-color:  rgb(220, 208, 236)!important;
+  color:#725789 !important;
+}
 
 @media screen and (max-width:430px){
   body {
@@ -210,6 +254,57 @@ img {
 }
 }
 
+.post-form-hidden{
+  display: none;
+}
+
+.display{
+  display: block !important;
+}
+
+.hidden {
+  display: none;
+}
+/* report */
+.popup-report{
+  display: none;
+  padding-top: 10%;
+  padding-left: 30%;
+  padding-right: 30%;
+  box-shadow: 0 2px 20px 0 rgb(0 0 0 / 30%);
+  width:100%;
+  height:100%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  position: fixed;
+  z-index: 10000000000;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.report-header{
+  padding-left: 20px; 
+  padding-right:20px;
+  color:#4b5b68;
+  font-size: 12px;
+  font-weight: 400;
+}
+.report-form{
+  margin:20px;
+}
+
+.btn-icon{
+  background:none;
+  border:none;
+}
+
+.thin{
+  margin:0%
+}
+
+.right{
+  padding-right: 0px;
+}
 /*
 * Comment
 ******************************************************************************/
@@ -348,8 +443,6 @@ img {
 ******************************************************************************/
 .thread-wrap{
   background-color: white; 
-  margin-left: 30px; 
-  margin-top: 30px; 
   padding: 20px; 
   width: 50vw; 
   border-radius: 10px'

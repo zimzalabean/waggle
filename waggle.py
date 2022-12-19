@@ -77,14 +77,15 @@ def getPosts(conn):
     '''returns the latest 20 posts for homepage feed'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        select a.*, b.username, CONCAT(b.first_name,' ',b.last_name) as full_name, c.gaggle_name 
+        select a.*, b.username, CONCAT(b.first_name,' ',b.last_name) as full_name, c.gaggle_name, d.filename as pic
         from post a
         left join user b
         on (a.poster_id = b.user_id)
         left join gaggle c
         on (a.gaggle_id = c.gaggle_id)
+        LEFT JOIN post_pics d
+        ON (a.post_id = d.post_id)
         order by posted_date DESC
-        limit 20 
     ''')
     return curs.fetchall()
 
@@ -93,12 +94,14 @@ def getPost(conn, post_id):
     '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.*, b.username, CONCAT(b.first_name,' ',b.last_name) as full_name, c.gaggle_name 
+        SELECT a.*, b.username, CONCAT(b.first_name,' ',b.last_name) as full_name, c.gaggle_name, d.filename as pic
         FROM post a
         LEFT JOIN user b
         ON (a.poster_id = b.user_id)
         LEFT JOIN gaggle c
         ON (a.gaggle_id = c.gaggle_id)
+        LEFT JOIN post_pics d
+        ON (a.post_id = d.post_id)
         WHERE a.post_id = %s''',
                  [post_id])
     result = curs.fetchone()
@@ -119,12 +122,14 @@ def getGagglePosts(conn, gaggle_name):
     gaggle_id = getGaggleID(conn, gaggle_name)['gaggle_id']
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.*,  b.username, CONCAT(b.first_name,' ',b.last_name) as full_name, c.gaggle_name  
+        SELECT a.*,  b.username, CONCAT(b.first_name,' ',b.last_name) as full_name, c.gaggle_name, d.filename as pic
         FROM post a
         LEFT JOIN user b
         ON (a.poster_id = b.user_id)
         LEFT JOIN gaggle c
         ON (a.gaggle_id = c.gaggle_id)
+        LEFT JOIN post_pics d
+        ON (a.post_id = d.post_id)
         WHERE c.gaggle_id = %s
         order by posted_date DESC''',
                  [gaggle_id])
@@ -157,6 +162,9 @@ def addComment(conn, post_id, parent_comment_id, content, commentor_id, posted_d
         VALUES (%s,%s,%s,%s,%s,0,0,0,0) ''', 
                 [post_id, parent_comment_id, content, commentor_id, posted_date])
     conn.commit()  # need this!   
+    curs.execute('SELECT last_insert_id() as new_comment_id') #retrieve new post_id
+    row = curs.fetchone()
+    comment_id = row['new_comment_id']
     #if this is a reply to a post
     if parent_comment_id is None:
         curs.execute('''
@@ -173,7 +181,7 @@ def addComment(conn, post_id, parent_comment_id, content, commentor_id, posted_d
                     [parent_comment_id])                        
     conn.commit() 
     print('updated')        
-    return commentor_id
+    return comment_id
   
 def likePost(conn, post_id, user_id, kind):
     '''Record user's like/dislike of a post by 
@@ -326,7 +334,7 @@ def joinGaggle(conn, user_id, gaggle_id):
         VALUES (%s,%s) ''', 
                 [user_id, gaggle_id])
     conn.commit()  # need this!   
-    return "Joined "
+    return {'gaggle_id':gaggle_id, 'result': 'UNJOIN'}
 
 def unjoinGaggle(conn, user_id, gaggle_id):
     '''Remove a user into a gaggle member list'''
@@ -337,7 +345,7 @@ def unjoinGaggle(conn, user_id, gaggle_id):
         AND gaggle_id = %s''', 
                 [ user_id, gaggle_id])
     conn.commit()  # need this!   
-    return "Unjoined"
+    return {'gaggle_id':gaggle_id, 'result': 'JOIN'}
 
 def isGosling(conn, user_id, gaggle_id):  
     '''Check if a user is in a gaggle member list'''  
@@ -363,7 +371,10 @@ def addPost(conn, gaggle_id, poster_id, content, tag_id, posted_date):
         VALUES(%s, %s, %s, %s, %s, 0, 0, 0, 0)''',
         [gaggle_id, poster_id, content, tag_id, posted_date])
     conn.commit()
-    return poster_id 
+    curs.execute('SELECT last_insert_id() as new_post_id') #retrieve new post_id
+    row = curs.fetchone()
+    post_id = row['new_post_id']
+    return post_id 
 
 
 def getComment(conn, comment_id):
@@ -902,4 +913,47 @@ def increment_strikes(conn, user_id):
         where user_id = %s
     ''', [user_id])
     conn.commit()
-    return res    
+    return res   
+
+def getModOfGaggles(conn, gaggle_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        select a.user_id, b.username
+        from moderator a
+        left join user b using (user_id)
+        where gaggle_id = %s
+    ''', [gaggle_id])
+    return curs.fetchall()
+
+
+def addNotif(conn, user_id, content, kind, source, id, noti_time, status):
+    '''
+    add notifications
+    '''
+    status = 'pending'
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        INSERT INTO notifs(user_id, content, kind, source, id, noti_time, status)
+        VALUES(%s,%s,%s,%s,%s,%s,%s)''',
+                [user_id, content, kind, source, id, noti_time, status])
+    conn.commit()
+
+def updateNotifStatus(conn, notif_id):
+    status = 'seen'
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        UPDATE notifs set status = %s 
+        WHERE notif_id = %s''',
+                [status, notif_id])
+    conn.commit()
+
+def getNotifs(conn, user_id):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT * 
+        FROM notifs
+        WHERE status = 'pending'
+        AND user_id = %s''',
+                [user_id])
+    return curs.fetchall()    
+

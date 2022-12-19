@@ -1,34 +1,36 @@
 {% extends "base-bs.html" %}
 
 {% block main_content %}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<style>
+
+</style>
+
+
 <div class="container-xxl flex-grow-1 container-p-y">
     <!-- HEADER -->
     <div class="row">
         <div class="col-lg-12 mb-4">
-            <div class="card card-header bg-primary text-white">
+            <div class="card card-header bg-primary text-white" >
                 <div class="d-flex align-items-end align-items-sm-center row">
-                    <div class="col-sm-2">
-                        <!-- <div class = 'avator'>
-                            <img src="{{url_for('profilePic',user_id=user_id)}}" alt="{{user_id}}" class = 'img-profile'>    
-                        </div >  -->
-                    </div>
-                    <div class="col-sm-8">
+                    <div class="col-sm-10" onclick= "window.location.href = '{{url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}';">
                         <div class="card-body py-3">
                             <h1 class="card-title text-white">{{gaggle.gaggle_name}}</h1>
                         </div>
                     </div>
                     <div class="col-sm-2">
                         <div class="card-body py-3">
-                            <form name="join_group" action="{{url_for('joinGaggle', gaggle_name = gaggle.gaggle_name)}}" class="ml-0" method="POST">
+
                                 {% if isAuthor %}                                
-                                <a href = "{{url_for('myGaggle', gaggle_name = gaggle.gaggle_name)}}"><button class = "btn btn-lg rounded-pill btn-secondary">EDIT GROUP</button></a> 
+                                <a href = "{{url_for('myGaggle', gaggle_name = gaggle.gaggle_name)}}"><button class = "btn btn-lg rounded-pill btn-dark text-white">EDIT GROUP</button></a> 
+                                <form name="join_group" action="{{url_for('joinGroup')}}"  method="POST">
                                 {% elif joined %}
-                                <input type="submit" class="btn btn-lg rounded-pill btn-secondary" name="submit" value="Unjoin">
+                                <button id = 'btn-{{gaggle.gaggle_id}}' class="btn rounded-pill btn-dark" name="submit" onclick ="joinGroup('{{gaggle.gaggle_id}}')">UNJOIN</button>
                                 {% else %}
-                                <input type="submit" class="btn btn-lg rounded-pill btn-dark" name="submit" value="Join">
+                                <button id = 'btn-{{gaggle.gaggle_id}}' class="btn rounded-pill btn-dark" name="submit" onclick ="joinGroup('{{gaggle.gaggle_id}}')">JOIN</button>
                                 {% endif %}
                                 <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
-                            </form>
+                                </form>
                         </div>
                     </div>
                 </div>
@@ -41,11 +43,9 @@
         <div class="col-lg-4 order-1">
             <div class="card">
                 <div class="d-flex align-items-end align-items-sm-center row">
-                    <!-- <div class="col-sm-3">
-                        <img src="/static/img/avatars/1.png" alt class="w-vw-5 m-3 py-0 h-auto rounded-circle" />
-                    </div> -->
                     <div class="col-sm-9 py-0">
-                        <h3>{{gaggle.gaggle_name}}</h3>
+                        <div style="margin-top:20px; margin-left: 20px;"> 
+                        <h3>{{gaggle.gaggle_name}}</h3></div>
                     </div>
                 </div>
                 <hr/>
@@ -60,7 +60,11 @@
                 </div>
                 <hr/>
                 <div class="d-flex align-items-end align-items-sm-center row">
-                    <p class="mx-3"><strong>Moderators: </strong></p>
+                    <p class="mx-3"><strong>Moderators: </strong>
+                        {% for mod in mods%}
+                        <a href="{{url_for('user', username=mod['username'])}}">{{mod['username']}}</a>
+                        {%endfor%}
+                    </p>
                 </div>
                 <hr/>
                 <div class="d-flex align-items-end align-items-sm-center row">
@@ -70,29 +74,109 @@
         </div>
         <!-- LEFT COLUMN -->
         <div class="col-lg-8 mb-4 order-0">
-            <!-- CREATE POST -->
-            {% if joined %}
-            <div class="card mb-4">
-                <div class="d-flex align-items-end align-items-sm-center row">
-                    <h4 class="m-3">Create Post:</h4>
-                    <form name="write_post" action="{{url_for('addPost')}}" method="POST">
-                        <textarea class="mx-4 mb-0" name="content" rows="4" style="width: 45vw; min-width: 400px"></textarea>
-                        <input type="submit" class="btn rounded-pill btn-dark m-4 mt-2" value="Post">
-                        <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
-                        <input type="hidden" name="gaggle_name" value="{{gaggle.gaggle_name}}">
-                    </form>
-                </div>
-            </div>
-            {% endif %}
             {% block sub_content %}
+            <!-- CREATE POST -->
+                <div id ='post-to-{{gaggle.gaggle_id}}' class = "post-form {{'display' if joined else 'hidden'}}" >
+                    <div class="card mb-4">
+                        <div  class="d-flex align-items-end align-items-sm-center row">
+                            <h4 class="m-3">Create Post:</h4>
+                            <form id="write_post" name="write_post" action="{{url_for('postGroup')}}" method="POST" enctype="multipart/form-data">
+                                <textarea class="mx-4 mb-0" name="content" id = "content" rows="4" style="width: 45vw; min-width: 400px"></textarea>
+                                <div style = 'margin: 20px; margin-right: 40px;'>
+                                <div  class="d-flex align-items-end align-items-sm-center justify-content-end">
+                                    <div class="d-flex align-items-end align-items-sm-center justify-content-end">
+                                    <label>Upload picture: <input type="file" id= "uploadfile" name="pic" style = 'max-width: 250px;'></label></div>
+                                    <input type="submit" class="btn rounded-pill btn-dark" value="Post" onclick ="postGroup('{{gaggle.gaggle_id}}')">
+                                </div></div>
+                                <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
+                                <input type="hidden" name="gaggle_name" value="{{gaggle.gaggle_name}}">
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+
                 <!-- FEED -->
-                <h3>Feed</h3>
+                <div class="card mb-4">
+                    <div style = 'margin-top:20px; margin-left: 20px;'>
+                <h3>Feed</h3></div>
+                <div class = "feed" id = 'feed'>
                 {% import "postTemplateJS.html" as postComp%}
                 {% for post in posts %}
                     {{postComp.post_temp(post=post)}}
                 {% endfor %}
+                </div>
+                </div>
             {% endblock %}
         </div>
     </div>
 </div>
+
+<script>
+    function joinGroup(gaggle_id) {
+        console.log(gaggle_id);
+        $.ajax({
+                type: "POST",
+                url: "/gaggle/join/",
+                data: JSON.stringify({'gaggle_id': gaggle_id}),
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                async: true,
+                success: function (resp) {
+                    console.log(resp);
+                    var gaggle_id = resp.gaggle_id;
+                    var result = resp.result;
+                    console.log(result);
+                    $("#btn-"+gaggle_id).text(result);
+                    if (result =='JOIN') {
+                        document.getElementById("post-to-"+gaggle_id).classList.remove('display');
+                        document.getElementById("post-to-"+gaggle_id).classList.toggle("hidden");
+                    }
+                    else if (result == 'UNJOIN'){
+                        document.getElementById("post-to-"+gaggle_id).classList.remove('hidden');
+                        document.getElementById("post-to-"+gaggle_id).classList.toggle('display');
+                    };
+                    }
+            });  event.preventDefault();
+    }
+
+
+    function postGroup(gaggle_id) {
+        console.log(gaggle_id);
+        var content = $('textarea#content').val();
+        var form_data = new FormData();
+        console.log(content)
+        console.log('postFile', $('#uploadfile').prop('files')[0])
+        form_data.append('postFile', $('#uploadfile').prop('files')[0]);
+        form_data.append('content', content);
+        form_data.append('gaggle_id', gaggle_id);
+        $.ajax({
+                type: "POST",
+                url: "/addPost/",
+                data: form_data,
+                contentType: false,
+                cache: false,
+                processData: false,
+                dataType: 'json',
+                async: true,
+                success: function(resp){
+                    var new_post = resp['new_post']
+                    $('#feed').prepend(new_post);
+                    $('textarea#content').val('');
+                    $('input#uploadfile').val('');
+                }
+            });  event.preventDefault();
+    }    
+
+
+
+        function changeLanguage(language) {
+            var element = document.getElementById("url");
+            element.value = language;
+            element.innerHTML = language;
+        }
+
+    </script>
+
+
 {% endblock %}
