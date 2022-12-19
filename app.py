@@ -654,7 +654,7 @@ def gaggleMembers(gaggle_name):
     conn = dbi.connect() 
     members = waggle.getMembers(conn, gaggle_name)  
     username = session.get('username')
-    return render_template('groupMembers.html', gaggle_name = gaggle_name, members = members, username=username, user_id = user_id) 
+    return render_template('members-bs.html', gaggle_name = gaggle_name, members = members, username=username, user_id = user_id) 
 
 @app.route('/gaggle/join/', methods=['POST'])
 def joinGroup():
