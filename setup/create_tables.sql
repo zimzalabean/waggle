@@ -1,19 +1,20 @@
 drop table if exists notifs;
-drop table if exists moderator;
-drop table if exists mod_invite;
+drop table if exists group_blocked;
+drop table if exists flag_comment;
+drop table if exists flag_post;
 drop table if exists bad_gosling;
+drop table if exists mod_invite;
+drop table if exists moderator;
 drop table if exists comment_like;
 drop table if exists post_like;
-drop table if exists flag_post;
-drop table if exists flag_comment;
 drop table if exists convos;
 drop table if exists comment;
+drop table if exists post_pics;
 drop table if exists post;
 drop table if exists tag;
 drop table if exists gosling;
 drop table if exists gaggle;
 drop table if exists picfile;
-drop table if exists post_pics;
 drop table if exists user;
 
 
@@ -275,7 +276,7 @@ CREATE table convos(
   anc_id int,
   des_id int,
   foreign key (anc_id) references comment(comment_id)
-      on update no action
+    on update no action
     on delete cascade,
   foreign key (des_id) references comment(comment_id)
     on update no action
