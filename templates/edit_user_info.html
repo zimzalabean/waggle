@@ -8,7 +8,7 @@
 
     <div class="post-header" style = 'margin-bottom: 20px;'>
         <div class = 'avator' style = 'width:100px; height:100px;margin-right: 15%; clip-path: circle(100px);'>
-        <img src="{{url_for('profilePic',user_id=user_id)}}"  class = 'img-profile' style = "  object-fit: cover; width: 100%; height: 100%; border-radius:50%;">
+        <img src="{{url_for('profilePic',user_id=user_id)}}"  class = 'img-profile'>
         </div>      
     </div>
 
@@ -16,8 +16,12 @@
 
     <p>Upload New Photo:
     <form method="post" action="{{url_for('file_upload')}}" enctype="multipart/form-data">
-            <p><label>Pic: <input type="file" name="pic"></label>
-            <input type="submit" value="upload"></p>
+            <p>
+                <label>Pic:
+                    <input type="file" name="pic">
+                </label>
+                <input type="submit" value="upload">
+            </p>
     </form>
 
     <form class="edit_form" action="{{url_for('editMyPage')}}" method="POST">

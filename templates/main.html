@@ -1,12 +1,65 @@
 {% extends "base-bs.html" %}
-    
+
+{% block sidebar %}
+    <li class="menu-item active">
+        <a href="{{url_for('homepage')}}" class="menu-link">
+        <i class="menu-icon tf-icons bx bxs-home"></i>
+        <div data-i18n="Analytics">Home</div>
+        </a>
+    </li>
+    <li class="menu-item">
+        <a href="{{url_for('personalHistory')}}" class="menu-link">
+        <i class="menu-icon tf-icons bx bx-history"></i>
+        <div data-i18n="Authentications">History</div>
+        </a>
+    </li>
+    <li class="menu-item">
+        <a href="{{url_for('createGaggle')}}" class="menu-link">
+        <i class="menu-icon tf-icons bx bxs-book-add"></i>
+        <div data-i18n="Misc">Create Gaggle</div>
+        </a>
+    </li>
+    <li class="menu-item">
+        <a href="{{url_for('profile')}}" class="menu-link">
+        <i class="menu-icon tf-icons bx bxs-user"></i>
+        <div data-i18n="Misc">Profile</div>
+        </a>
+    </li>
+    <li class="menu-item">
+        <a href="{{url_for('dashboard')}}" class="menu-link">
+        <i class="menu-icon tf-icons bx bxs-dashboard"></i>
+        <div data-i18n="Misc">Dashboard</div>
+        </a>
+    </li>
+    <li class="menu-item">
+        <a href="{{url_for('notif')}}" class="menu-link">
+        <i class="menu-icon tf-icons bx bxs-bell"></i>
+        <div data-i18n="Misc">Notifications</div>
+        </a>
+    </li>
+{% endblock %}
 <!-- display main feed -->
 {% block main_content %}
+<div class="row my-3"></div>
 
 <!-- most recent 20 posts -->
     {% import "postTemplateJS.html" as postComp%}
     {% for post in posts %}
-        {{postComp.post_temp(post=post)}}
+        <div class="row">
+            <div class="col-lg-1 mb-3 order-0"></div>
+            <div class="col-lg-10 mb-3 order-1">
+                <div class="card">
+                    <div class="d-flex align-items-end row">
+                        <div class="col-sm-12">
+                            <div class="card-body">
+                            {{postComp.post_temp(post=post, pageIsNotPost = true)}}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-1 mb-3 order-2"></div>
+        </div>
     {% endfor %}
 
 {% endblock %}

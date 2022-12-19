@@ -1,4 +1,4 @@
-{% macro comment_temp(comment, user_id) -%}
+{% macro comment_temp(comment, user_id, pageIsNotPost) -%}
 
 
 <div class="comment-wrap">
@@ -14,7 +14,6 @@
     
     <div class="comment-img-wrap" onclick= "window.location.href = '{{url_for('addReply', comment_id=comment.comment_id)}}';">
       <p> {{comment.content}}</p>
-
     </div>
 
     <div class="post-info-counts">
@@ -53,7 +52,9 @@
           </svg>
         </button>
       </div>
-
+      {% if pageIsNotPost %}
+      <a href="{{url_for('post', post_id=comment.post_id)}}" class="btn btn-sm btn-outline-primary" style="float:right">View Post</a>
+      {% endif %}
     </div>
 </div>
 <div id="myDropdown_reply_{{comment.comment_id}}" class="dropdown-reply">   

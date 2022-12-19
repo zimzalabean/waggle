@@ -838,17 +838,30 @@ def unlikePost(conn, user_id, post_id):
     print('decreases likes')
     return "Unliked"           
 
+# def getUserComments(conn, user_id):
+#     '''returns all of user's comments sorted by latest'''
+#     curs = dbi.dict_cursor(conn)
+#     curs.execute('''
+#         SELECT * 
+#         FROM comment
+#         WHERE commentor_id = %s
+#         ORDER BY posted_date desc''',
+#                  [user_id])
+#     all_posts = curs.fetchall()
+#     return all_posts 
+
 def getUserComments(conn, user_id):
     '''returns all of user's comments sorted by latest'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT * 
-        FROM comment
+        SELECT a.*, b.username as username
+        FROM comment a
+        LEFT JOIN user b
+        ON a.commentor_id = b.user_id
         WHERE commentor_id = %s
         ORDER BY posted_date desc''',
                  [user_id])
-    all_posts = curs.fetchall()
-    return all_posts
+    return curs.fetchall()
 
 ####_____To be used Functions for beta not yet tested_____#### 
 

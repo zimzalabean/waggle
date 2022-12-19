@@ -1,17 +1,19 @@
-{% macro post_temp(post) -%}
+{% macro post_temp(post, pageIsNotPost) -%}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
 <div class="post-wrap" id = "post-{{post.post_id}}">
     <div class="post-header">
         <div class = 'avator'>
           <img src="{{url_for('profilePic',user_id=post.poster_id)}}" alt="{{post.poster_id}}" class = 'img-profile'>
         </div>
       <div class="post-header-info">
-        <div class = 'gaggle-name'> <a href="{{url_for('user', username=post.username)}}"><span>@{{post.username}}</span></a>   <span class = 'posted-date'> @{{post.posted_date}}</span>      </div> 
+        <div class = 'gaggle-name'> <a href="{{url_for('user', username=post.username)}}"><span>@{{post.username}}</span></a></div> 
+        <div><span class = 'posted-date'> @{{post.posted_date}}</span></div>
         <div><a href="{{url_for('gaggle',gaggle_name=post.gaggle_name)}}"> 🐣 {{post.gaggle_name}}</a> </div>
-        
       </div>      
     </div>
 
-    <div class="post-img-wrap" onclick= "window.location.href = '{{url_for('post', post_id=post.post_id)}}';">
+    <div class="post-img-wrap" onclick= "window.location.href = '{{url_for('post', post_id=post.post_id)}}';" style="cursor:pointer">
       <p> {{post.content}}</p>
       {% if post.pic != None %}
         <div style="max-width: 300px;"><img src="{{url_for('postPic', filename = post.pic)}}" alt="{{post.pic}}"></div>
@@ -67,7 +69,6 @@
           {% endif %}
           {% if not post.canDelete %}
           <div> Block user</div>
-          <hr class = thin>
           <div onclick="displayReport('{{post.post_id}}')">Report Post</div>
           {% endif %}
         </div> 
@@ -92,7 +93,6 @@
               </div> 
         </div>
       </div>
-      <hr class='thin'>
       <div>
       <div class = 'report-form' id = 'report-form-{{post.post_id}}'>
           We want to know why you want to flag this post to provide some information for our moderators. Please provide a reason for your report:

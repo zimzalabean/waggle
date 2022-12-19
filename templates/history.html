@@ -1,5 +1,43 @@
 {% extends "base-bs.html" %}
 
+{% block sidebar %}
+  <li class="menu-item">
+    <a href="{{url_for('homepage')}}" class="menu-link">
+      <i class="menu-icon tf-icons bx bxs-home"></i>
+      <div data-i18n="Analytics">Home</div>
+    </a>
+  </li>
+  <li class="menu-item active">
+    <a href="{{url_for('personalHistory')}}" class="menu-link">
+      <i class="menu-icon tf-icons bx bx-history"></i>
+      <div data-i18n="Authentications">History</div>
+    </a>
+  </li>
+  <li class="menu-item">
+    <a href="{{url_for('createGaggle')}}" class="menu-link">
+      <i class="menu-icon tf-icons bx bxs-book-add"></i>
+      <div data-i18n="Misc">Create Gaggle</div>
+    </a>
+  </li>
+  <li class="menu-item">
+    <a href="{{url_for('profile')}}" class="menu-link">
+      <i class="menu-icon tf-icons bx bxs-user"></i>
+      <div data-i18n="Misc">Profile</div>
+    </a>
+  </li>
+  <li class="menu-item">
+    <a href="{{url_for('dashboard')}}" class="menu-link">
+      <i class="menu-icon tf-icons bx bxs-dashboard"></i>
+      <div data-i18n="Misc">Dashboard</div>
+    </a>
+  </li>
+  <li class="menu-item">
+    <a href="{{url_for('notif')}}" class="menu-link">
+      <i class="menu-icon tf-icons bx bxs-bell"></i>
+      <div data-i18n="Misc">Notifications</div>
+    </a>
+  </li>
+  {% endblock %}
 {% block main_content %}
 <div class="container-xxl flex-grow-1 container-p-y">
   <h3 class="fw-bold py-2 mb-2">{{username}}'s History</h3>
@@ -14,11 +52,11 @@
                   class="nav-link active"
                   role="tab"
                   data-bs-toggle="tab"
-                  data-bs-target="#navs-pills-justified-all"
-                  aria-controls="navs-pills-justified-all"
-                  aria-selected="true"
+                  data-bs-target="#navs-pills-justified-posts"
+                  aria-controls="navs-pills-justified-posts"
+                  aria-selected="false"
                 >
-                <i class='tf-icons bx bx-world'></i> All
+                <i class='tf-icons bx bx-pencil'></i> Posts
                 </button>
               </li>
               <li class="nav-item">
@@ -27,22 +65,71 @@
                   class="nav-link"
                   role="tab"
                   data-bs-toggle="tab"
-                  data-bs-target="#navs-pills-justified-posts"
-                  aria-controls="navs-pills-justified-posts"
+                  data-bs-target="#navs-pills-justified-comments"
+                  aria-controls="navs-pills-justified-comments"
                   aria-selected="false"
                 >
-                <i class='tf-icons bx bx-pencil'></i> Posts
+                <i class='tf-icons bx bx-comment'></i> Comments
                 </button>
               </li>
-              <div class="tab-pane fade" id="navs-pills-justified-posts" role="tabpanel">
+              <li class="nav-item">
+                <button
+                  type="button"
+                  class="nav-link"
+                  role="tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#navs-pills-justified-likes"
+                  aria-controls="navs-pills-justified-likes"
+                  aria-selected="false"
+                >
+                <i class='tf-icons bx bx-like'></i> Likes
+                </button>
+              </li>
+            </ul>
+            <div class="tab-content">
+              <div class="tab-pane fade show active" id="navs-pills-justified-posts" role="tabpanel">
                 <!-- post section -->
                 {% import "postTemplateJS.html" as postComp%}
                     {% for post in posts %}
-                        {{postComp.post_temp(post=post)}}
+                    <div class="row">
+                      <div class="col-lg-1 mb-4 order-0"></div>
+                      <div class="col-lg-10 mb-4 order-1">
+                      <div class="card">
+                          <div class="d-flex align-items-end row">
+                          <div class="col-sm-12">
+                              <div class="card-body">
+                                {{postComp.post_temp(post=post, pageIsNotPost = true)}}
+                              </div>
+                            </div>
+                            </div>
+                        </div>
+                        </div>
+                        <div class="col-lg-1 mb-4 order-2"></div>
+                      </div>
+                    {% endfor %}
+              </div>
+              <div class="tab-pane fade" id="navs-pills-justified-comments" role="tabpanel">
+                {% import "commentTemplateJS.html" as commentComp%}
+                    {% for comment in comments %}
+                    <div class="row">
+                      <div class="col-lg-1 mb-4 order-0"></div>
+                      <div class="col-lg-10 mb-4 order-1">
+                      <div class="card">
+                          <div class="d-flex align-items-end row">
+                          <div class="col-sm-12">
+                              <div class="card-body">
+                                {{commentComp.comment_temp(comment=comment, user_id=user_id, pageIsNotPost = true)}}
+                              </div>
+                            </div>
+                            </div>
+                        </div>
+                        </div>
+                        <div class="col-lg-1 mb-4 order-2"></div>
+                      </div>
                     {% endfor %}
               </div>
               <div class="tab-pane fade" id="navs-pills-justified-likes" role="tabpanel">
-                
+                <h4>This feature is not yet implemented. Coming soon!</h4>
               </div>
             </div>
           </div>

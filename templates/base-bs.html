@@ -90,8 +90,9 @@
           <div class="menu-inner-shadow"></div>
 
           <ul class="menu-inner py-1">
+            {% block sidebar %}
             <!-- Sidebar -->
-            <li class="menu-item active">
+            <li class="menu-item">
               <a href="{{url_for('homepage')}}" class="menu-link">
                 <i class="menu-icon tf-icons bx bxs-home"></i>
                 <div data-i18n="Analytics">Home</div>
@@ -105,13 +106,13 @@
             </li>
             <li class="menu-item">
               <a href="{{url_for('createGaggle')}}" class="menu-link">
-                <i class="menu-icon tf-icons bx bxs-book"></i>
+                <i class="menu-icon tf-icons bx bxs-book-add"></i>
                 <div data-i18n="Misc">Create Gaggle</div>
               </a>
             </li>
             <li class="menu-item">
               <a href="{{url_for('profile')}}" class="menu-link">
-                <i class="menu-icon tf-icons bx bxs-dashboard"></i>
+                <i class="menu-icon tf-icons bx bxs-user"></i>
                 <div data-i18n="Misc">Profile</div>
               </a>
             </li>
@@ -123,10 +124,11 @@
             </li>
             <li class="menu-item">
               <a href="{{url_for('notif')}}" class="menu-link">
-                <i class="menu-icon bi bi-bell-fill"></i>
+                <i class="menu-icon tf-icons bx bxs-bell"></i>
                 <div data-i18n="Misc">Notifications</div>
               </a>
             </li>
+            {% endblock %}
           </ul>
         </aside>
         <!-- / Menu -->
