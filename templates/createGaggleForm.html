@@ -53,41 +53,21 @@
                     <label for="gaggle_name" class="form-label">Gaggle Name*</label>
                     <input class="form-control" type="text" id="gaggle_name" name="gaggle_name" value="{{gaggle_name}}" autofocus>
                   </div>
-                </
+                </div>
+                <div class="row">
                   <div class="mb-3 col-md-6">
                     <label for="description" class="form-label">Description</label>
                     <textarea class="form-control" type="text" id="description" name="description"></textarea>
                   </div>
                 </div>
+                <p>*: Required, no space or special characters allowed.</p>
                 <div class="mt-2">
                   <button type="submit" class="btn btn-primary me-2">Create</button>
                 </div>
               </form>
-              <p>*: Required, no space or special characters allowed.</p>
             </div>
             <!-- /Account -->
           </div>
         </div>
-
-
-
-    <!-- <div>
-        <form action="{{url_for('createGaggle')}}" method="POST">
-        <table>
-            <tr>
-                <td><label for="gaggle_name">Gaggle Name*</label></td>
-                <td><input id="gaggle_name" name='gaggle_name' value="{{gaggle_name}}"></td> 
-            </tr>
-            <tr>
-                <td><label for="description">Description</label></td>
-                <td><input id="description" name='description' value="{{description}}"></td>
-            </tr>            
-            </table>
-            <input type="submit" name="submit" value="Create">
-        </form>
-
-    <p>*: Required, no space or special character (@, #, $, %) allowed </p>
-    
-    </div> -->
 </div>
 {% endblock %}
