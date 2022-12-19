@@ -196,26 +196,13 @@ def search():
     under different filter that have a name matching the keyword search.
     """
     conn = dbi.connect()
-    kind = request.args.get('submit')
     user_id = isLoggedIn()
-    if kind is None: #fresh search
-        query = request.args.get('search-query')
-        session['query'] = query #set query
-        kind = 'Gaggles'
-        results = waggle.searchGaggle(conn, query)     
-    elif kind == 'Posts':
-        query = session.get('query')
-        results = waggle.searchPost(conn, query)
-    elif kind == 'Comments':
-        query = session.get('query')
-        results = waggle.searchComment(conn, query)
-    elif kind == 'Goslings':
-        query = session.get('query')
-        results = waggle.searchPeople(conn, query)
-    else:
-        query = session.get('query')
-        results = waggle.searchPost(conn, query) 
-    return render_template('testform.html', query = query, results = results, kind = kind, user_id = user_id) 
+    query = request.args.get('search-query')
+    gaggles = waggle.searchGaggle(conn, query)
+    posts = waggle.searchPost(conn, query)
+    comments = waggle.searchComment(conn, query)
+    users = waggle.searchPeople(conn, query)
+    return render_template('search-bs.html', query = query, gaggles = gaggles, posts = posts, comments = comments, users = users, user_id = user_id)
 
 ####_____Post Functions_____#### 
 
