@@ -16,21 +16,20 @@
         <div class="col-lg-12 mb-4">
             <div class="card card-header bg-primary text-white" >
                 <div class="d-flex align-items-end align-items-sm-center row">
-                    <div class="col-sm-10" onclick= "window.location.href = '{{url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}';">
+                    <div class="col-xl-10" onclick= "window.location.href = '{{url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}';">
                         <div class="card-body py-3">
                             <h1 class="card-title text-white">{{gaggle.gaggle_name}}</h1>
                         </div>
                     </div>
-                    <div class="col-sm-2">
+                    <div class="col-xl-2">
                         <div class="card-body py-3">
-
                                 {% if isAuthor %}                                
-                                <a href = "{{url_for('myGaggle', gaggle_name = gaggle.gaggle_name)}}"><button class = "btn btn-lg rounded-pill btn-dark text-white">EDIT GROUP</button></a> 
+                                <a href = "{{url_for('myGaggle', gaggle_name = gaggle.gaggle_name)}}"><button class = "btn btn rounded-pill btn-dark text-white">Edit Group</button></a> 
                                 <form name="join_group" action="{{url_for('joinGroup')}}"  method="POST">
                                 {% elif joined %}
-                                <button id = 'btn-{{gaggle.gaggle_id}}' class="btn rounded-pill btn-dark" name="submit" onclick ="joinGroup('{{gaggle.gaggle_id}}')">UNJOIN</button>
+                                <button id = 'btn-{{gaggle.gaggle_id}}' class="btn rounded-pill btn-dark" name="submit" onclick ="joinGroup('{{gaggle.gaggle_id}}')">Unjoin</button>
                                 {% else %}
-                                <button id = 'btn-{{gaggle.gaggle_id}}' class="btn rounded-pill btn-dark" name="submit" onclick ="joinGroup('{{gaggle.gaggle_id}}')">JOIN</button>
+                                <button id = 'btn-{{gaggle.gaggle_id}}' class="btn rounded-pill btn-dark" name="submit" onclick ="joinGroup('{{gaggle.gaggle_id}}')">Join</button>
                                 {% endif %}
                                 <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
                                 </form>
