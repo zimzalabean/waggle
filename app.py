@@ -855,7 +855,7 @@ def myGaggle(gaggle_name):
         gaggle = waggle.getGaggle(conn, gaggle_name)
         hasGaggle = True
     if request.method == 'GET':
-        return render_template('gaggleDashboard.html', hasGaggle = hasGaggle, gaggles = gaggles, gaggle = gaggle, invitees = invitees, user_id = user_id)
+        return render_template('dashboard.html', hasGaggle = hasGaggle, gaggles = gaggles, gaggle = gaggle, invitees = invitees, user_id = user_id)
     else:
         kind = request.form.get('submit')
         if kind == 'Change':
@@ -1099,9 +1099,7 @@ def dashboard():
         flash('You are not a creator of any gaggles yet. Want to create one?')
         return redirect(url_for('createGaggle'))
     if request.method == 'GET':
-        return render_template('gaggleDashboard.html', hasGaggle = hasGaggle, gaggles = gaggles, gaggle = gaggle, invitees = invitees, user_id = user_id)
-
-
+        return render_template('dashboard.html', hasGaggle = hasGaggle, gaggles = gaggles, gaggle = gaggle, invitees = invitees, user_id = user_id)
 
 
 @app.before_first_request

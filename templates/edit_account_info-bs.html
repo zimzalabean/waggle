@@ -22,14 +22,20 @@
                           id="uploadedAvatar"
                         />
                         <div class="button-wrapper">
-                          <form method="post" action="{{url_for('file_upload')}}" enctype="multipart/form-data">
-                            <input
-                              type="file"
-                              name="pic"
-                            />
-                            <input type="submit" class="btn btn-primary" value="Upload"></button>
-                            <p class="text-muted mb-0 mt-1">Allowed JPG, GIF or PNG. Max size of 800K (is this true?)</p>
-                          </form>
+                            <form method="post" action="{{url_for('file_upload')}}" enctype="multipart/form-data">
+                              <div class="input-group">
+                                <input
+                                  class="form-control"
+                                  type="file"
+                                  name="pic"
+                                />
+                                <div class="input-group-append">
+                                  <input type="submit" class="btn btn-primary" value="Upload"></button>
+                                </div>
+                              </div>
+                              <p class="text-muted mb-0 mt-1">Allowed JPG, GIF or PNG. Max size of 800K (is this true?)</p>
+                            </form>
+                          </div>
                         </div>
                       </div>
                     </div>
