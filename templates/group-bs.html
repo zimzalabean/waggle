@@ -14,23 +14,22 @@
     <!-- HEADER -->
     <div class="row">
         <div class="col-lg-12 mb-4">
-            <div class="card card-header bg-primary text-white" >
+            <div class="card card-header bg-primary-light text-white" >
                 <div class="d-flex align-items-end align-items-sm-center row">
-                    <div class="col-sm-10" onclick= "window.location.href = '{{url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}';">
+                    <div class="col-xl-10" onclick= "window.location.href = '{{url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}';">
                         <div class="card-body py-3">
-                            <h1 class="card-title text-white">{{gaggle.gaggle_name}}</h1>
+                            <h1 class="card-title text-white"><strong>{{gaggle.gaggle_name}}</strong></h1>
                         </div>
                     </div>
-                    <div class="col-sm-2">
+                    <div class="col-xl-2">
                         <div class="card-body py-3">
-
                                 {% if isAuthor %}                                
                                 <a href = "{{url_for('editGaggle', gaggle_name = gaggle.gaggle_name)}}"><button class = "btn btn-lg rounded-pill btn-dark text-white">EDIT GROUP</button></a> 
                                 <form name="join_group" action="{{url_for('joinGroup')}}"  method="POST">
                                 {% elif joined %}
-                                <button id = 'btn-{{gaggle.gaggle_id}}' class="btn rounded-pill btn-dark" name="submit" onclick ="joinGroup('{{gaggle.gaggle_id}}')">UNJOIN</button>
+                                <button id = 'btn-{{gaggle.gaggle_id}}' class="btn rounded-pill btn-dark" name="submit" onclick ="joinGroup('{{gaggle.gaggle_id}}')">Unjoin</button>
                                 {% else %}
-                                <button id = 'btn-{{gaggle.gaggle_id}}' class="btn rounded-pill btn-dark" name="submit" onclick ="joinGroup('{{gaggle.gaggle_id}}')">JOIN</button>
+                                <button id = 'btn-{{gaggle.gaggle_id}}' class="btn rounded-pill btn-dark" name="submit" onclick ="joinGroup('{{gaggle.gaggle_id}}')">Join</button>
                                 {% endif %}
                                 <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
                                 </form>
@@ -48,7 +47,7 @@
                 <div class="d-flex align-items-end align-items-sm-center row">
                     <div class="col-sm-9 py-0">
                         <div style="margin-top:20px; margin-left: 20px;"> 
-                        <h3>{{gaggle.gaggle_name}}</h3></div>
+                        <h3><strong>{{gaggle.gaggle_name}}</strong></h3></div>
                     </div>
                 </div>
                 <hr/>
@@ -77,7 +76,7 @@
                 </div>
                 <hr/>
                 <div class="d-flex align-items-end align-items-sm-center row">
-                    <!-- <p class="mx-3"><a href="{{url_for('gaggleMembers', gaggle_name = gaggle.gaggle_name)}}">View Members</a></p> -->
+                    <p class="mx-3"><a href="{{url_for('gaggleMembers', gaggle_name = gaggle.gaggle_name)}}">View Members</a></p>
                 </div>
             </div>
         </div>
@@ -105,19 +104,23 @@
                         </div>
                     </div>
                 </div>
-
-
-                <!-- FEED -->
-                <div class="card mb-4">
-                    <div style = 'margin-top:20px; margin-left: 20px;'>
-                <h3>Feed</h3></div>
-                <div class = "feed" id = 'feed'>
+                <h3>Feed</h3>
                 {% import "postTemplateJS.html" as postComp%}
                 {% for post in posts %}
-                    {{postComp.post_temp(post=post)}}
+                    <div class="row">
+                        <div class="col-lg-12 mb-3">
+                            <div class="card">
+                                <div class="d-flex align-items-end row">
+                                    <div class="col-sm-12">
+                                        <div class="card-body">
+                                        {{postComp.post_temp(post=post, pageIsNotPost = true)}}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 {% endfor %}
-                </div>
-                </div>
             {% endblock %}
         </div>
     </div>

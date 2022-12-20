@@ -330,7 +330,7 @@ def joinGaggle(conn, user_id, gaggle_id):
         VALUES (%s,%s) ''', 
                 [user_id, gaggle_id])
     conn.commit()  # need this!   
-    return {'gaggle_id':gaggle_id, 'result': 'UNJOIN'}
+    return {'gaggle_id':gaggle_id, 'result': 'Unjoin'}
 
 def unjoinGaggle(conn, user_id, gaggle_id):
     '''Remove a user into a gaggle member list'''
@@ -341,7 +341,7 @@ def unjoinGaggle(conn, user_id, gaggle_id):
         AND gaggle_id = %s''', 
                 [ user_id, gaggle_id])
     conn.commit()  # need this!   
-    return {'gaggle_id':gaggle_id, 'result': 'JOIN'}
+    return {'gaggle_id':gaggle_id, 'result': 'Join'}
 
 def isGosling(conn, user_id, gaggle_id):  
     '''Check if a user is in a gaggle member list'''  
@@ -517,23 +517,29 @@ def searchPost(conn, query):
     '''returns all posts whose content match the query'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.*,b.username 
-        from post a
+        SELECT a.*, b.username as author, c.gaggle_name as gaggle
+        FROM post a
         LEFT JOIN user b
-        ON a.poster_id = b.user_id
+        ON (a.poster_id = b.user_id)
+        LEFT JOIN gaggle c
+        USING (gaggle_id)
         WHERE content LIKE %s''',
-                 ['%'+query+'%']) 
+                 ["%"+query+"%"]) 
     return curs.fetchall() 
 
 def searchComment(conn, query):
     '''returns all comments whose content match the query'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.*, b.username
+        SELECT a.*, c.gaggle_name as gaggle, d.username as author
         FROM comment a
-        LEFT JOIN user b
-        ON a.commentor_id = b.user_id
-        WHERE content LIKE %s''',
+        LEFT JOIN post b
+        USING (post_id)
+        LEFT JOIN gaggle c
+        USING (gaggle_id)
+        LEFT JOIN user d
+        ON (a.commentor_id = d.user_id)
+        WHERE a.content LIKE %s''',
                  ["%"+query+"%"]) 
     return curs.fetchall()   
 
