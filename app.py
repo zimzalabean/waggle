@@ -26,6 +26,7 @@ app.config['TRAP_BAD_REQUEST_ERRORS'] = True
 
 # For File Upload
 app.config['UPLOADS'] = 'setup/uploads'
+app.config['DEFAULT'] = 'setup/default'
 app.config['MAX_CONTENT_LENGTH'] = 1*1024*1024 # 1 MB
 
 
@@ -311,6 +312,17 @@ def addComment():
         comment = waggle.getComment(conn, comment_id)
         return jsonify({'new_comment': render_template('new_comment.html', comment=comment)})         
 
+@app.route('/deleteComment/', methods=["POST"])
+def removeComment():
+    user_id = isLoggedIn()
+    data = request.get_json()
+    comment_id = data['comment_id']
+    conn = dbi.connect()    
+    deleted_comment_id = waggle.deleteComment(conn, comment_id)
+    print(deleted_comment_id)
+    return jsonify({'comment_id':deleted_comment_id})
+
+
 @app.route('/post/<post_id>/', methods=['GET']) #add hyperlink from group-bs.html to post
 def post(post_id):
     """
@@ -520,8 +532,7 @@ def editMyPage():
                             WHERE user_id = %s''',
                         [new_bio,user_id])
             conn.commit()
-        flash('Your information was successfully updated.')
-        return redirect(url_for('editMyPage'))
+        
 
 @app.route('/upload/', methods=["GET", "POST"])
 def file_upload():
@@ -585,10 +596,10 @@ def profilePic(user_id):
     conn = dbi.connect()
     profilePic = waggle.getProfilePic(conn, user_id)
     if(profilePic is None): #sets the default photo if user's profile pic doesn't exist
-        filename = '0.jpeg'
+        filename = 'profile.jpeg'
+        return send_from_directory(app.config['DEFAULT'],filename)
     else: 
-        filename = profilePic['filename']
-    return send_from_directory(app.config['UPLOADS'],filename)
+        return send_from_directory(app.config['UPLOADS'], profilePic['filename'])
 
 @app.route('/post_pic/<filename>')
 def postPic(filename):
@@ -649,8 +660,12 @@ def gaggle(gaggle_name):
         return redirect(url_for('login')) 
     else: 
         conn = dbi.connect() 
-        gaggle = waggle.getGaggle(conn, gaggle_name)  
+        gaggle = waggle.getGaggle(conn, gaggle_name) 
+        print(gaggle['guidelines']) 
+        if gaggle['guidelines'] is None:
+            gaggle['guidelines'] = 'No guidelines specified for this gaggle.'
         posts = likedPosts(user_id, waggle.getGagglePosts(conn, gaggle_name))
+        print(gaggle['guidelines'])
         posts = canDeletePosts(posts, user_id)
         gaggle_id = waggle.getGaggleID(conn, gaggle_name)['gaggle_id']
         joined  = waggle.isGosling(conn, user_id, gaggle_id)
@@ -690,36 +705,39 @@ def joinGroup():
     return jsonify(action)
 
 @app.route('/creator/<gaggle_name>', methods=['GET', 'POST'])
-def myGaggle(gaggle_name):
+def editGaggle(gaggle_name):
     '''
-    Show gaggles you've created, toggle to change gaggle. Default view is first gaggle. 
+    Edit Gaggle information 
     '''
-    user_id = isLoggedIn()
     conn = dbi.connect() 
-    gaggles = waggle.getGagglesCreated(conn, user_id)
-    hasGaggle = False   
-    if len(gaggles) > 0:
-        gaggle_id = waggle.getGaggleID(conn, gaggle_name)['gaggle_id']
-        invitees = waggle.getInvitees(conn, gaggle_id)
-        gaggle = waggle.getGaggle(conn, gaggle_name)
-        hasGaggle = True
     if request.method == 'GET':
-        return render_template('dashboard.html', hasGaggle = hasGaggle, gaggles = gaggles, gaggle = gaggle, invitees = invitees, user_id = user_id)
+        return redirect(url_for('dashboard'))
     else:
-        kind = request.form.get('submit')
-        if kind == 'Change':
-            gaggle_name = request.form.get('new_gaggle_name')           
-        elif kind == 'Update':
-            new_group_bio = request.form.get('content') 
-            updated = waggle.updateBio(conn, gaggle_id, new_group_bio)
+        new_bio, new_guidelines = '', ''
+        gaggle_id = waggle.getGaggleID(conn, gaggle_name)['gaggle_id']
+        if request.form['description'] != '':
+            new_bio = request.form['description']
+            waggle.updateBio(conn, gaggle_id, new_bio)
+        if request.form['guidelines'] != '':
+            new_guidelines = request.form['guidelines']
+            waggle.updateGuidelines(conn, gaggle_id, new_guidelines)
+        flash('Your information was successfully updated.')
+        return redirect(url_for('dashboard')) 
+
+@app.route('/inviteUser/<gaggle_name>', methods=['POST'])
+def inviteUser(gaggle_name):
+    conn = dbi.connect() 
+    invitee_username = ''
+    if request.form['invitee_username'] != '':
+        invitee_username = request.form['invitee_username']
+        gaggle_id = waggle.getGaggleID(conn, gaggle_name)['gaggle_id']
+        validInvite = waggle.modInvite(conn, gaggle_id, invitee_username)
+        if validInvite:
+            flash('Invitation sent')
         else:
-            invitee_username = request.form.get('invitee_username')
-            validInvite = waggle.modInvite(conn, gaggle_id, invitee_username)
-            if validInvite:
-                flash('Invitation sent')
-            else:
-                flash('Invitation already pending')
-        return redirect(url_for('myGaggle', gaggle_name = gaggle_name)) 
+            flash('Invitation already pending or User is not apart of gaggle group')
+    return redirect(url_for('dashboard'))
+    
 
 @app.route('/delete/<gaggle_id>', methods=['GET', 'POST'])
 def deleteGaggle(gaggle_id):
@@ -796,7 +814,7 @@ def inviteMod():
     else: 
         invitee_username = request.form.get('invitee_username')
         gaggle_id = request.form.get('gaggle_id')
-        validInvite = waggle.modInvite(conn, gaggle_id, invitee_username)
+        validInvite = waggle.modInvite(conn, gaggle_id, user_id, invitee_username)
         if validInvite:
             flash('Invitation sent')
         else:
@@ -940,22 +958,21 @@ def dashboard():
     hasGaggle = False  
     gaggles = waggle.getGagglesCreated(conn, user_id)
     if len(gaggles) > 0:
-        gaggle = gaggles[0] 
+        gaggle = gaggles[0]
         gaggle_id = gaggle['gaggle_id']         
-        invitees = waggle.getInvitees(conn, gaggle_id)
         hasGaggle = True
     else:
         flash('You are not a creator of any gaggles yet. Want to create one?')
         return redirect(url_for('createGaggle'))
     if request.method == 'GET':
-        return render_template('dashboard.html', hasGaggle = hasGaggle, gaggles = gaggles, gaggle = gaggle, invitees = invitees, user_id = user_id)
+        return render_template('dashboard.html', hasGaggle = hasGaggle, gaggles = gaggles, gaggle = gaggle, user_id = user_id)
 
 
 @app.before_first_request
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'ldau_db' 
+    db_to_use = 'hs1_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 

@@ -443,14 +443,14 @@ def getInvitees(conn, gaggle_id):
     curs.execute('''
         SELECT b.username, a.accepted 
         FROM 
-        mod_invite a
-        LEFT JOIN user b
+        mod_invite as a
+        INNER JOIN user as b
         ON (a.invitee_id = b.user_id)
         WHERE a.gaggle_id= %s''',
                 [gaggle_id])  
     return curs.fetchall()
 
-def modInvite(conn, gaggle_id, username):
+def modInvite(conn, gaggle_id, username,user_id):
     '''
     Add valid username and corresponding gaggle_id into mod_invite table. 
     '''
@@ -469,9 +469,9 @@ def modInvite(conn, gaggle_id, username):
             valid = True
             accepted = 'Pending'
             curs.execute('''
-                INSERT INTO mod_invite(gaggle_id, invitee_id, accepted) 
+                INSERT INTO mod_invite(gaggle_id, invitee_id,inviter_id, accepted) 
                 VALUES(%s,%s, %s)''',
-                        [gaggle_id, invitee_id, accepted])         
+                        [gaggle_id, invitee_id,user_id, accepted])         
             conn.commit()  
             return valid
     return valid   
@@ -637,6 +637,16 @@ def updateBio(conn, gaggle_id, new_group_bio):
         SET description = %s
         WHERE gaggle_id = %s''',
                 [new_group_bio, gaggle_id])
+    conn.commit()
+    return gaggle_id 
+
+def updateGuidelines(conn, gaggle_id, new_group_guidelines):
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        UPDATE gaggle
+        SET guidelines = %s
+        WHERE gaggle_id = %s''',
+                [new_group_guidelines, gaggle_id])
     conn.commit()
     return gaggle_id 
 
@@ -1024,3 +1034,15 @@ def getOwnPosts(conn, user_id):
     result = curs.fetchall()
     post_ids = [x[0] for x in result]
     return post_ids     
+
+def deleteComment(conn, comment_id):
+    '''
+    Delete comment
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''delete
+                    from comment
+                    where comment_id = %s''',
+                    [comment_id])
+    conn.commit()
+    return comment_id

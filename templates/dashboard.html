@@ -61,6 +61,19 @@
                 <strong>Home</strong>
                 </button>
               </li>
+              <li class="nav-item">
+                <button
+                  type="button"
+                  class="nav-link"
+                  role="tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#navs-justified-moderator"
+                  aria-controls="navs-justified-moderator"
+                  aria-selecte="false"
+                >
+                <strong>Moderator Status</strong>
+                </button>
+              </li>
             {% for gaggle in gaggles %}
               <li class="nav-item">
                 <button
@@ -82,7 +95,16 @@
                 <div class="card mb-3">
                   <h3 class="card-header fw-bold">Main</h3>
                   <div class="card-body">
-                    
+
+                  </div>
+                </div>
+              </div>
+              
+              <div class="tab-pane fade show" id="navs-justified-moderator" role="tabpanel">
+                <div class="card mb-3">
+                  <h3 class="card-header fw-bold">Invitation Responses:</h3>
+                  <div class="card-body">
+
                   </div>
                 </div>
               </div>
@@ -90,37 +112,41 @@
               <div class="tab-pane fade" id="navs-justified-{{gaggle.gaggle_name}}" role="tabpanel">
                 <div class="card mb-3">
                   <h3 class="card-header fw-bold">Creator View for <a href="{{url_for('gaggle',gaggle_name=gaggle.gaggle_name)}}"><strong>{{gaggle.gaggle_name}}</strong></a></h3>
-                  <h5 class="card-header">Edit <strong>{{gaggle.gaggle_name}}</strong>'s Description:</h5>
                   <div class="card-body">
-                    <div class="update_group">
-                      <textarea class="form-control" name="content">{{gaggle.description}}</textarea>
-                      <input type="submit" class="btn rounded-pill btn-dark my-2" value="Update">
-                    </div>
+                    <form action="{{url_for('editGaggle', gaggle_name=gaggle.gaggle_name)}}" method="POST">
+                      <h5 class="card-header">Edit <strong>{{gaggle.gaggle_name}}</strong>'s Description:</h5>
+                      <div class="update_group">
+                        <textarea class="form-control" type="text" name="description">{{gaggle.description}}</textarea>
+                      </div>
+                      <h5 class="card-header">Edit <strong>{{gaggle.gaggle_name}}</strong>'s Guidelines:</h5>
+                      <div class="update_group">
+                        <textarea class="form-control" type="text" name="guidelines">{{gaggle.guidelines}}</textarea>
+                      </div>
+                      <div class="mt-2">
+                        <button type="submit" class="btn btn-primary me-2">Save changes</button>
+                      </div>
+                    </form>
                   </div>
                   <hr class="my-0"/>
                   <h5 class="card-header">Invite New Moderator to <strong>{{gaggle.gaggle_name}}</strong>:</h5>
                   <div class="card-body">
                     <div class="mod_invite">
-                      <div class="row d-flex align-items-center">
-                        <div class="mb-3 col-xl-4">
-                          <input class="form-control" type="text" name="invitee_username" placeholder="ex. ab6">
+                      <form action="{{url_for('inviteUser', gaggle_name=gaggle.gaggle_name)}}" method="POST">
+                        <div class="row d-flex align-items-center">
+                          <div class="mb-3 col-xl-4">
+                            <input class="form-control" type="text" name="invitee_username" placeholder="ex. ab6">
+                          </div>
                         </div>
-                        <div class="mb-3 col-xl-3">
-                          <input type="submit" class="btn rounded-pill btn-dark my-2" value="Invite">
+                        <div class="mt-2">
+                          <button type="submit" class="btn btn-primary me-2">Invite</button>
                         </div>
-                      </div>
-                      <div class="row">
-                        <h5>Invitation Responses:</h5>
-                        {% for invitee in invitees %}
-                          <p> Status for {{invitee.username}}: {{invitee.accepted}}</p>
-                        {% endfor %}
-                      </div>
-                    </div>
+                      </form>
                   </div>
                 </div>
               </div>
-              {% endfor %}
             </div>
+              {% endfor %}
+
 
           </div>
         </div>

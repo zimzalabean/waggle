@@ -47,6 +47,7 @@ CREATE TABLE gaggle (
   gaggle_name varchar(20),
   author_id int,
   description varchar(100) COLLATE utf8_bin,
+  guidelines varchar(100) COLLATE utf8_bin,
   primary key(gaggle_id),
   INDEX(author_id),
   foreign key (author_id) references user(user_id) 
@@ -177,6 +178,7 @@ CREATE TABLE moderator (
 CREATE TABLE mod_invite (
   gaggle_id int,
   invitee_id int,
+  inviter_id int,
   accepted enum('Yes', 'No', 'Pending'),
   INDEX(gaggle_id),
   foreign key (gaggle_id) references gaggle(gaggle_id)
