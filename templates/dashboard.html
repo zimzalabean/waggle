@@ -103,9 +103,16 @@
               <div class="tab-pane fade show" id="navs-justified-moderator" role="tabpanel">
                 <div class="card mb-3">
                   <h3 class="card-header fw-bold">Invitation Responses:</h3>
+                  {% for gaggle in gaggles %}
+                  <h5 class="card-header"><strong>{{gaggle.gaggle_name}}:</strong></h5>
                   <div class="card-body">
-
+                    {% for invitee in allInvitees%}
+                      {%if invitee.gaggle_id == gaggle.gaggle_id %}
+                        <p>{{invitee.username}}: {{invitee.accepted}}<p>
+                      {% endif %}                      
+                    {% endfor %}
                   </div>
+                  {% endfor %}
                 </div>
               </div>
               {% for gaggle in gaggles %}
