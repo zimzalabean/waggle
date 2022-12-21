@@ -8,17 +8,18 @@
         </div>
       <div class="post-header-info">
         <div class = 'gaggle-name'> <a href="{{url_for('user', username=post.username)}}"><span>@{{post.username}}</span></a></div> 
-        <div><span class = 'posted-date'> @{{post.posted_date}}</span></div>
+        <div><span class = 'posted-date'> {{post.posted_date}}</span></div>
         <div><a href="{{url_for('gaggle',gaggle_name=post.gaggle_name)}}"> 🐣 {{post.gaggle_name}}</a> </div>
       </div>      
     </div>
 
-    <div class="post-img-wrap" onclick= "window.location.href = '{{url_for('post', post_id=post.post_id)}}';" style="cursor:pointer">
-      <p> {{post.content}}</p>
-      {% if post.pic != None %}
-        <div style="max-width: 300px;"><img src="{{url_for('postPic', filename = post.pic)}}" alt="{{post.pic}}"></div>
-      {% endif %}
-    </div>
+    <a href="{{url_for('post', post_id=post.post_id)}}">
+      <div class="post-img-wrap">
+        <p> {{post.content}}</p>
+        {% if post.pic != None %}
+          <div style="max-width: 300px;"><img src="{{url_for('postPic', filename = post.pic)}}" alt="{{post.pic}}"></div>
+        {% endif %}
+      </div></a>
 
     <div class="post-info-counts">
           <div class="replies-count" style = 'display: flex; align-items: center;'>

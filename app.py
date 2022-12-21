@@ -753,7 +753,7 @@ def createGaggle():
     conn = dbi.connect() 
     username = session.get('username')
     if request.method == 'GET':
-        return render_template('createGaggleForm.html')
+        return render_template('createGaggleForm.html', user_id = user_id, username = username)
     else:
         gaggle_name = request.form.get('gaggle_name')           
         description = request.form.get('description') 
@@ -765,10 +765,10 @@ def createGaggle():
                 return redirect(url_for('gaggle', gaggle_name = gaggle_name))  
             else:
                 flash("gaggle name already existed")
-                return render_template('createGaggleForm.html')
+                return render_template('createGaggleForm.html', user_id = user_id, username = username)
         else:
             flash('gaggle name cannot be empty')
-            return render_template('createGaggleForm.html')
+            return render_template('createGaggleForm.html', user_id = user_id, username = username)
 
 @app.route('/unjoinGaggle/<username>/<gaggle_id>/<gaggle_name>', methods=['POST'])
 def unJoinGaggle(username,gaggle_id, gaggle_name):
@@ -889,10 +889,11 @@ def response_invite():
 def notif():
     ''' View notifications '''
     user_id = isLoggedIn()
-    conn = dbi.connect() 
+    conn = dbi.connect()
+    username = session.get('username', '')
     notifs = formatNotif(waggle.getNotifs(conn, user_id))
     if request.method == 'GET':
-        return render_template('notifications.html', notifs = notifs)
+        return render_template('notifications.html', notifs = notifs, user_id = user_id, username = username)
     else:
         data = request.get_json()
         notif_id = data['notif_id']
@@ -942,6 +943,7 @@ def dashboard():
     """
     user_id = isLoggedIn()
     conn = dbi.connect() 
+    username = session.get('username', '')
     hasGaggle = False  
     gaggles = waggle.getGagglesCreated(conn, user_id)
     if len(gaggles) > 0:
@@ -952,7 +954,7 @@ def dashboard():
         flash('You are not a creator of any gaggles yet. Want to create one?')
         return redirect(url_for('createGaggle'))
     if request.method == 'GET':
-        return render_template('dashboard.html', hasGaggle = hasGaggle, gaggles = gaggles, gaggle = gaggle, user_id = user_id)
+        return render_template('dashboard.html', hasGaggle = hasGaggle, gaggles = gaggles, gaggle = gaggle, user_id = user_id, username = username)
 
 
 @app.before_first_request

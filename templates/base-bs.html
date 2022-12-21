@@ -161,9 +161,9 @@
                 <!-- User -->
                 <li class="nav-item navbar-dropdown dropdown-user dropdown">
                   <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown">
-                    <div class="avatar avatar-online"  style = "display: block; background-color: blueviolet; border-radius:50%">
+                    <div class="avatar avatar-online">
                       <!-- <button style = "display: block; background-color: blueviolet; border-radius:50%"> -->
-                      <!-- <img src="{{url_for('profilePic',user_id=user_id)}}" alt class="w-px-40 h-auto rounded-circle" /> -->
+                      <img src="{{url_for('profilePic',user_id=user_id)}}" alt class="w-px-40 h-auto rounded-circle img-profile" />
                     </div>                    
                   </a>
                   <ul class="dropdown-menu dropdown-menu-end">
@@ -171,9 +171,9 @@
                       <a class="dropdown-item" href="{{url_for('user', username = username)}}">
                         <div class="d-flex">
                           <div class="flex-shrink-0 me-3">
-                            <!-- <div class="avatar avatar-online">
-                              <img src="/static/img/avatars/1.png" alt class="w-px-40 h-auto rounded-circle" />
-                            </div> -->
+                            <div class="avatar avatar-online">
+                              <img src="{{url_for('profilePic',user_id=user_id)}}" alt class="w-px-40 h-auto rounded-circle img-profile" />
+                            </div>
                           </div>
                           <div class="flex-grow-1">
                             <span class="fw-semibold d-block">{{username}}</span>
