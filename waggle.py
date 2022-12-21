@@ -59,7 +59,17 @@ def searchGaggle(conn, query):
         SELECT * from gaggle 
         WHERE gaggle_name LIKE %s''',
                  ["%"+query+"%"]) 
-    return curs.fetchall()    
+    return curs.fetchall()
+
+def getGaggleName(conn, gaggle_id):
+    '''returns a gaggle's name based on its gaggle_id'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT a.gaggle_name
+        FROM gaggle a
+        WHERE gaggle_id = %s''',
+                [gaggle_id])
+    return curs.fetchone()
 
 def getGaggle(conn, gaggle_name):
     '''returns information about a gaggle based on its gaggle_name'''

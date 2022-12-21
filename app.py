@@ -316,21 +316,23 @@ def post(post_id):
     Returns the page for the specific post with the given post_id.
     """
     user_id = isLoggedIn()   
-    username = session.get('username')
+    username = session.get('username', '')
     conn = dbi.connect() 
     #get post infos and check user's previous interaction
     post = waggle.getPost(conn, post_id)
     post['canDelete'] = (user_id == post['poster_id'])
     post['isLiked'] = waggle.hasLikedPost(conn, user_id, post_id)
-    gaggle_id = post['gaggle_id']
-    #get gaggle from post
-    curs = dbi.dict_cursor(conn)
-    curs.execute('''SELECT *
-                    FROM gaggle
-                    WHERE gaggle_id = %s''',[gaggle_id])
-    gaggle = curs.fetchone()
+    # gaggle_id = post['gaggle_id']
+    # #get gaggle from post
+    # curs = dbi.dict_cursor(conn)
+    # curs.execute('''SELECT *
+    #                 FROM gaggle
+    #                 WHERE gaggle_id = %s''',[gaggle_id])
+    # gaggle = curs.fetchone()
+    gaggle = waggle.getGaggle(conn, post['gaggle_name'])
     if gaggle['guidelines'] is None:
             gaggle['guidelines'] = 'No guidelines specified for this gaggle.'
+    gaggle_id = waggle.getGaggleID(conn, post['gaggle_name'])['gaggle_id']
     #get post comments
     comments = likedComments(user_id, waggle.getPostComments(conn, post_id))
     valid = waggle.isGosling(conn, user_id, gaggle_id) #can user reply to post
