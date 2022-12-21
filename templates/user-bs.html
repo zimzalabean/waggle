@@ -1,5 +1,10 @@
 {% extends "base-bs.html" %}
 
+{% block title_description %}
+<title>{{username}} | Waggle</title>
+<meta name="description" content="Profile page for user {{username}}" />
+{% endblock %}
+
 {% block sidebar %}
     <li class="menu-item">
         <a href="{{url_for('homepage')}}" class="menu-link">
@@ -48,7 +53,7 @@
                 <div class="d-flex align-items-end align-items-sm-center row">
                     <div class="col-sm-2">
                         <div class = 'avator' style = 'width:100px; height:100px;margin-left: 15%; clip-path: circle(100px);'>
-                            <img src="{{url_for('profilePic',user_id=user_id)}}"  class = 'img-profile' style = "  object-fit: cover; width: 100%; height: 100%; border-radius:50%;">
+                            <img src="{{url_for('profilePic',user_id=user_id)}}" alt="{{user_id}} profile picture" class = 'img-profile' style = "  object-fit: cover; width: 100%; height: 100%; border-radius:50%;">
                         </div>   
                     </div>
                     <div class="col-sm-8">

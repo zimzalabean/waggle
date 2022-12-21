@@ -1,5 +1,10 @@
 {% extends "base-bs.html" %}
 
+{% block title_description %}
+<title>{{gaggle.gaggle_name}} | Waggle</title>
+<meta name="description" content="" />
+{% endblock %}
+
 {% block main_content %}
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 <script src="https://rawgit.com/theraot/emoji/master/emoji.js" charset="utf-8"></script>
@@ -90,7 +95,7 @@
                             <h4 class="m-3">Create Post:</h4>
                             <form id="write_post" name="write_post" action="{{url_for('postGroup')}}" method="POST" enctype="multipart/form-data">
                                 <p class="emoji">
-                                <textarea name="content" id = "content" rows="4" style="width: 45vw; min-width: 400px"></textarea>
+                                <textarea aria-label="text box for body of post" name="content" id = "content" rows="4" style="width: 45vw; min-width: 400px"></textarea>
                                 </p>
                                 <div style = 'margin: 20px; margin-right: 40px;'>
                                 <div  class="d-flex align-items-end align-items-sm-center justify-content-end">
@@ -133,7 +138,7 @@
             <div class="col-sm-10"><strong>Guidelines:</strong></div>
             <div class="col-sm-10"> {{gaggle.guidelines}}</div>
             <div class="col-sm-2 right"> 
-                <button class = 'btn-icon' onclick="closeGuidelines('{{gaggle.gaggle_id}}')" >
+                <button aria-label="close guidelines" class = 'btn-icon' onclick="closeGuidelines('{{gaggle.gaggle_id}}')" >
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x" viewBox="0 0 16 16">
                         <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
                     </svg>

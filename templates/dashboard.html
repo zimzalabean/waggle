@@ -1,5 +1,10 @@
 {% extends "base-bs.html" %}
 
+{% block title_description %}
+<title>Dashboard | Waggle</title>
+<meta name="description" content="" />
+{% endblock %}
+
 {% block sidebar %}
   <li class="menu-item">
     <a href="{{url_for('homepage')}}" class="menu-link">
@@ -123,11 +128,11 @@
                     <form action="{{url_for('editGaggle', gaggle_name=gaggle.gaggle_name)}}" method="POST">
                       <h5 class="card-header">Edit <strong>{{gaggle.gaggle_name}}</strong>'s Description:</h5>
                       <div class="update_group">
-                        <textarea class="form-control" type="text" name="description">{{gaggle.description}}</textarea>
+                        <textarea title="Description of {{gaggle.gaggle_name}}" class="form-control" type="text" name="description">{{gaggle.description}}</textarea>
                       </div>
                       <h5 class="card-header">Edit <strong>{{gaggle.gaggle_name}}</strong>'s Guidelines:</h5>
                       <div class="update_group">
-                        <textarea class="form-control" type="text" name="guidelines">{{gaggle.guidelines}}</textarea>
+                        <textarea title="Guidelines of {{gaggle.gaggle_name}}" class="form-control" type="text" name="guidelines">{{gaggle.guidelines}}</textarea>
                       </div>
                       <div class="mt-2">
                         <button type="submit" class="btn btn-primary me-2">Save changes</button>
@@ -141,7 +146,7 @@
                       <form action="{{url_for('inviteUser', gaggle_name=gaggle.gaggle_name)}}" method="POST">
                         <div class="row d-flex align-items-center">
                           <div class="mb-3 col-xl-4">
-                            <input class="form-control" type="text" name="invitee_username" placeholder="ex. ab6">
+                            <input title="Invite new moderator" class="form-control" type="text" name="invitee_username" placeholder="ex. ab6">
                           </div>
                         </div>
                         <div class="mt-2">
