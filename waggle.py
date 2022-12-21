@@ -470,7 +470,7 @@ def modInvite(conn, gaggle_id, username,user_id):
             accepted = 'Pending'
             curs.execute('''
                 INSERT INTO mod_invite(gaggle_id, invitee_id,inviter_id, accepted) 
-                VALUES(%s,%s, %s)''',
+                VALUES(%s,%s, %s, %s)''',
                         [gaggle_id, invitee_id,user_id, accepted])         
             conn.commit()  
             return valid
@@ -1052,3 +1052,14 @@ def deleteComment(conn, comment_id):
                     [comment_id])
     conn.commit()
     return comment_id
+
+def getAllInvitees(conn,user_id):
+    '''
+    Returns all the invitees status sent by specified user
+    '''
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        SELECT b.username, a.gaggle_id, a.accepted
+        FROM mod_invite as a INNER JOIN user as b ON (a.invitee_id = b.user_id)
+        WHERE a.inviter_id= %s''',[user_id])  
+    return curs.fetchall()

@@ -88,7 +88,7 @@ VALUES
 INSERT INTO mod_invite
   (gaggle_id,
   invitee_id,
-  inviter_id
+  inviter_id,
   accepted)
 VALUES
   (2,4,2, 'Pending'),

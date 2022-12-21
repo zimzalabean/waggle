@@ -329,6 +329,8 @@ def post(post_id):
                     FROM gaggle
                     WHERE gaggle_id = %s''',[gaggle_id])
     gaggle = curs.fetchone()
+    if gaggle['guidelines'] is None:
+            gaggle['guidelines'] = 'No guidelines specified for this gaggle.'
     #get post comments
     comments = likedComments(user_id, waggle.getPostComments(conn, post_id))
     valid = waggle.isGosling(conn, user_id, gaggle_id) #can user reply to post
@@ -607,11 +609,6 @@ def canIntComment(comment_id, user_id):
     valid = waggle.isGosling(conn, user_id, gaggle_id)
     return valid
 
-
-@app.route('/blockUser/<username>', methods=["POST"])
-def blockUser(username):
-    pass
-
 @app.route('/deactivate/')
 def deactivateAccount():
     '''
@@ -648,7 +645,6 @@ def gaggle(gaggle_name):
     else: 
         conn = dbi.connect() 
         gaggle = waggle.getGaggle(conn, gaggle_name) 
-        print(gaggle['guidelines']) 
         if gaggle['guidelines'] is None:
             gaggle['guidelines'] = 'No guidelines specified for this gaggle.'
         posts = likedPosts(user_id, waggle.getGagglePosts(conn, gaggle_name))
@@ -713,12 +709,13 @@ def editGaggle(gaggle_name):
 
 @app.route('/inviteUser/<gaggle_name>', methods=['POST'])
 def inviteUser(gaggle_name):
+    user_id = isLoggedIn()
     conn = dbi.connect() 
     invitee_username = ''
     if request.form['invitee_username'] != '':
         invitee_username = request.form['invitee_username']
         gaggle_id = waggle.getGaggleID(conn, gaggle_name)['gaggle_id']
-        validInvite = waggle.modInvite(conn, gaggle_id, invitee_username)
+        validInvite = waggle.modInvite(conn, gaggle_id, invitee_username,user_id)
         if validInvite:
             flash('Invitation sent')
         else:
@@ -946,6 +943,8 @@ def dashboard():
     username = session.get('username', '')
     hasGaggle = False  
     gaggles = waggle.getGagglesCreated(conn, user_id)
+    allInvitees = waggle.getAllInvitees(conn,user_id)
+    print(allInvitees)
     if len(gaggles) > 0:
         gaggle = gaggles[0]
         gaggle_id = gaggle['gaggle_id']         
@@ -954,7 +953,7 @@ def dashboard():
         flash('You are not a creator of any gaggles yet. Want to create one?')
         return redirect(url_for('createGaggle'))
     if request.method == 'GET':
-        return render_template('dashboard.html', hasGaggle = hasGaggle, gaggles = gaggles, gaggle = gaggle, user_id = user_id, username = username)
+        return render_template('dashboard.html', hasGaggle = hasGaggle, gaggles = gaggles, gaggle = gaggle, user_id = user_id, username = username, allInvitees = allInvitees)
 
 
 @app.before_first_request

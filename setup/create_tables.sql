@@ -180,7 +180,8 @@ CREATE TABLE mod_invite (
   invitee_id int,
   inviter_id int,
   accepted enum('Yes', 'No', 'Pending'),
-  INDEX(gaggle_id),
+  primary key(gaggle_id, invitee_id),
+  INDEX(inviter_id),
   foreign key (gaggle_id) references gaggle(gaggle_id)
     on update no action
     on delete cascade,
