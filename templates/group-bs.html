@@ -29,12 +29,12 @@
                     <div class="col-xl-3">
                         <div class="card-body py-3">
                                 {% if isAuthor %}                                
-                                <a href = "{{url_for('editGaggle', gaggle_name = gaggle.gaggle_name)}}"><button class = "btn btn-lg rounded-pill btn-dark text-white">Edit Group</button></a> 
+                                <a href = "{{url_for('editGaggle', gaggle_name = gaggle.gaggle_name)}}"><button class = "btn btn-lg rounded-pill btn-info">Edit Group</button></a> 
                                 <form name="join_group" action="{{url_for('joinGroup')}}"  method="POST">
                                 {% elif joined %}
-                                <button id = 'btn-{{gaggle.gaggle_id}}' class="btn rounded-pill btn-dark" name="submit" onclick ="joinGroup('{{gaggle.gaggle_id}}')">Unjoin</button>
+                                <button id = 'btn-{{gaggle.gaggle_id}}' class="btn rounded-pill btn-info" name="submit" onclick ="joinGroup('{{gaggle.gaggle_id}}')">Unjoin</button>
                                 {% else %}
-                                <button id = 'btn-{{gaggle.gaggle_id}}' class="btn rounded-pill btn-dark" name="submit" onclick ="joinGroup('{{gaggle.gaggle_id}}')">Join</button>
+                                <button id = 'btn-{{gaggle.gaggle_id}}' class="btn rounded-pill btn-info" name="submit" onclick ="joinGroup('{{gaggle.gaggle_id}}')">Join</button>
                                 {% endif %}
                                 <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
                                 </form>
@@ -167,11 +167,11 @@
                     var result = resp.result;
                     console.log(result);
                     $("#btn-"+gaggle_id).text(result);
-                    if (result =='JOIN') {
+                    if (result =='Join') {
                         document.getElementById("post-to-"+gaggle_id).classList.remove('display');
                         document.getElementById("post-to-"+gaggle_id).classList.toggle("hidden");
                     }
-                    else if (result == 'UNJOIN'){
+                    else if (result == 'Unjoin'){
                         document.getElementById("post-to-"+gaggle_id).classList.remove('hidden');
                         document.getElementById("post-to-"+gaggle_id).classList.toggle('display');
                     };

@@ -5,6 +5,7 @@
 <meta name="description" content="Profile page for user {{username}}" />
 {% endblock %}
 
+{% if isPersonal %}
 {% block sidebar %}
     <li class="menu-item">
         <a href="{{url_for('homepage')}}" class="menu-link">
@@ -43,6 +44,7 @@
         </a>
     </li>
 {% endblock %}
+{% endif %}
 
 {% block main_content %}
 <div class="container-xxl flex-grow-1 container-p-y">

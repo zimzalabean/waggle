@@ -68,26 +68,3 @@
     {% endfor %}
 
 {% endblock %}
-
-<!-- right content -->
-{% block right_content %}
-    <div class = 'gaggle-list'>
-        <h5>YOUR WEDGES</h5>
-
-            {% for gaggle in gaggles %}
-            <p>w/<a href="{{url_for('gaggle', gaggle_name=gaggle['gaggle_name'])}}">{{gaggle['gaggle_name']}}</a></p>
-            {% endfor %}
-    </div>
-
-    <div class = 'gaggle-list'>
-        <h5>YOUR GAGGLES</h5>
-
-            {% for gaggle in gaggles %}
-            <p>g/<a href="{{url_for('gaggle', gaggle_name=gaggle['gaggle_name'])}}">{{gaggle['gaggle_name']}}</a></p>
-            {% endfor %}
-    </div>  
-
-
-
-
-{% endblock %}
