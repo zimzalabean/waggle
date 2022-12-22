@@ -185,7 +185,7 @@ def history(username):
     my_user_id = session.get('user_id', '')
     my_username = session.get('username', '')
     posts = waggle.getUserPosts(conn, username)
-    comments = waggle.getUserComments(conn, user_id)
+    comments = waggle.getUserComments(conn, my_user_id)
     return render_template('history.html', username = username, posts = posts, comments = comments, my_username = my_username, my_user_id = my_user_id)
 
 
