@@ -1,0 +1,43 @@
+{% extends "base-bs.html" %}
+
+{% block main_content %}
+
+    <div>
+                <form method=get action="{{url_for('search')}}" >       
+                        <button type="submit" id = 'gg-btn' class = "btn rounded-pill {{'selected' if kind == 'Gaggles'}}" name="submit" value="Gaggles">GAGGLES</button>
+                        <button type="submit" id = 'pst-btn' class = "btn rounded-pill {{'selected' if kind == 'Posts'}}" name="submit" value="Posts">POSTS</button>
+                        <button type="submit" id = 'cmt-btn' class = "btn rounded-pill {{'selected' if kind == 'Comments'}}" name="submit" value="Comments">COMMENTS</button>
+                        <button type="submit" id = 'gsl-btn' class = "btn rounded-pill {{'selected' if kind == 'Goslings'}}" name="submit" value="Goslings">GOSLINGS</button>
+                        <input type="hidden" name="query" value="{{query}}">
+                </form>
+
+    </div>
+    <div class = 'search-result'>  
+    Results matching {{query}}:
+
+    {% if kind == 'Posts' %}
+        {% import "postTemplateJS.html" as postComp%}
+        {% for post in results %}
+            {{postComp.post_temp(post=post)}}
+        {% endfor %} 
+
+    {% elif kind == 'Comments' %}
+    {% import "commentTemplateJS.html" as commentComp%}
+        {% for comment in results %}
+            {{commentComp.comment_temp(comment=comment, user_id = user_id)}}
+        {% endfor %}       
+
+    {% elif kind == 'Goslings' %}
+        {% for user in results %}
+             Gosling:   <a href="{{url_for('user', username=user.username)}}">{{user.username}}</a>
+        {% endfor %}  
+
+    {% else %}
+        {% for gaggle in results %}
+        <a href="{{ url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a>
+        {% endfor %}      
+    {% endif %}
+    </div>       
+
+
+{% endblock %}
