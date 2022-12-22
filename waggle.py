@@ -647,6 +647,9 @@ def getGagglesJoined(conn, user_id):
     return curs.fetchall()
 
 def updateBio(conn, gaggle_id, new_group_bio):
+    '''
+        Edits gaggle's bio 
+    '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         UPDATE gaggle
@@ -657,6 +660,9 @@ def updateBio(conn, gaggle_id, new_group_bio):
     return gaggle_id 
 
 def updateGuidelines(conn, gaggle_id, new_group_guidelines):
+    '''
+        Edits gaggle's guidelines 
+    '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         UPDATE gaggle
@@ -1042,7 +1048,7 @@ def getOwnPosts(conn, user_id):
 
 def deleteComment(conn, comment_id):
     '''
-    Delete comment
+    Delete comment 
     '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''delete
