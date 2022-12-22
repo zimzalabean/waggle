@@ -762,13 +762,15 @@ def inviteMod():
 def modqueue():
     logged_in = session.get('logged_in', False)
     if logged_in != False:
-        username = session.get('username')
-        user_id = session.get('user_id')
+        my_username = session.get('username')
+        my_user_id = session.get('user_id')
         
         conn = dbi.connect()
-        gaggles = waggle.getMyModGaggles(conn, user_id)
-        if len(gaggles) > 0:
-            gaggle_id = gaggles[0]['gaggle_id']
+        modgaggles = waggle.getMyModGaggles(conn, my_user_id)
+        hasModGaggle = False
+        if len(modgaggles) > 0:
+            gaggle_id = modgaggles[0]['gaggle_id']
+            hasModGaggle = True
             flagged = waggle.get_flagged_posts(conn, gaggle_id)
             pending, approved = [], []
             for flag in flagged:
@@ -786,8 +788,8 @@ def modqueue():
                     else:
                         approved.append(flag)
             else:
-                gaggle_name = gaggles[0]['gaggle_name']
-            return render_template('modqueue.html', gaggles=gaggles, gaggle_id=gaggle_id, pending = pending, approved = approved, username=username, user_id = user_id, chosenGaggle = gaggle_name)
+                gaggle_name = modgaggles[0]['gaggle_name']
+            return render_template('modqueue.html', modgaggles=modgaggles, gaggle_id=gaggle_id, pending = pending, approved = approved, my_username = my_username, my_user_id = my_user_id, chosenGaggle = gaggle_name, hasModGaggle = hasModGaggle)
         else:
             flash('You are not a moderator yet')
             return redirect(request.referrer)

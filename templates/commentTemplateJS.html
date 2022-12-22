@@ -44,26 +44,9 @@
     
         <div><span id="comment-likes-count-{{comment.comment_id}}">{{comment.likes}}</span></div>
       </div>
-     
-      <div class="action">
-       
-        <div class="smaller-circle">
-          <button aria-label="view more actions">
-            
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-three-dots" viewBox="0 0 16 16">
-              <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-      {%if comment.commentor_id == user_id%}
-      <form method = 'post' action="{{url_for('removeComment')}}">
-        <button onclick="">Delete Comment</button> 
-      </form>
-      {%endif%}
-      {% if pageIsNotPost %}
-      <a href="{{url_for('post', post_id=comment.post_id)}}" class="btn btn-sm btn-outline-primary" style="float:right">View Post</a>
-      {% endif %}
+      <!-- {% if comment.commentor_id == user_id %}
+        <button class="btn btn-sm btn-outline-danger">Delete Comment</button> 
+      {%endif%} -->
     </div>
 </div>
 <div id="myDropdown_reply_{{comment.comment_id}}" class="dropdown-reply">   
@@ -110,6 +93,25 @@
                 }
             });  event.preventDefault();
     }
+
+    // function deleteComment(comment_id) {
+    //   console.log(comment_id);
+    //   $.ajax({
+    //           type: "POST",
+    //           url: "/deleteComment",
+    //           data: JSON.stringify({'comment_id': comment_id}),
+    //           contentType: 'application/json; charset=utf-8',
+    //           dataType: 'json',
+    //           async: true,
+    //           success: function(resp){
+    //             console.log('deleted')
+    //             post_id = resp['comment_id']
+    //             console.log(comment_id)
+    //             document.getElementById("comment-"+comment_id).classList.toggle("hidden");
+    //           }
+    //       });  event.preventDefault();
+  } 
+
     function showDropdown(pid) {
             document.getElementById("myDropdown_"+pid).classList.toggle("display");
             console.log(document.getElementById("myDropdown_"+pid));
