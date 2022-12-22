@@ -1,19 +1,20 @@
 drop table if exists notifs;
-drop table if exists moderator;
-drop table if exists mod_invite;
+drop table if exists group_blocked;
+drop table if exists flag_comment;
+drop table if exists flag_post;
 drop table if exists bad_gosling;
+drop table if exists mod_invite;
+drop table if exists moderator;
 drop table if exists comment_like;
 drop table if exists post_like;
-drop table if exists flag_post;
-drop table if exists flag_comment;
 drop table if exists convos;
 drop table if exists comment;
+drop table if exists post_pics;
 drop table if exists post;
 drop table if exists tag;
 drop table if exists gosling;
 drop table if exists gaggle;
 drop table if exists picfile;
-drop table if exists post_pics;
 drop table if exists user;
 
 
@@ -46,6 +47,7 @@ CREATE TABLE gaggle (
   gaggle_name varchar(20),
   author_id int,
   description varchar(100) COLLATE utf8_bin,
+  guidelines varchar(100) COLLATE utf8_bin,
   primary key(gaggle_id),
   INDEX(author_id),
   foreign key (author_id) references user(user_id) 
@@ -176,8 +178,10 @@ CREATE TABLE moderator (
 CREATE TABLE mod_invite (
   gaggle_id int,
   invitee_id int,
+  inviter_id int,
   accepted enum('Yes', 'No', 'Pending'),
-  INDEX(gaggle_id),
+  primary key(gaggle_id, invitee_id),
+  INDEX(inviter_id),
   foreign key (gaggle_id) references gaggle(gaggle_id)
     on update no action
     on delete cascade,
@@ -275,7 +279,7 @@ CREATE table convos(
   anc_id int,
   des_id int,
   foreign key (anc_id) references comment(comment_id)
-      on update no action
+    on update no action
     on delete cascade,
   foreign key (des_id) references comment(comment_id)
     on update no action

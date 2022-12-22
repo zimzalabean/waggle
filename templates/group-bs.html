@@ -1,5 +1,10 @@
 {% extends "base-bs.html" %}
 
+{% block title_description %}
+<title>{{gaggle.gaggle_name}} | Waggle</title>
+<meta name="description" content="" />
+{% endblock %}
+
 {% block main_content %}
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 <script src="https://rawgit.com/theraot/emoji/master/emoji.js" charset="utf-8"></script>
@@ -14,23 +19,22 @@
     <!-- HEADER -->
     <div class="row">
         <div class="col-lg-12 mb-4">
-            <div class="card card-header bg-primary text-white" >
+            <div class="card card-header bg-primary-light text-white" >
                 <div class="d-flex align-items-end align-items-sm-center row">
-                    <div class="col-sm-10" onclick= "window.location.href = '{{url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}';">
+                    <div class="col-xl-9" onclick= "window.location.href = '{{url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}';">
                         <div class="card-body py-3">
-                            <h1 class="card-title text-white">{{gaggle.gaggle_name}}</h1>
+                            <h1 class="card-title text-white"><strong>{{gaggle.gaggle_name}}</strong></h1>
                         </div>
                     </div>
-                    <div class="col-sm-2">
+                    <div class="col-xl-3">
                         <div class="card-body py-3">
-
                                 {% if isAuthor %}                                
-                                <a href = "{{url_for('myGaggle', gaggle_name = gaggle.gaggle_name)}}"><button class = "btn btn-lg rounded-pill btn-dark text-white">EDIT GROUP</button></a> 
+                                <a href = "{{url_for('editGaggle', gaggle_name = gaggle.gaggle_name)}}"><button class = "btn btn-lg rounded-pill btn-info">Edit Group</button></a> 
                                 <form name="join_group" action="{{url_for('joinGroup')}}"  method="POST">
                                 {% elif joined %}
-                                <button id = 'btn-{{gaggle.gaggle_id}}' class="btn rounded-pill btn-dark" name="submit" onclick ="joinGroup('{{gaggle.gaggle_id}}')">UNJOIN</button>
+                                <button id = 'btn-{{gaggle.gaggle_id}}' class="btn rounded-pill btn-info" name="submit" onclick ="joinGroup('{{gaggle.gaggle_id}}')">Unjoin</button>
                                 {% else %}
-                                <button id = 'btn-{{gaggle.gaggle_id}}' class="btn rounded-pill btn-dark" name="submit" onclick ="joinGroup('{{gaggle.gaggle_id}}')">JOIN</button>
+                                <button id = 'btn-{{gaggle.gaggle_id}}' class="btn rounded-pill btn-info" name="submit" onclick ="joinGroup('{{gaggle.gaggle_id}}')">Join</button>
                                 {% endif %}
                                 <input type="hidden" name="gaggle_id" value="{{gaggle.gaggle_id}}">
                                 </form>
@@ -48,7 +52,7 @@
                 <div class="d-flex align-items-end align-items-sm-center row">
                     <div class="col-sm-9 py-0">
                         <div style="margin-top:20px; margin-left: 20px;"> 
-                        <h3>{{gaggle.gaggle_name}}</h3></div>
+                        <h3><strong>{{gaggle.gaggle_name}}</strong></h3></div>
                     </div>
                 </div>
                 <hr/>
@@ -56,6 +60,12 @@
                     <div class="col-sm-12">
                         <p class="mx-3">{{gaggle.description}}</p>
                     </div>
+                </div>
+                <hr/>
+                <div class="d-flex align-items-end align-items-sm-center row">
+                    <div class="col-sm-12">
+                        <p class="mx-3" onclick="displayGuidelines()"><strong>Show Guidelines</strong></p>
+                    </div> 
                 </div>
                 <hr/>
                 <div class="d-flex align-items-end align-items-sm-center row">
@@ -71,7 +81,7 @@
                 </div>
                 <hr/>
                 <div class="d-flex align-items-end align-items-sm-center row">
-                    <!-- <p class="mx-3"><a href="{{url_for('gaggleMembers', gaggle_name = gaggle.gaggle_name)}}">View Members</a></p> -->
+                    <p class="mx-3"><a href="{{url_for('gaggleMembers', gaggle_name = gaggle.gaggle_name)}}">View Members</a></p>
                 </div>
             </div>
         </div>
@@ -85,7 +95,7 @@
                             <h4 class="m-3">Create Post:</h4>
                             <form id="write_post" name="write_post" action="{{url_for('postGroup')}}" method="POST" enctype="multipart/form-data">
                                 <p class="emoji">
-                                <textarea name="content" id = "content" rows="4" style="width: 45vw; min-width: 400px"></textarea>
+                                <textarea aria-label="Post" name="content" id = "content" rows="4" style="width: 45vw; min-width: 400px"></textarea>
                                 </p>
                                 <div style = 'margin: 20px; margin-right: 40px;'>
                                 <div  class="d-flex align-items-end align-items-sm-center justify-content-end">
@@ -99,22 +109,46 @@
                         </div>
                     </div>
                 </div>
-
-
-                <!-- FEED -->
-                <div class="card mb-4">
-                    <div style = 'margin-top:20px; margin-left: 20px;'>
-                <h3>Feed</h3></div>
-                <div class = "feed" id = 'feed'>
+                <h3>Feed</h3>
                 {% import "postTemplateJS.html" as postComp%}
                 {% for post in posts %}
-                    {{postComp.post_temp(post=post, user_id = user_id)}}
+                    <div class="row">
+                        <div class="col-lg-12 mb-3">
+                            <div id="feed">
+                                <div class="card">
+                                    <div class="d-flex align-items-end row">
+                                        <div class="col-sm-12">
+
+                                            {{postComp.post_temp(post=post, user_id = my_user_id)}}
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 {% endfor %}
-                </div>
-                </div>
             {% endblock %}
         </div>
     </div>
+</div>
+
+<div id = "guidelines" class = 'popup-report'>
+    <div class="card">
+      <div class = 'report-header'>
+        <div class="d-flex align-items-end align-items-sm-center row">
+            <div class="col-sm-10"><strong>Guidelines:</strong></div>
+            <div class="col-sm-10"> {{gaggle.guidelines}}</div>
+            <div class="col-sm-2 right"> 
+                <button aria-label="close guidelines" class = 'btn-icon' onclick="closeGuidelines('{{gaggle.gaggle_id}}')" >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x" viewBox="0 0 16 16">
+                        <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                    </svg>
+                </button>
+            </div> 
+        </div>
+      </div>
+  </div>
 </div>
 
 <script>
@@ -133,11 +167,11 @@
                     var result = resp.result;
                     console.log(result);
                     $("#btn-"+gaggle_id).text(result);
-                    if (result =='JOIN') {
+                    if (result =='Join') {
                         document.getElementById("post-to-"+gaggle_id).classList.remove('display');
                         document.getElementById("post-to-"+gaggle_id).classList.toggle("hidden");
                     }
-                    else if (result == 'UNJOIN'){
+                    else if (result == 'Unjoin'){
                         document.getElementById("post-to-"+gaggle_id).classList.remove('hidden');
                         document.getElementById("post-to-"+gaggle_id).classList.toggle('display');
                     };
@@ -179,6 +213,13 @@
             var element = document.getElementById("url");
             element.value = language;
             element.innerHTML = language;
+        }
+
+        function displayGuidelines() {
+            document.getElementById("guidelines").classList.toggle("display");
+        }
+        function closeGuidelines() {
+            document.getElementById("guidelines").classList.remove("display");
         }
 
     </script>

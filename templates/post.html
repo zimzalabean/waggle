@@ -1,12 +1,17 @@
 {% extends "group-bs.html" %}
 
+{% block title_description %}
+<title>View Post | Waggle</title>
+<meta name="description" content="" />
+{% endblock %}
+
 {% block sub_content %}
 
     <div style = 'background-color: white; margin:auto; padding: 20px;'>
         <h3> Post </h3>
     <div>   
     {% import "postTemplateJS.html" as postComp%}
-        {{postComp.post_temp(post=post, user_id = user_id)}}
+        {{postComp.post_temp(post=post, user_id = my_user_id)}}
     </div> 
     
     {% if valid %}

@@ -59,7 +59,17 @@ def searchGaggle(conn, query):
         SELECT * from gaggle 
         WHERE gaggle_name LIKE %s''',
                  ["%"+query+"%"]) 
-    return curs.fetchall()    
+    return curs.fetchall()
+
+def getGaggleName(conn, gaggle_id):
+    '''returns a gaggle's name based on its gaggle_id'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT a.gaggle_name
+        FROM gaggle a
+        WHERE gaggle_id = %s''',
+                [gaggle_id])
+    return curs.fetchone()
 
 def getGaggle(conn, gaggle_name):
     '''returns information about a gaggle based on its gaggle_name'''
@@ -331,7 +341,7 @@ def joinGaggle(conn, user_id, gaggle_id):
         VALUES (%s,%s) ''', 
                 [user_id, gaggle_id])
     conn.commit()  # need this!   
-    return {'gaggle_id':gaggle_id, 'result': 'UNJOIN'}
+    return {'gaggle_id':gaggle_id, 'result': 'Unjoin'}
 
 def unjoinGaggle(conn, user_id, gaggle_id):
     '''Remove a user into a gaggle member list'''
@@ -342,7 +352,7 @@ def unjoinGaggle(conn, user_id, gaggle_id):
         AND gaggle_id = %s''', 
                 [ user_id, gaggle_id])
     conn.commit()  # need this!   
-    return {'gaggle_id':gaggle_id, 'result': 'JOIN'}
+    return {'gaggle_id':gaggle_id, 'result': 'Join'}
 
 def isGosling(conn, user_id, gaggle_id):  
     '''Check if a user is in a gaggle member list'''  
@@ -444,14 +454,14 @@ def getInvitees(conn, gaggle_id):
     curs.execute('''
         SELECT b.username, a.accepted 
         FROM 
-        mod_invite a
-        LEFT JOIN user b
+        mod_invite as a
+        INNER JOIN user as b
         ON (a.invitee_id = b.user_id)
         WHERE a.gaggle_id= %s''',
                 [gaggle_id])  
     return curs.fetchall()
 
-def modInvite(conn, gaggle_id, username):
+def modInvite(conn, gaggle_id, username,user_id):
     '''
     Add valid username and corresponding gaggle_id into mod_invite table. 
     '''
@@ -470,9 +480,9 @@ def modInvite(conn, gaggle_id, username):
             valid = True
             accepted = 'Pending'
             curs.execute('''
-                INSERT INTO mod_invite(gaggle_id, invitee_id, accepted) 
-                VALUES(%s,%s, %s)''',
-                        [gaggle_id, invitee_id, accepted])         
+                INSERT INTO mod_invite(gaggle_id, invitee_id,inviter_id, accepted) 
+                VALUES(%s,%s, %s, %s)''',
+                        [gaggle_id, invitee_id,user_id, accepted])         
             conn.commit()  
             return valid
     return valid   
@@ -518,23 +528,29 @@ def searchPost(conn, query):
     '''returns all posts whose content match the query'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.*,b.username 
-        from post a
+        SELECT a.*, b.username as author, c.gaggle_name as gaggle
+        FROM post a
         LEFT JOIN user b
-        ON a.poster_id = b.user_id
+        ON (a.poster_id = b.user_id)
+        LEFT JOIN gaggle c
+        USING (gaggle_id)
         WHERE content LIKE %s''',
-                 ['%'+query+'%']) 
+                 ["%"+query+"%"]) 
     return curs.fetchall() 
 
 def searchComment(conn, query):
     '''returns all comments whose content match the query'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.*, b.username
+        SELECT a.*, c.gaggle_name as gaggle, d.username as author
         FROM comment a
-        LEFT JOIN user b
-        ON a.commentor_id = b.user_id
-        WHERE content LIKE %s''',
+        LEFT JOIN post b
+        USING (post_id)
+        LEFT JOIN gaggle c
+        USING (gaggle_id)
+        LEFT JOIN user d
+        ON (a.commentor_id = d.user_id)
+        WHERE a.content LIKE %s''',
                  ["%"+query+"%"]) 
     return curs.fetchall()   
 
@@ -632,12 +648,28 @@ def getGagglesJoined(conn, user_id):
     return curs.fetchall()
 
 def updateBio(conn, gaggle_id, new_group_bio):
+    '''
+        Edits gaggle's bio 
+    '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         UPDATE gaggle
         SET description = %s
         WHERE gaggle_id = %s''',
                 [new_group_bio, gaggle_id])
+    conn.commit()
+    return gaggle_id 
+
+def updateGuidelines(conn, gaggle_id, new_group_guidelines):
+    '''
+        Edits gaggle's guidelines 
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        UPDATE gaggle
+        SET guidelines = %s
+        WHERE gaggle_id = %s''',
+                [new_group_guidelines, gaggle_id])
     conn.commit()
     return gaggle_id 
 
@@ -837,19 +869,7 @@ def unlikePost(conn, user_id, post_id):
                 [post_id])
     conn.commit()
     print('decreases likes')
-    return "Unliked"           
-
-# def getUserComments(conn, user_id):
-#     '''returns all of user's comments sorted by latest'''
-#     curs = dbi.dict_cursor(conn)
-#     curs.execute('''
-#         SELECT * 
-#         FROM comment
-#         WHERE commentor_id = %s
-#         ORDER BY posted_date desc''',
-#                  [user_id])
-#     all_posts = curs.fetchall()
-#     return all_posts 
+    return "Unliked"
 
 def getUserComments(conn, user_id):
     '''returns all of user's comments sorted by latest'''
@@ -860,9 +880,10 @@ def getUserComments(conn, user_id):
         LEFT JOIN user b
         ON a.commentor_id = b.user_id
         WHERE commentor_id = %s
-        ORDER BY posted_date desc''',
-                 [user_id])
-    return curs.fetchall()
+        ORDER BY posted_date desc
+        ''', [user_id])
+    all_comments = curs.fetchall()
+    return all_comments
 
 ####_____To be used Functions for beta not yet tested_____#### 
 
@@ -992,4 +1013,27 @@ def getConvo(conn, comment_id, user_id):
         ORDER BY posted_date asc''',
                 [user_id, comment_id])
     return curs.fetchall()        
+   
 
+def deleteComment(conn, comment_id):
+    '''
+    Delete comment 
+    '''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''delete
+                    from comment
+                    where comment_id = %s''',
+                    [comment_id])
+    conn.commit()
+    return comment_id
+
+def getAllInvitees(conn,user_id):
+    '''
+    Returns all the invitees status sent by specified user
+    '''
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        SELECT b.username, a.gaggle_id, a.accepted
+        FROM mod_invite as a INNER JOIN user as b ON (a.invitee_id = b.user_id)
+        WHERE a.inviter_id= %s''',[user_id])  
+    return curs.fetchall()

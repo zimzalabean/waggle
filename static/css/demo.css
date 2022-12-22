@@ -184,6 +184,12 @@ img {
   clip-path: circle(50%);
   margin-right:0px  !important;
 }
+
+.smaller-circle{
+  clip-path: circle(40%);
+  margin-right:0px !important;
+}
+
 .post-info-counts div button {  
   color: inherit;
   background:none;
@@ -312,15 +318,9 @@ img {
     max-width:100%;
     align-self: flex-end;
     background: none;
-    /* border-radius:3px; */
     padding: 20px;
     border: none;
-    /* border-bottom: 1px solid #e6ecf0;
-    border-top: 1px solid #e6ecf0; */
   }
-  .comment-wrap:hover {
-    background-color: rgb(246, 246, 246);
-}
   .comment-header {
     display: flex;
     align-items:flex-start;

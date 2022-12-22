@@ -1,0 +1,144 @@
+{% extends "base-bs.html" %}
+
+{% block title_description %}
+<title>Results for &quot;{{query}}&quot; | Waggle</title>
+<meta name="description" content="" />
+{% endblock %}
+
+{% block main_content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+  <h3 class="fw-bold py-2 mb-2">Search Results for &quot;{{query}}&quot;:</h3>
+       <!-- Pills -->
+      <div class="row">
+        <div class="col-xl-12">
+          <div class="nav-align-top mb-4">
+            <ul class="nav nav-pills mb-3 nav-fill" role="tablist">
+              <li class="nav-item">
+                <button
+                  type="button"
+                  class="nav-link active"
+                  role="tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#navs-pills-justified-gaggles"
+                  aria-controls="navs-pills-justified-gaggles"
+                  aria-selected="false"
+                >
+                <i class='tf-icons bx bx-group'></i> Gaggles
+                </button>
+              </li>
+              <li class="nav-item">
+                <button
+                  type="button"
+                  class="nav-link"
+                  role="tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#navs-pills-justified-posts"
+                  aria-controls="navs-pills-justified-posts"
+                  aria-selected="false"
+                >
+                <i class='tf-icons bx bx-pencil'></i> Posts
+                </button>
+              </li>
+              <li class="nav-item">
+                <button
+                  type="button"
+                  class="nav-link"
+                  role="tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#navs-pills-justified-comments"
+                  aria-controls="navs-pills-justified-comments"
+                  aria-selected="false"
+                >
+                <i class='tf-icons bx bx-comment'></i> Comments
+                </button>
+              </li>
+              <li class="nav-item">
+                <button
+                  type="button"
+                  class="nav-link"
+                  role="tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#navs-pills-justified-users"
+                  aria-controls="navs-pills-justified-users"
+                  aria-selected="false"
+                >
+                <i class='tf-icons bx bx-user'></i> Users
+                </button>
+              </li>
+            </ul>
+            <div class="tab-content">
+              <div class="tab-pane fade show active" id="navs-pills-justified-gaggles" role="tabpanel">
+                <div class="d-flex flex-wrap" id="icons-container">
+                    {% for gaggle in gaggles %}
+                    <div class="card icon-card cursor-pointer text-center mb-4 mx-2">
+                        <div class="card-body">
+                            <p class="icon-name text-truncate mb-0"><a href="{{url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a></p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+              </div>
+              <div class="tab-pane fade" id="navs-pills-justified-posts" role="tabpanel">
+                <div class="card">
+                  {% import "postTemplateJS.html" as postComp %}
+                    {% for post in results %}
+                    <div class="row">
+                      <div class="col-lg-1 mb-3 order-0"></div>
+                      <div class="col-lg-10 mb-3 order-1">
+                          <div class="card">
+                              <div class="d-flex align-items-end row">
+                                  <div class="col-sm-12">
+                                      <div class="card-body">
+                                      {{postComp.post_temp(post=post, pageIsNotPost = true)}}
+                                      </div>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                      <div class="col-lg-1 mb-3 order-2"></div>
+                    </div>
+                    {% endfor %}
+                </div>
+              </div>
+              <div class="tab-pane fade" id="navs-pills-justified-comments" role="tabpanel">
+                <div class="card">
+                  {% import "commentTemplateJS.html" as commentComp %}
+                  {% for comment in results %}
+                  <div class="row">
+                    <div class="col-lg-1 mb-3 order-0"></div>
+                    <div class="col-lg-10 mb-3 order-1">
+                        <div class="card">
+                            <div class="d-flex align-items-end row">
+                                <div class="col-sm-12">
+                                    <div class="card-body">
+                                    {{commentComp.comment_temp(comment = comment, user_id = user_id)}}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-1 mb-3 order-2"></div>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+              <div class="tab-pane fade" id="navs-pills-justified-users" role="tabpanel">
+                <div class="d-flex flex-wrap" id="icons-container">
+                    {% for user in users %}
+                    <div class="card icon-card cursor-pointer text-center mb-4 mx-2">
+                        <div class="card-body">
+                            <p class="icon-name text-truncate mb-0"><a href="{{url_for('user', username=user.username)}}">{{user.username}}</a></p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Pills -->
+    </div>
+</div>
+{% endblock %}

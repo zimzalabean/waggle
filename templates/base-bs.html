@@ -27,9 +27,8 @@
       content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"
     />
 
-    <title>{{ page_title }}</title>
-
-    <meta name="description" content="" />
+    {% block title_description%}
+    {% endblock %}
 
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="/static/img/favicon/favicon.ico" />
@@ -95,13 +94,13 @@
             <li class="menu-item">
               <a href="{{url_for('homepage')}}" class="menu-link">
                 <i class="menu-icon tf-icons bx bxs-home"></i>
-                <div data-i18n="Analytics">Home</div>
+                <div data-i18n="Misc">Home</div>
               </a>
             </li>
             <li class="menu-item">
               <a href="{{url_for('personalHistory')}}" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-history"></i>
-                <div data-i18n="Authentications">History</div>
+                <div data-i18n="Misc">History</div>
               </a>
             </li>
             <li class="menu-item">
@@ -152,7 +151,7 @@
                 <div class="nav-item d-flex align-items-center">
                   <i class="bx bx-search fs-4 lh-0"></i>
                   <form class="search_form" method="GET" action="{{url_for('search')}}">
-                    <input type="text" class="form-control border-0 shadow-none" id="search-query" name="search-query" placeholder="Find Gaggles...">
+                      <input title="search bar"type="text" class="form-control border-0 shadow-none" id="search-query" name="search-query" placeholder="Search">
                   </form>
                 </div>
               </div>
@@ -162,23 +161,22 @@
                 <!-- User -->
                 <li class="nav-item navbar-dropdown dropdown-user dropdown">
                   <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown">
-                    <div class="avatar avatar-online"  style = "display: block; background-color: blueviolet; border-radius:50%">
-                      <!-- <button style = "display: block; background-color: blueviolet; border-radius:50%"> -->
-                      <!-- <img src="{{url_for('profilePic',user_id=user_id)}}" alt class="w-px-40 h-auto rounded-circle" /> -->
+                    <div class="avatar avatar-online">
+                      <img src="{{url_for('profilePic',user_id=my_user_id)}}" alt="{{my_username}} profile picture" class="w-px-40 h-auto rounded-circle img-profile" />
                     </div>                    
                   </a>
                   <ul class="dropdown-menu dropdown-menu-end">
                     <li>
-                      <a class="dropdown-item" href="{{url_for('user', username = username)}}">
+                      <a class="dropdown-item" href="{{url_for('user', username = my_username)}}">
                         <div class="d-flex">
                           <div class="flex-shrink-0 me-3">
-                            <!-- <div class="avatar avatar-online">
-                              <img src="/static/img/avatars/1.png" alt class="w-px-40 h-auto rounded-circle" />
-                            </div> -->
+                            <div class="avatar avatar-online">
+                              <img src="{{url_for('profilePic',user_id=my_user_id)}}" alt class="w-px-40 h-auto rounded-circle img-profile" />
+                            </div>
                           </div>
                           <div class="flex-grow-1">
-                            <span class="fw-semibold d-block">{{username}}</span>
-                            <small class="text-muted">View Profile</small>
+                            <span class="fw-semibold d-block">{{my_username}}</span>
+                            <small>View Profile</small>
                           </div>
                         </div>
                       </a>
@@ -229,6 +227,8 @@
             <!-- Footer -->
             <footer class="content-footer footer bg-footer-theme">
               <div class="container-xxl d-flex flex-wrap justify-content-between py-2 flex-md-row flex-column">
+                <div>
+                </div>
                 <div class="mb-2 mb-md-0">
                   ©
                   <script>
@@ -236,24 +236,6 @@
                   </script>
                   , made with ❤️ by
                   <a href="https://themeselection.com" target="_blank" class="footer-link fw-bolder">ThemeSelection</a>
-                </div>
-                <div>
-                  <a href="https://themeselection.com/license/" class="footer-link me-4" target="_blank">License</a>
-                  <a href="https://themeselection.com/" target="_blank" class="footer-link me-4">More Themes</a>
-
-                  <a
-                    href="https://themeselection.com/demo/sneat-bootstrap-html-admin-template/documentation/"
-                    target="_blank"
-                    class="footer-link me-4"
-                    >Documentation</a
-                  >
-
-                  <a
-                    href="https://github.com/themeselection/sneat-html-admin-template-free/issues"
-                    target="_blank"
-                    class="footer-link me-4"
-                    >Support</a
-                  >
                 </div>
               </div>
             </footer>
