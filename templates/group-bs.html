@@ -21,9 +21,9 @@
         <div class="col-lg-12 mb-4">
             <div class="card card-header bg-primary-light text-white" >
                 <div class="d-flex align-items-end align-items-sm-center row">
-                    <div class="col-xl-9" onclick= "window.location.href = '{{url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}';">
+                    <div class="col-xl-9">
                         <div class="card-body py-3">
-                            <h1 class="card-title text-white"><strong>{{gaggle.gaggle_name}}</strong></h1>
+                            <a href="{{url_for('gaggle', gaggle_name=gaggle.gaggle_name)}}"><h1 class="card-title text-white"><strong>{{gaggle.gaggle_name}}</strong></h1></a>
                         </div>
                     </div>
                     <div class="col-xl-3">

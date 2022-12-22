@@ -64,12 +64,12 @@
 
         <div id="myDropdown_{{post.post_id}}" class="card dropdown-content">
           {% if post.poster_id == user_id %}
-          <div >
+          <div class="justify-content-center">
           <form method='post' action="{{url_for('removePost')}}" >  
           <button onclick="deletePost('{{post.post_id}}')">Delete Post</button>
           </form></div>
           {% else %}
-          <div onclick="displayReport('{{post.post_id}}')">Report Post</div>
+          <div onclick="displayReport('{{post.post_id}}')" style="cursor:pointer" class="justify-content-center">Report Post</div>
           {% endif %}
         </div> 
       </div>   
@@ -81,11 +81,12 @@
 
 <div id = 'report-{{post.post_id}}' class = 'popup-report'>
     <div class="card">
-
       <div class = 'report-header'>
         <div class="d-flex align-items-end align-items-sm-center row">
-              <div class="col-sm-10"> SUBMIT A REPORT </div>
-              <div class="col-sm-2 right"> 
+              <div class="col-sm-11">
+                <h4 class="mt-4 mb-0">Submit a Report</h4>
+              </div>
+              <div class="col-sm-1"> 
                 <button aria-label="submit report" class = 'btn-icon' onclick="closeReport('{{post.post_id}}')" >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x" viewBox="0 0 16 16">
                     <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
@@ -96,10 +97,10 @@
       </div>
       <div>
       <div class = 'report-form' id = 'report-form-{{post.post_id}}'>
-          We want to know why you want to flag this post to provide some information for our moderators. Please provide a reason for your report:
-          <form action="{{url_for('report')}}" method="POST">
-            <label>Reason: <textarea id = 'report'class="mx-4 mb-0" name="reason" rows="2" style="width: 30vw; border: solid rgb(210, 210, 210) 1px;"></textarea></label>
-            <input type="submit" value="Report" onclick="reportPost('{{post.post_id}}')">
+          <p>To help our moderators respond more efficiently, please provide a reason for your report.</p>
+          <form action="{{url_for('report')}}" method="POST" >
+            <textarea title="Reason for report" id = 'report'class="form-control" name="reason" rows="2" style="width: 35vw; border: solid rgb(210, 210, 210) 1px;"></textarea>
+            <button type="submit" class="btn rounded-pill btn-outline-danger mt-2" onclick="reportPost('{{post.post_id}}')">Report</button>
           </form>
       </div>
     </div>

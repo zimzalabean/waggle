@@ -150,13 +150,14 @@ def search():
     under different filter that have a name matching the keyword search.
     """
     conn = dbi.connect()
-    user_id = isLoggedIn()
+    my_user_id = isLoggedIn()
+    my_username = session.get('username','')
     query = request.args.get('search-query')
     gaggles = waggle.searchGaggle(conn, query)
     posts = waggle.searchPost(conn, query)
     comments = waggle.searchComment(conn, query)
     users = waggle.searchPeople(conn, query)
-    return render_template('search-bs.html', query = query, gaggles = gaggles, posts = posts, comments = comments, users = users, user_id = user_id)
+    return render_template('search-bs.html', query = query, gaggles = gaggles, posts = posts, comments = comments, users = users, my_user_id = my_user_id, my_username = my_username)
 
 ####_____Post Functions_____#### 
 
@@ -913,7 +914,7 @@ def dashboard():
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'hs1_db' 
+    db_to_use = 'waggle_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 

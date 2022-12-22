@@ -86,13 +86,13 @@
             <div class="card-body">
               <!-- Logo -->
               <div class="app-brand justify-content-center">
-                  <span class="app-brand-text demo text-body fw-bolder">Waggle</span>
+                  <img style="height:65px" src="/static/img/elements/waggle-logo.png"/>
               </div>
               <!-- /Logo -->
               <form id="formAuthentication" class="mb-3" action="{{url_for('signup')}}" method="POST">
                 <div class="mb-3">
                   <label for="first_name" class="form-label">First Name</label>
-                  <input type="text" class="form-control" id="first_name" name="first_name" value="{{first_name}}" placeholder="ex. Wendy" />
+                  <input type="text" class="form-control" id="first_name" name="first_name" value="{{first_name}}" placeholder="ex. Wendy" autofocus/>
                 </div>
                 <div class="mb-3">
                   <label for="last_name" class="form-label">Last Name</label>
@@ -114,7 +114,6 @@
                     id="username"
                     name="username"
                     placeholder="Create username"
-                    autofocus
                   />
                 </div>
                 <div class="mb-3 form-password-toggle">
