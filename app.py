@@ -257,15 +257,16 @@ def addComment():
         comment = waggle.getComment(conn, comment_id, user_id)
         return jsonify({'new_comment': render_template('new_comment.html', comment=comment)})         
 
-@app.route('/deleteComment/', methods=["POST"])
+@app.route('/delete/comment', methods=["POST"])
 def removeComment():
     user_id = isLoggedIn()
     data = request.get_json()
+    print(data)
     comment_id = data['comment_id']
     conn = dbi.connect()    
     deleted_comment_id = waggle.deleteComment(conn, comment_id)
     print(deleted_comment_id)
-    return jsonify({'comment_id':deleted_comment_id})
+    return jsonify({'comment_id': deleted_comment_id})
 
 
 @app.route('/post/<post_id>/', methods=['GET']) #add hyperlink from group-bs.html to post
