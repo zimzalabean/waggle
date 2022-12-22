@@ -1,6 +1,105 @@
 {% extends "dashboard.html" %}
       
 {% block sub_content %}
+
+{% if hasGaggle %}
+       <!-- Tabs -->
+      <div class="row">
+        <div class="col-xl-12">
+          <div class="nav-align-top mb-4">
+            <ul class="nav nav-tabs nav-fill" role="tablist">
+              <li class="nav-item">
+                <button
+                  type="button"
+                  class="nav-link active"
+                  role="tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#navs-justified-home"
+                  aria-controls="navs-justified-home"
+                  aria-selecte="false"
+                >
+                <strong>Home</strong>
+                </button>
+              </li>
+            {% for modgaggle in modgaggles %}
+              <li class="nav-item">
+                <button
+                  type="button"
+                  class="nav-link"
+                  role="tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#navs-justified-{{gaggle.gaggle_name}}"
+                  aria-controls="navs-justified-{{gaggle.gaggle_name}}"
+                  aria-selected="false"
+                >
+                <strong>{{modgaggle.gaggle_name}}</strong>
+                </button>
+              </li>
+            {% endfor %}
+            </ul>
+            <div class="tab-content">
+              <div class="tab-pane fade show active" id="navs-justified-home" role="tabpanel">
+                <div class="card mb-3">
+                  <h4 class="card-header fw-bold">Moderator Invitation Status</h4>
+                  {% for gaggle in gaggles %}
+                  <hr>
+                  <h5 class="card-header"><strong>{{gaggle.gaggle_name}}:</strong></h5>
+                  <div class="card-body">
+                    {% for invitee in allInvitees%}
+                      {%if invitee.gaggle_id == gaggle.gaggle_id %}
+                        <p>{{invitee.username}}: {{invitee.accepted}}<p>
+                      {% endif %}                      
+                    {% endfor %}
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+              {% for modgaggle in modgaggles %}
+              <div class="tab-pane fade" id="navs-justified-{{modgaggle.gaggle_name}}" role="tabpanel">
+                <div class="card mb-3">
+                  <h3 class="card-header fw-bold">Creator View for <a href="{{url_for('gaggle',gaggle_name=modgaggle.gaggle_name)}}"><strong>{{modgaggle.gaggle_name}}</strong></a></h3>
+                  <div class="card-body">
+                    <form action="{{url_for('editGaggle', gaggle_name=modgaggle.gaggle_name)}}" method="POST">
+                      <h5 class="card-header">Edit <strong>{{modgaggle.gaggle_name}}</strong>'s Description:</h5>
+                      <div class="update_group">
+                        <textarea title="Description of {{modgaggle.gaggle_name}}" class="form-control" type="text" name="description">{{modgaggle.description}}</textarea>
+                      </div>
+                      <h5 class="card-header">Edit <strong>{{gaggle.gaggle_name}}</strong>'s Guidelines:</h5>
+                      <div class="update_group">
+                        <textarea title="Guidelines of {{modgaggle.gaggle_name}}" class="form-control" type="text" name="guidelines">{{modgaggle.guidelines}}</textarea>
+                      </div>
+                      <div class="mt-2">
+                        <button type="submit" class="btn btn-primary me-2">Save changes</button>
+                      </div>
+                    </form>
+                  </div>
+                  <hr class="my-0"/>
+                  <h5 class="card-header">Invite New Moderator to <strong>{{modgaggle.gaggle_name}}</strong>:</h5>
+                  <div class="card-body">
+                    <div class="mod_invite">
+                      <form action="{{url_for('inviteUser', gaggle_name=modgaggle.gaggle_name)}}" method="POST">
+                        <div class="row d-flex align-items-center">
+                          <div class="mb-3 col-xl-4">
+                            <input title="Invite new moderator" class="form-control" type="text" name="invitee_username" placeholder="ex. ab6">
+                          </div>
+                        </div>
+                        <div class="mt-2">
+                          <button type="submit" class="btn btn-primary me-2">Invite</button>
+                        </div>
+                      </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% else %}
+        You haven't created any Gaggles.
+      {% endif %}
+
+    <!-- LINE OF DEMARCATION -->
 <h1>Displaying Moderator queue</h1>
 <div>
     <form method="POST" action="{{url_for('modqueue')}}">

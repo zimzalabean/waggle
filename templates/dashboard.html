@@ -85,6 +85,7 @@
             <div class="tab-content">
               <div class="tab-pane fade show active" id="navs-justified-home" role="tabpanel">
                 <div class="card mb-3">
+                  <!-- <h4><a href="{{url_for('modqueue')}}">View Modqueue</a></h4> -->
                   <h4 class="card-header fw-bold">Moderator Invitation Status</h4>
                   {% for gaggle in gaggles %}
                   <hr>
@@ -136,9 +137,7 @@
                 </div>
               </div>
             </div>
-              {% endfor %}
-
-
+            {% endfor %}
           </div>
         </div>
       </div>
@@ -146,10 +145,12 @@
         You haven't created any Gaggles.
       {% endif %}
     </div>
-      <!-- Tabs -->
-
-  <!-- {% block sub_content %}
+    <!-- <h3 class="fw-bold py-2 mb-2">Moderator Dashboard</h3>
+    
+          
+  {% block sub_content %}
 
   {% endblock %} -->
+</div>
 
 {% endblock %}

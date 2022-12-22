@@ -30,7 +30,7 @@
     <div class = 'replies' id = 'replies'>
         {% import "commentTemplateJS.html" as commentComp%}
         {% for comment in comments %}
-            {{commentComp.comment_temp(comment=comment, user_id = user_id, pageIsNotPost = false)}}
+            {{commentComp.comment_temp(comment=comment, user_id = my_user_id, pageIsNotPost = false)}}
         {% endfor %}
     </div>
 

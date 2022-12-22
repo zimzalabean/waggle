@@ -1,7 +1,7 @@
 {% macro comment_temp(comment, user_id, pageIsNotPost) -%}
 
 
-<div class="comment-wrap">
+<div class="comment-wrap" id = "comment_{{comment.comment_id}}">
     <div class="comment-header">
         <div class = 'avator-comment'>
           <img src="{{url_for('profilePic',user_id=comment.commentor_id)}}" alt="{{comment.commentor_id}}" class = 'img-profile'>
@@ -46,14 +46,21 @@
       </div>
      
       <div class="action">
+       
         <div class="smaller-circle">
           <button aria-label="view more actions">
+            
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-three-dots" viewBox="0 0 16 16">
               <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
             </svg>
           </button>
         </div>
       </div>
+      {%if comment.commentor_id == user_id%}
+      <form method = 'post' action="{{url_for('removeComment')}}">
+        <button id="comment_{{comment.comment_id}}" onclick="deleteComment('{{comment.comment_id}}')">Delete Comment</button> 
+      </form>
+      {%endif%}
       {% if pageIsNotPost %}
       <a href="{{url_for('post', post_id=comment.post_id)}}" class="btn btn-sm btn-outline-primary" style="float:right">View Post</a>
       {% endif %}
@@ -78,7 +85,24 @@
             document.getElementById("myDropdown_reply_"+cid).classList.toggle("show-reply");
             console.log(document.getElementById("myDropdown_reply_"+cid));
         }
-
+    
+    function deleteComment(comment_id) {
+      console.log(comment_id);
+      $.ajax({
+              type: "POST",
+              url: "/delete/comment",
+              data: JSON.stringify({'comment_id': comment_id}),
+              contentType: 'application/json; charset=utf-8',
+              dataType: 'json',
+              async: true,
+              success: function(resp){
+                console.log('deleted')
+                comment_id = resp['comment_id']
+                console.log(comment_id)
+                document.getElementById("comment_"+comment_id).classList.toggle("hidden");
+              }
+          });  event.preventDefault();
+  } 
 
     function likeComment(comment_id, commentor_id) {   
         $.ajax({
@@ -103,6 +127,25 @@
                 }
             });  event.preventDefault();
     }
+
+    // function deleteComment(comment_id) {
+    //   console.log(comment_id);
+    //   $.ajax({
+    //           type: "POST",
+    //           url: "/deleteComment",
+    //           data: JSON.stringify({'comment_id': comment_id}),
+    //           contentType: 'application/json; charset=utf-8',
+    //           dataType: 'json',
+    //           async: true,
+    //           success: function(resp){
+    //             console.log('deleted')
+    //             post_id = resp['comment_id']
+    //             console.log(comment_id)
+    //             document.getElementById("comment-"+comment_id).classList.toggle("hidden");
+    //           }
+    //       });  event.preventDefault();
+  } 
+
     function showDropdown(pid) {
             document.getElementById("myDropdown_"+pid).classList.toggle("display");
             console.log(document.getElementById("myDropdown_"+pid));

@@ -150,13 +150,14 @@ def search():
     under different filter that have a name matching the keyword search.
     """
     conn = dbi.connect()
-    user_id = isLoggedIn()
+    my_user_id = isLoggedIn()
+    my_username = session.get('username','')
     query = request.args.get('search-query')
     gaggles = waggle.searchGaggle(conn, query)
     posts = waggle.searchPost(conn, query)
     comments = waggle.searchComment(conn, query)
     users = waggle.searchPeople(conn, query)
-    return render_template('search-bs.html', query = query, gaggles = gaggles, posts = posts, comments = comments, users = users, user_id = user_id)
+    return render_template('search-bs.html', query = query, gaggles = gaggles, posts = posts, comments = comments, users = users, my_user_id = my_user_id, my_username = my_username)
 
 ####_____Post Functions_____#### 
 
@@ -185,8 +186,9 @@ def history(username):
     my_user_id = session.get('user_id', '')
     my_username = session.get('username', '')
     posts = waggle.getUserPosts(conn, username)
-    comments = waggle.getUserComments(conn, my_user_id)
-    return render_template('history.html', username = username, posts = posts, comments = comments, my_username = my_username, my_user_id = my_user_id)
+    user_id = waggle.getUserID(conn, username)['user_id']
+    comments = waggle.getUserComments(conn, user_id)
+    return render_template('history.html', username = username, posts = posts, comments = comments, my_username = my_username, my_user_id = my_user_id, user_id=user_id)
 
 
 @app.route('/user/history/')
@@ -217,7 +219,7 @@ def postGroup():
     if len(content) != 0:
         poster_id = session.get('user_id', '')
         post_id = waggle.addPost(conn, gaggle_id, poster_id, content, None, posted_date)
-        ## ADD PIC ##
+        ## ADD PIC IF USER SUBMITTED ONE##
         if fname is not None:
             user_filename = fname.filename
             ext = user_filename.split('.')[-1]
@@ -255,15 +257,16 @@ def addComment():
         comment = waggle.getComment(conn, comment_id, user_id)
         return jsonify({'new_comment': render_template('new_comment.html', comment=comment)})         
 
-@app.route('/deleteComment/', methods=["POST"])
+@app.route('/delete/comment', methods=["POST"])
 def removeComment():
     user_id = isLoggedIn()
     data = request.get_json()
+    print(data)
     comment_id = data['comment_id']
     conn = dbi.connect()    
     deleted_comment_id = waggle.deleteComment(conn, comment_id)
     print(deleted_comment_id)
-    return jsonify({'comment_id':deleted_comment_id})
+    return jsonify({'comment_id': deleted_comment_id})
 
 
 @app.route('/post/<post_id>/', methods=['GET']) #add hyperlink from group-bs.html to post
@@ -283,6 +286,8 @@ def post(post_id):
                     FROM gaggle
                     WHERE gaggle_id = %s''',[gaggle_id])
     gaggle = curs.fetchone()
+    if gaggle['guidelines'] is None:
+            gaggle['guidelines'] = 'No guidelines specified for this gaggle.'
     #get post comments
     comments =  waggle.getPostComments(conn, post_id, my_user_id)
     valid = waggle.isGosling(conn, my_user_id, gaggle_id) #can user reply to post
@@ -406,6 +411,8 @@ def addReply(comment_id):
         WHERE gaggle_id = %s''',
                  [gaggle_id]) 
     gaggle = curs.fetchone() 
+    if gaggle['guidelines'] is None:
+            gaggle['guidelines'] = 'No guidelines specified for this gaggle.'
     isAuthor = waggle.isAuthor(conn, my_user_id, gaggle_id)
     #=============================================
     comment_chain =  waggle.getConvo(conn, comment_id, my_user_id) #this is the previous comment chain
@@ -437,7 +444,6 @@ def editMyPage():
     user_info = waggle.getUserInfo(conn, my_user_id)
     if request.method == 'GET':
         return render_template('edit_account_info-bs.html', user=user_info, my_username=my_username,my_user_id=my_user_id)
-
     else:
         new_fn, new_ln, new_cy, new_bio = '', '', '', ''
         if request.form['first_name'] != '':
@@ -447,7 +453,6 @@ def editMyPage():
                             SET first_name = %s
                             WHERE user_id = %s''',
                         [new_fn,my_user_id])
-            conn.commit()
         if request.form['last_name'] != '':
             new_ln = request.form['last_name']
             curs = dbi.dict_cursor(conn)
@@ -455,7 +460,6 @@ def editMyPage():
                             SET last_name = %s
                             WHERE user_id = %s''',
                         [new_ln,my_user_id])
-            conn.commit()
         if request.form['class_year'] != '':
             new_cy = request.form['class_year']
             curs = dbi.dict_cursor(conn)
@@ -463,7 +467,6 @@ def editMyPage():
                             SET class_year = %s
                             WHERE user_id = %s''',
                         [new_cy,my_user_id])
-            conn.commit()
         if request.form['bio_text'] != '':
             new_bio = request.form['bio_text']
             curs = dbi.dict_cursor(conn)
@@ -471,8 +474,9 @@ def editMyPage():
                             SET bio_text = %s
                             WHERE user_id = %s''',
                         [new_bio,my_user_id])
-            conn.commit()
-        
+        conn.commit()
+        flash('Profile successfully updated')
+        return redirect(url_for('editMyPage'))
 
 @app.route('/upload/', methods=["GET", "POST"])
 def file_upload():
@@ -596,7 +600,9 @@ def gaggle(gaggle_name):
         return redirect(url_for('login')) 
     else: 
         conn = dbi.connect() 
-        gaggle = waggle.getGaggle(conn, gaggle_name)  
+        gaggle = waggle.getGaggle(conn, gaggle_name)
+        if gaggle['guidelines'] is None:
+            gaggle['guidelines'] = 'No guidelines specified for this gaggle.'  
         posts = waggle.getGagglePosts(conn, gaggle_name, my_user_id)
         gaggle_id = waggle.getGaggleID(conn, gaggle_name)['gaggle_id']
         joined  = waggle.isGosling(conn, my_user_id, gaggle_id)
@@ -757,13 +763,15 @@ def inviteMod():
 def modqueue():
     logged_in = session.get('logged_in', False)
     if logged_in != False:
-        username = session.get('username')
-        user_id = session.get('user_id')
+        my_username = session.get('username')
+        my_user_id = session.get('user_id')
         
         conn = dbi.connect()
-        gaggles = waggle.getMyModGaggles(conn, user_id)
-        if len(gaggles) > 0:
-            gaggle_id = gaggles[0]['gaggle_id']
+        modgaggles = waggle.getMyModGaggles(conn, my_user_id)
+        hasModGaggle = False
+        if len(modgaggles) > 0:
+            gaggle_id = modgaggles[0]['gaggle_id']
+            hasModGaggle = True
             flagged = waggle.get_flagged_posts(conn, gaggle_id)
             pending, approved = [], []
             for flag in flagged:
@@ -781,8 +789,8 @@ def modqueue():
                     else:
                         approved.append(flag)
             else:
-                gaggle_name = gaggles[0]['gaggle_name']
-            return render_template('modqueue.html', gaggles=gaggles, gaggle_id=gaggle_id, pending = pending, approved = approved, username=username, user_id = user_id, chosenGaggle = gaggle_name)
+                gaggle_name = modgaggles[0]['gaggle_name']
+            return render_template('modqueue.html', modgaggles=modgaggles, gaggle_id=gaggle_id, pending = pending, approved = approved, my_username = my_username, my_user_id = my_user_id, chosenGaggle = gaggle_name, hasModGaggle = hasModGaggle)
         else:
             flash('You are not a moderator yet')
             return redirect(request.referrer)
@@ -909,7 +917,7 @@ def dashboard():
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'ldau_db' 
+    db_to_use = 'waggle_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 
