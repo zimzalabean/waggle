@@ -56,9 +56,9 @@
                 <div class="card">
                     <div class="d-flex align-items-end row">
                         <div class="col-sm-12">
-                            <div class="card-body">
-                            {{postComp.post_temp(post=post, pageIsNotPost = true)}}
-                            </div>
+                            
+                            {{postComp.post_temp(post=post, user_id = my_user_id)}}
+
                         </div>
                     </div>
                 </div>
@@ -66,28 +66,5 @@
             <div class="col-lg-1 mb-3 order-2"></div>
         </div>
     {% endfor %}
-
-{% endblock %}
-
-<!-- right content -->
-{% block right_content %}
-    <div class = 'gaggle-list'>
-        <h5>YOUR WEDGES</h5>
-
-            {% for gaggle in gaggles %}
-            <p>w/<a href="{{url_for('gaggle', gaggle_name=gaggle['gaggle_name'])}}">{{gaggle['gaggle_name']}}</a></p>
-            {% endfor %}
-    </div>
-
-    <div class = 'gaggle-list'>
-        <h5>YOUR GAGGLES</h5>
-
-            {% for gaggle in gaggles %}
-            <p>g/<a href="{{url_for('gaggle', gaggle_name=gaggle['gaggle_name'])}}">{{gaggle['gaggle_name']}}</a></p>
-            {% endfor %}
-    </div>  
-
-
-
 
 {% endblock %}

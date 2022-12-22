@@ -1,7 +1,8 @@
-{% macro post_temp(post, pageIsNotPost) -%}
+{% macro post_temp(post, user_id) -%}
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 
 <div class="post-wrap" id = "post-{{post.post_id}}">
+  <div class="card-body">
     <div class="post-header">
         <div class = 'avator'>
           <img src="{{url_for('profilePic',user_id=post.poster_id)}}" alt="{{post.poster_id}}" class = 'img-profile'>
@@ -13,7 +14,7 @@
       </div>      
     </div>
 
-    <a href="{{url_for('post', post_id=post.post_id)}}">
+    <a style="color:#566a7f" href="{{url_for('post', post_id=post.post_id)}}">
       <div class="post-img-wrap">
         <p> {{post.content}}</p>
         {% if post.pic != None %}
@@ -34,11 +35,11 @@
 
     
 
-          <div class="metric {{'selected' if post.isLiked}}"  id="post-likes-{{post.post_id}}" style = 'display: flex; align-items: center;'>
+          <div class="metric {{'selected' if (post.isLiked == 1)}}"  id="post-likes-{{post.post_id}}" style = 'display: flex; align-items: center;'>
             <div class = 'small-circle'>
               <form class = "like-count-post" method= 'post' action="{{url_for('likePost')}}" > 
-              {% if post.isLiked %}
-                <button aria-label="unlike" id = 'post-Like{{post.post_id}}' onclick ="likePost('{{post.post_id}}','{{post.poster_id}}')">
+              {% if post.isLiked == 1 %}
+                <button id = 'post-Like{{post.post_id}}' onclick ="likePost('{{post.post_id}}','{{post.poster_id}}')">
                 <svg class="feather feather-heart sc-dnqmqq jxshSx" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
                 </button>
               {% else %}
@@ -62,18 +63,18 @@
         </div> 
 
         <div id="myDropdown_{{post.post_id}}" class="card dropdown-content">
-          {% if post.canDelete %}
+          {% if post.poster_id == user_id %}
           <div >
           <form method='post' action="{{url_for('removePost')}}" >  
           <button onclick="deletePost('{{post.post_id}}')">Delete Post</button>
           </form></div>
-          {% endif %}
-          {% if not post.canDelete %}
+          {% else %}
           <div onclick="displayReport('{{post.post_id}}')">Report Post</div>
           {% endif %}
         </div> 
       </div>   
   </div>  
+</div>
 </div>
 
 

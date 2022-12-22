@@ -217,7 +217,7 @@ img {
   display: none !important;
   position: absolute;
   min-width: 100px;
-  margin-top: 40px;
+  margin-left: 40px;
 }
 
 .dropdown-content div{

@@ -7,22 +7,22 @@
         <div class = 'comment-thread'>               
             <a  class="comment-border-link"></a>
             {% import "postTemplateJS.html" as postComp%}
-            {{postComp.post_temp(post=post)}}
+            {{postComp.post_temp(post=post, user_id = my_user_id)}}
             {% import "commentTemplateJS.html" as commentComp%}
                 {% for comment in comment_chain %}
-                    {{commentComp.comment_temp(comment=comment, user_id=user_id)}}
+                    {{commentComp.comment_temp(comment=comment, user_id=my_user_id)}}
                 {% endfor %}
         </div>
 
         <!-- main comment -->  
         <div id = 'main-comment'>  
-            {{commentComp.comment_temp(comment=parent_comment, user_id=user_id)}}
+            {{commentComp.comment_temp(comment=parent_comment, user_id=my_user_id)}}
         </div>  
 
         <!-- Replies section-->  
         <div class = 'replies'>
             {% for comment in replies %}  
-                {{commentComp.comment_temp(comment=comment, user_id=user_id)}}
+                {{commentComp.comment_temp(comment=comment, user_id=my_user_id)}}
             {% endfor %}
         </div>
 </div>

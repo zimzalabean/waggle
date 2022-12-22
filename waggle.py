@@ -40,7 +40,7 @@ def getUserPosts(conn, username):
     user_id = getUserID(conn, username)['user_id']
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.*, b.username, c.gaggle_name
+        SELECT a.*, b.username, c.gaggle_name, exists(select user_id from post_like where post_id = a.post_id and user_id = %s) as isLiked
         FROM post a
         LEFT JOIN user b
         ON (a.poster_id = b.user_id)
@@ -48,7 +48,7 @@ def getUserPosts(conn, username):
         ON (a.gaggle_id = c.gaggle_id)
         WHERE poster_id = %s
         order by posted_date DESC''',
-                 [user_id])
+                 [user_id, user_id])
     all_posts = curs.fetchall()
     return all_posts
 
@@ -59,7 +59,17 @@ def searchGaggle(conn, query):
         SELECT * from gaggle 
         WHERE gaggle_name LIKE %s''',
                  ["%"+query+"%"]) 
-    return curs.fetchall()    
+    return curs.fetchall()
+
+def getGaggleName(conn, gaggle_id):
+    '''returns a gaggle's name based on its gaggle_id'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        SELECT a.gaggle_name
+        FROM gaggle a
+        WHERE gaggle_id = %s''',
+                [gaggle_id])
+    return curs.fetchone()
 
 def getGaggle(conn, gaggle_name):
     '''returns information about a gaggle based on its gaggle_name'''
@@ -73,11 +83,11 @@ def getGaggle(conn, gaggle_name):
                  [gaggle_name])
     return curs.fetchone()      
 
-def getPosts(conn):
+def getPosts(conn, user_id):
     '''returns the latest 20 posts for homepage feed'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        select a.*, b.username, c.gaggle_name, d.filename
+        select a.*, b.username, c.gaggle_name, d.filename, exists(select user_id from post_like where post_id = a.post_id and user_id = %s) as isLiked
         from post a
         left join user b
         on (a.poster_id = b.user_id)
@@ -86,15 +96,15 @@ def getPosts(conn):
         LEFT JOIN post_pics d
         ON (a.post_id = d.post_id)
         order by posted_date DESC
-    ''')
+    ''', [user_id])
     return curs.fetchall()
 
-def getPost(conn, post_id):
+def getPost(conn, post_id, user_id):
     '''Get post and username and gaggle_name based on post_id
     '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.*, b.username, c.gaggle_name, d.filename as pic
+        SELECT a.*, b.username, c.gaggle_name, d.filename as pic, exists(select user_id from post_like where post_id = %s and user_id = %s) as isLiked
         FROM post a
         LEFT JOIN user b
         ON (a.poster_id = b.user_id)
@@ -103,8 +113,9 @@ def getPost(conn, post_id):
         LEFT JOIN post_pics d
         ON (a.post_id = d.post_id)
         WHERE a.post_id = %s''',
-                 [post_id])
+                 [post_id, user_id, post_id])
     result = curs.fetchone()
+    print(result)
     return result
 
 def getGaggleID(conn, gaggle_name):
@@ -117,12 +128,12 @@ def getGaggleID(conn, gaggle_name):
                  [gaggle_name])
     return curs.fetchone()  
 
-def getGagglePosts(conn, gaggle_name):
+def getGagglePosts(conn, gaggle_name, user_id):
     '''returns all posts in a gaggle based on gaggle_name sorted by latest'''
     gaggle_id = getGaggleID(conn, gaggle_name)['gaggle_id']
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.*,  b.username, c.gaggle_name, d.filename as pic
+        SELECT a.*,  b.username, c.gaggle_name, d.filename as pic, exists(select user_id from post_like where post_id = a.post_id and user_id = %s) as isLiked
         FROM post a
         LEFT JOIN user b
         ON (a.poster_id = b.user_id)
@@ -132,22 +143,22 @@ def getGagglePosts(conn, gaggle_name):
         ON (a.post_id = d.post_id)
         WHERE c.gaggle_id = %s
         order by posted_date DESC''',
-                 [gaggle_id])
+                 [user_id, gaggle_id])
     all_posts = curs.fetchall()
     return all_posts
 
-def getPostComments(conn, post_id):
+def getPostComments(conn, post_id, user_id):
     '''returns all comments on a post based on the post_id'''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.*, b.username, b.username, CONCAT(b.first_name,' ', b.last_name) as full_name 
+        SELECT a.*, b.username, b.username, exists(select user_id from comment_like where comment_id = a.comment_id and user_id = %s) as isLiked
         FROM comment a
         LEFT JOIN user b
         ON a.commentor_id = b.user_id
         WHERE parent_comment_id IS NULL 
         AND post_id = %s
         ORDER BY a.posted_date DESC''',
-                 [post_id])
+                 [user_id, post_id])
     return curs.fetchall()      
 
 def addComment(conn, post_id, parent_comment_id, content, commentor_id, posted_date):
@@ -373,33 +384,33 @@ def addPost(conn, gaggle_id, poster_id, content, tag_id, posted_date):
     return post_id 
 
 
-def getComment(conn, comment_id):
+def getComment(conn, comment_id, user_id):
     '''
     Retrieve comment info based on its comment_id.
     '''
     curs = dbi.dict_cursor(conn)  
     curs.execute('''
-        SELECT a.*, b.username
+        SELECT a.*, b.username, exists(select user_id from comment_like where comment_id = a.comment_id and user_id = %s) as isLiked
         FROM comment a
         LEFT JOIN user b
         ON a.commentor_id = b.user_id
         WHERE comment_id = %s''',
-                 [comment_id])     
+                 [user_id, comment_id])     
     return curs.fetchone() 
 
-def getReplies(conn, comment_id):  
+def getReplies(conn, comment_id, user_id):  
     '''
     Retrieve replies to a comment based on its comment_id. 
     '''
     curs = dbi.dict_cursor(conn)  
     curs.execute('''
-        SELECT a.*, b.username 
+        SELECT a.*, b.username, exists(select user_id from comment_like where comment_id = a.comment_id and user_id = %s) as isLiked 
         FROM comment a
         LEFT JOIN user b
         ON a.commentor_id = b.user_id
         WHERE parent_comment_id = %s
         ORDER BY posted_date desc''',
-                 [comment_id])     
+                 [user_id, comment_id])     
     return curs.fetchall()    
 
 def getParentComment(conn , comment_id):
@@ -637,6 +648,9 @@ def getGagglesJoined(conn, user_id):
     return curs.fetchall()
 
 def updateBio(conn, gaggle_id, new_group_bio):
+    '''
+        Edits gaggle's bio 
+    '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         UPDATE gaggle
@@ -647,6 +661,9 @@ def updateBio(conn, gaggle_id, new_group_bio):
     return gaggle_id 
 
 def updateGuidelines(conn, gaggle_id, new_group_guidelines):
+    '''
+        Edits gaggle's guidelines 
+    '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
         UPDATE gaggle
@@ -852,19 +869,7 @@ def unlikePost(conn, user_id, post_id):
                 [post_id])
     conn.commit()
     print('decreases likes')
-    return "Unliked"           
-
-# def getUserComments(conn, user_id):
-#     '''returns all of user's comments sorted by latest'''
-#     curs = dbi.dict_cursor(conn)
-#     curs.execute('''
-#         SELECT * 
-#         FROM comment
-#         WHERE commentor_id = %s
-#         ORDER BY posted_date desc''',
-#                  [user_id])
-#     all_posts = curs.fetchall()
-#     return all_posts 
+    return "Unliked"
 
 def getUserComments(conn, user_id):
     '''returns all of user's comments sorted by latest'''
@@ -875,9 +880,10 @@ def getUserComments(conn, user_id):
         LEFT JOIN user b
         ON a.commentor_id = b.user_id
         WHERE commentor_id = %s
-        ORDER BY posted_date desc''',
-                 [user_id])
-    return curs.fetchall()
+        ORDER BY posted_date desc
+        ''', [user_id])
+    all_comments = curs.fetchall()
+    return all_comments
 
 ####_____To be used Functions for beta not yet tested_____#### 
 
@@ -994,10 +1000,10 @@ def addConvo(conn, parent_comment_id, comment_id):
         [parent_comment_id])
     conn.commit()
 
-def getConvo(conn, comment_id):
+def getConvo(conn, comment_id, user_id):
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        SELECT a.anc_id, b.*, c.username 
+        SELECT a.anc_id, b.*, c.username, exists(select user_id from comment_like where comment_id = b.comment_id and user_id = %s) as isLiked 
         FROM convos a
         LEFT JOIN comment b
         ON a.anc_id = b.comment_id
@@ -1005,45 +1011,13 @@ def getConvo(conn, comment_id):
         ON b.commentor_id = c.user_id
         WHERE a.des_id = %s
         ORDER BY posted_date asc''',
-                [comment_id])
+                [user_id, comment_id])
     return curs.fetchall()        
-
-def getLikedComments(conn, user_id):
-    curs = dbi.cursor(conn)
-    curs.execute('''
-        SELECT comment_id 
-        FROM comment_like
-        WHERE user_id = %s''',
-                [user_id])
-    result = curs.fetchall()
-    likes = [x[0] for x in result]
-    return likes                    
-
-def getLikedPosts(conn, user_id):
-    curs = dbi.cursor(conn)
-    curs.execute('''
-        SELECT post_id 
-        FROM post_like
-        WHERE user_id = %s''',
-                [user_id])
-    result = curs.fetchall()
-    likes = [x[0] for x in result]
-    return likes       
-
-def getOwnPosts(conn, user_id):
-    curs = dbi.cursor(conn)
-    curs.execute('''
-        SELECT post_id 
-        FROM post
-        WHERE poster_id = %s''',
-                [user_id])
-    result = curs.fetchall()
-    post_ids = [x[0] for x in result]
-    return post_ids     
+   
 
 def deleteComment(conn, comment_id):
     '''
-    Delete comment
+    Delete comment 
     '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''delete
