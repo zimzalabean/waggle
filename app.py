@@ -121,52 +121,6 @@ def isLoggedIn():
     else:
         return user_id
 
-def likedComments(user_id, comments):
-    '''
-    Take in a list of comments and check if if this user has liked these comments
-    '''
-    conn = dbi.connect() 
-    likes = waggle.getLikedComments(conn, user_id)
-    for comment in comments:
-        comment_id = comment['comment_id']
-        comment['isLiked'] = (comment_id in likes)
-    return comments
-
-def likedPosts(user_id, posts):
-    '''
-    Take in a list of comments and check if if this user has liked these comments
-    '''
-    conn = dbi.connect() 
-    likes = waggle.getLikedPosts(conn, user_id)
-    for post in posts:
-        post_id = post['post_id']
-        post['isLiked'] = (post_id in likes)
-    return posts
-
-def canDeletePosts(posts, user_id):
-    '''
-    Helper function to determine if current user can delete a post.
-    Check if user_id is the author the post_id.
-    '''
-    conn = dbi.connect() 
-    post_ids = waggle.getOwnPosts(conn, user_id)
-    for post in posts:
-        post_id = post['post_id']
-        post['canDelete'] = (post_id in post_ids)
-    return posts
-
-# def getRepliesThread(comment_id, thread):  
-#     '''Helper function to get all the parent comment_id of the input comment_id.'''
-#     conn = dbi.connect() 
-#     parent_comment = waggle.getParentComment(conn, comment_id)
-#     print("current_thread" + str(thread))
-#     if len(parent_comment) == 0:
-#         return thread 
-#     else:
-#         parent_comment_id = parent_comment[0]['parent_comment_id'] 
-#         thread.append(parent_comment_id)
-#         return getRepliesThread(parent_comment_id, thread)
-
 ####_____Homepage Functions_____####
 
 @app.route('/')
@@ -183,8 +137,7 @@ def homepage():
         return redirect(url_for('login'))
     else:
         gaggles = waggle.getUserGaggle(conn, username)
-        posts_info = waggle.getPosts(conn)
-        posts = likedPosts(user_id, canDeletePosts(posts_info, user_id))
+        posts = waggle.getPosts(conn, user_id)
         return render_template('main.html',  gaggles = gaggles, username=username, posts=posts, user_id = user_id)
 
 ####_____Search Functions_____####
@@ -241,9 +194,8 @@ def history(username):
     """
     conn = dbi.connect()
     user_id = session.get('user_id', '')
-    posts = canDeletePosts(waggle.getUserPosts(conn, username),user_id)
-    posts = likedPosts(user_id, posts)
-    comments = likedComments(user_id,waggle.getUserComments(conn, user_id))
+    posts = waggle.getUserPosts(conn, username)
+    comments = waggle.getUserComments(conn, user_id)
     return render_template('history.html', username = username, posts = posts, comments = comments, user_id=user_id)
 
 @app.route('/user/history/')
@@ -289,9 +241,8 @@ def postGroup():
                     [post_id, filename, filename])
             conn.commit()
         #############
-        post = waggle.getPost(conn, post_id)
-        post['canDelete'] = True
-        return jsonify({'new_post': render_template('new_post.html', new_post=post)})
+        post = waggle.getPost(conn, post_id, user_id)
+        return jsonify({'new_post': render_template('new_post.html', new_post=post, user_id = user_id)})
 
 @app.route('/addComment/', methods=["POST"])
 def addComment():
@@ -300,6 +251,7 @@ def addComment():
     in the 'comment' table in the database.
     """
     conn = dbi.connect()
+    user_id = isLoggedIn()
     data = request.get_json()
     content = data['content']
     post_id = data['post_id']
@@ -308,7 +260,7 @@ def addComment():
     if len(content) != 0:
         commentor_id = session.get('user_id', '')
         comment_id = waggle.addComment(conn, post_id, None, content, commentor_id, posted_date)
-        comment = waggle.getComment(conn, comment_id)
+        comment = waggle.getComment(conn, comment_id, user_id)
         return jsonify({'new_comment': render_template('new_comment.html', comment=comment)})         
 
 @app.route('/post/<post_id>/', methods=['GET']) #add hyperlink from group-bs.html to post
@@ -320,9 +272,7 @@ def post(post_id):
     username = session.get('username')
     conn = dbi.connect() 
     #get post infos and check user's previous interaction
-    post = waggle.getPost(conn, post_id)
-    post['canDelete'] = (user_id == post['poster_id'])
-    post['isLiked'] = waggle.hasLikedPost(conn, user_id, post_id)
+    post = waggle.getPost(conn, post_id, user_id)
     gaggle_id = post['gaggle_id']
     #get gaggle from post
     curs = dbi.dict_cursor(conn)
@@ -331,7 +281,7 @@ def post(post_id):
                     WHERE gaggle_id = %s''',[gaggle_id])
     gaggle = curs.fetchone()
     #get post comments
-    comments = likedComments(user_id, waggle.getPostComments(conn, post_id))
+    comments =  waggle.getPostComments(conn, post_id, user_id)
     valid = waggle.isGosling(conn, user_id, gaggle_id) #can user reply to post
     isAuthor = waggle.isAuthor(conn,user_id, gaggle_id)
     return render_template('post.html', post = post, comments = comments, valid = valid, username=username, user_id=user_id, isAuthor = isAuthor, gaggle = gaggle)
@@ -439,12 +389,11 @@ def addReply(comment_id):
     conn = dbi.connect() 
     #=============================================
     # get information about the comment and check if current user has liked it
-    comment = waggle.getComment(conn, comment_id)
-    comment['isLiked'] = waggle.hasLikedCmt(conn, user_id, comment_id)
+    comment = waggle.getComment(conn, comment_id, user_id)
     #==============================================
     # get the post the comment originates from
     post_id = comment['post_id']
-    post = waggle.getPost(conn, post_id)
+    post = waggle.getPost(conn, post_id, user_id)
     gaggle_id = post['gaggle_id']
     curs = dbi.dict_cursor(conn)
     curs.execute('''
@@ -455,8 +404,8 @@ def addReply(comment_id):
     gaggle = curs.fetchone() 
     isAuthor = waggle.isAuthor(conn,user_id, gaggle_id)
     #=============================================
-    comment_chain = likedComments(user_id, waggle.getConvo(conn, comment_id)) #this is the previous comment chain
-    replies = likedComments(user_id, waggle.getReplies(conn, comment_id))
+    comment_chain =  waggle.getConvo(conn, comment_id, user_id) #this is the previous comment chain
+    replies =  waggle.getReplies(conn, comment_id, user_id)
     if request.method == 'GET':
         return render_template('reply.html', gaggle = gaggle, comment_chain = comment_chain, parent_comment = comment, replies = replies, post = post, username=username, user_id = user_id, isAuthor = isAuthor)
     else: #reply
@@ -650,8 +599,7 @@ def gaggle(gaggle_name):
     else: 
         conn = dbi.connect() 
         gaggle = waggle.getGaggle(conn, gaggle_name)  
-        posts = likedPosts(user_id, waggle.getGagglePosts(conn, gaggle_name))
-        posts = canDeletePosts(posts, user_id)
+        posts = waggle.getGagglePosts(conn, gaggle_name, user_id)
         gaggle_id = waggle.getGaggleID(conn, gaggle_name)['gaggle_id']
         joined  = waggle.isGosling(conn, user_id, gaggle_id)
         isAuthor = waggle.isAuthor(conn,user_id, gaggle_id)
@@ -907,19 +855,20 @@ def notif():
 
 def formatNotif(notifs):
     conn = dbi.connect() 
+    user_id = isLoggedIn()
     for notif in notifs:
         source = notif['source']
         kind = notif['kind']
         source_id = notif['id']
         if kind == 'liked':
             if source == 'comment':
-                comment = waggle.getComment(conn, source_id)
+                comment = waggle.getComment(conn, source_id, user_id)
                 content = comment['content']
             else:
-                post = waggle.getPost(conn, source_id)
+                post = waggle.getPost(conn, source_id, user_id)
                 content = post['content']
         else: #has to be a comment       
-            reply = waggle.getComment(conn, source_id)
+            reply = waggle.getComment(conn, source_id, user_id)
             content = reply['content']
         preview = content    
         if len(content) > 280: #shorten preview

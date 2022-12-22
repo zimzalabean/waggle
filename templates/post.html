@@ -6,7 +6,7 @@
         <h3> Post </h3>
     <div>   
     {% import "postTemplateJS.html" as postComp%}
-        {{postComp.post_temp(post=post, pageIsNotPost = false)}}
+        {{postComp.post_temp(post=post, user_id = user_id)}}
     </div> 
     
     {% if valid %}

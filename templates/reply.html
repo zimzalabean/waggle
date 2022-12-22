@@ -7,7 +7,7 @@
         <div class = 'comment-thread'>               
             <a  class="comment-border-link"></a>
             {% import "postTemplateJS.html" as postComp%}
-            {{postComp.post_temp(post=post)}}
+            {{postComp.post_temp(post=post, user_id = user_id)}}
             {% import "commentTemplateJS.html" as commentComp%}
                 {% for comment in comment_chain %}
                     {{commentComp.comment_temp(comment=comment, user_id=user_id)}}

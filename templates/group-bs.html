@@ -108,7 +108,7 @@
                 <div class = "feed" id = 'feed'>
                 {% import "postTemplateJS.html" as postComp%}
                 {% for post in posts %}
-                    {{postComp.post_temp(post=post)}}
+                    {{postComp.post_temp(post=post, user_id = user_id)}}
                 {% endfor %}
                 </div>
                 </div>
