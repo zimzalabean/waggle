@@ -1,7 +1,7 @@
 {% macro comment_temp(comment, user_id, pageIsNotPost) -%}
 
 
-<div class="comment-wrap">
+<div class="comment-wrap" id = "comment_{{comment.comment_id}}">
     <div class="comment-header">
         <div class = 'avator-comment'>
           <img src="{{url_for('profilePic',user_id=comment.commentor_id)}}" alt="{{comment.commentor_id}}" class = 'img-profile'>
@@ -58,7 +58,7 @@
       </div>
       {%if comment.commentor_id == user_id%}
       <form method = 'post' action="{{url_for('removeComment')}}">
-        <button onclick="">Delete Comment</button> 
+        <button id="comment_{{comment.comment_id}}" onclick="deleteComment('{{comment.comment_id}}')">Delete Comment</button> 
       </form>
       {%endif%}
       {% if pageIsNotPost %}
@@ -85,7 +85,24 @@
             document.getElementById("myDropdown_reply_"+cid).classList.toggle("show-reply");
             console.log(document.getElementById("myDropdown_reply_"+cid));
         }
-
+    
+    function deleteComment(comment_id) {
+      console.log(comment_id);
+      $.ajax({
+              type: "POST",
+              url: "/delete/comment",
+              data: JSON.stringify({'comment_id': comment_id}),
+              contentType: 'application/json; charset=utf-8',
+              dataType: 'json',
+              async: true,
+              success: function(resp){
+                console.log('deleted')
+                comment_id = resp['comment_id']
+                console.log(comment_id)
+                document.getElementById("comment_"+comment_id).classList.toggle("hidden");
+              }
+          });  event.preventDefault();
+  } 
 
     function likeComment(comment_id, commentor_id) {   
         $.ajax({
