@@ -284,6 +284,8 @@ def post(post_id):
                     FROM gaggle
                     WHERE gaggle_id = %s''',[gaggle_id])
     gaggle = curs.fetchone()
+    if gaggle['guidelines'] is None:
+            gaggle['guidelines'] = 'No guidelines specified for this gaggle.'
     #get post comments
     comments =  waggle.getPostComments(conn, post_id, my_user_id)
     valid = waggle.isGosling(conn, my_user_id, gaggle_id) #can user reply to post
@@ -407,6 +409,8 @@ def addReply(comment_id):
         WHERE gaggle_id = %s''',
                  [gaggle_id]) 
     gaggle = curs.fetchone() 
+    if gaggle['guidelines'] is None:
+            gaggle['guidelines'] = 'No guidelines specified for this gaggle.'
     isAuthor = waggle.isAuthor(conn, my_user_id, gaggle_id)
     #=============================================
     comment_chain =  waggle.getConvo(conn, comment_id, my_user_id) #this is the previous comment chain
@@ -594,7 +598,9 @@ def gaggle(gaggle_name):
         return redirect(url_for('login')) 
     else: 
         conn = dbi.connect() 
-        gaggle = waggle.getGaggle(conn, gaggle_name)  
+        gaggle = waggle.getGaggle(conn, gaggle_name)
+        if gaggle['guidelines'] is None:
+            gaggle['guidelines'] = 'No guidelines specified for this gaggle.'  
         posts = waggle.getGagglePosts(conn, gaggle_name, my_user_id)
         gaggle_id = waggle.getGaggleID(conn, gaggle_name)['gaggle_id']
         joined  = waggle.isGosling(conn, my_user_id, gaggle_id)
@@ -907,7 +913,7 @@ def dashboard():
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'mp2_db' 
+    db_to_use = 'hs1_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 
