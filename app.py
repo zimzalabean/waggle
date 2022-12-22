@@ -493,7 +493,7 @@ def editMyPage():
             curs.execute('''UPDATE user
                             SET first_name = %s
                             WHERE user_id = %s''',
-                        [new_fn,user_id])
+                        [new_fn,my_user_id])
             conn.commit()
         if request.form['last_name'] != '':
             new_ln = request.form['last_name']
@@ -501,7 +501,7 @@ def editMyPage():
             curs.execute('''UPDATE user
                             SET last_name = %s
                             WHERE user_id = %s''',
-                        [new_ln,user_id])
+                        [new_ln,my_user_id])
             conn.commit()
         if request.form['class_year'] != '':
             new_cy = request.form['class_year']
@@ -509,7 +509,7 @@ def editMyPage():
             curs.execute('''UPDATE user 
                             SET class_year = %s
                             WHERE user_id = %s''',
-                        [new_cy,user_id])
+                        [new_cy,my_user_id])
             conn.commit()
         if request.form['bio_text'] != '':
             new_bio = request.form['bio_text']
@@ -517,7 +517,7 @@ def editMyPage():
             curs.execute('''UPDATE user
                             SET bio_text = %s
                             WHERE user_id = %s''',
-                        [new_bio,user_id])
+                        [new_bio,my_user_id])
             conn.commit()
         
 
