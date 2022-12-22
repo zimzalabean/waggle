@@ -255,6 +255,7 @@ def addComment():
         commentor_id = session.get('user_id', '')
         comment_id = waggle.addComment(conn, post_id, None, content, commentor_id, posted_date)
         comment = waggle.getComment(conn, comment_id, user_id)
+        print(comment)
         return jsonify({'new_comment': render_template('new_comment.html', comment=comment)})         
 
 @app.route('/delete/comment', methods=["POST"])
@@ -263,8 +264,9 @@ def removeComment():
     data = request.get_json()
     print(data)
     comment_id = data['comment_id']
+    post_id = data['post_id']
     conn = dbi.connect()    
-    deleted_comment_id = waggle.deleteComment(conn, comment_id)
+    deleted_comment_id = waggle.deleteComment(conn, comment_id, post_id)
     print(deleted_comment_id)
     return jsonify({'comment_id': deleted_comment_id})
 

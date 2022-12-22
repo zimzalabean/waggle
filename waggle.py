@@ -1015,7 +1015,7 @@ def getConvo(conn, comment_id, user_id):
     return curs.fetchall()        
    
 
-def deleteComment(conn, comment_id):
+def deleteComment(conn, comment_id, post_id):
     '''
     Delete comment 
     '''
@@ -1024,6 +1024,12 @@ def deleteComment(conn, comment_id):
                     from comment
                     where comment_id = %s''',
                     [comment_id])
+    conn.commit()
+    curs.execute('''
+            UPDATE post
+            SET replies = replies - 1
+            WHERE post_id = %s''',
+                    [post_id])
     conn.commit()
     return comment_id
 
