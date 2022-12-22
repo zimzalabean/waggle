@@ -185,8 +185,9 @@ def history(username):
     my_user_id = session.get('user_id', '')
     my_username = session.get('username', '')
     posts = waggle.getUserPosts(conn, username)
+    user_id = waggle.getUserID(conn, username)['user_id']
     comments = waggle.getUserComments(conn, user_id)
-    return render_template('history.html', username = username, posts = posts, comments = comments, my_username = my_username, my_user_id = my_user_id)
+    return render_template('history.html', username = username, posts = posts, comments = comments, my_username = my_username, my_user_id = my_user_id, user_id=user_id)
 
 
 @app.route('/user/history/')
@@ -437,7 +438,6 @@ def editMyPage():
     user_info = waggle.getUserInfo(conn, my_user_id)
     if request.method == 'GET':
         return render_template('edit_account_info-bs.html', user=user_info, my_username=my_username,my_user_id=my_user_id)
-
     else:
         new_fn, new_ln, new_cy, new_bio = '', '', '', ''
         if request.form['first_name'] != '':
@@ -447,7 +447,6 @@ def editMyPage():
                             SET first_name = %s
                             WHERE user_id = %s''',
                         [new_fn,my_user_id])
-            conn.commit()
         if request.form['last_name'] != '':
             new_ln = request.form['last_name']
             curs = dbi.dict_cursor(conn)
@@ -455,7 +454,6 @@ def editMyPage():
                             SET last_name = %s
                             WHERE user_id = %s''',
                         [new_ln,my_user_id])
-            conn.commit()
         if request.form['class_year'] != '':
             new_cy = request.form['class_year']
             curs = dbi.dict_cursor(conn)
@@ -463,7 +461,6 @@ def editMyPage():
                             SET class_year = %s
                             WHERE user_id = %s''',
                         [new_cy,my_user_id])
-            conn.commit()
         if request.form['bio_text'] != '':
             new_bio = request.form['bio_text']
             curs = dbi.dict_cursor(conn)
@@ -471,8 +468,9 @@ def editMyPage():
                             SET bio_text = %s
                             WHERE user_id = %s''',
                         [new_bio,my_user_id])
-            conn.commit()
-        
+        conn.commit()
+        flash('Profile successfully updated')
+        return redirect(url_for('editMyPage'))
 
 @app.route('/upload/', methods=["GET", "POST"])
 def file_upload():
@@ -909,11 +907,7 @@ def dashboard():
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-<<<<<<< HEAD
     db_to_use = 'mp2_db' 
-=======
-    db_to_use = 'ldau_db' 
->>>>>>> 523628c96987d773f2d941cf0343cb222e26150a
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 
