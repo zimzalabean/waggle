@@ -127,8 +127,9 @@
               async: true,
               success: function(resp){
                 console.log('deleted')
-                post_id = resp['comment_id']
-                console.log(comment_id)
+                comment_id = resp['comment_id']
+                post_id = resp['post_id']
+                
                 document.getElementById("comment_"+comment_id).classList.toggle("hidden");
               }
           });  event.preventDefault();

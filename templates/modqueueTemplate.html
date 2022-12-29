@@ -1,0 +1,107 @@
+<style>
+.cell{
+    padding:10px;
+}
+</style>
+
+<h4 class="card-header fw-bold">Pending Flag Requests</h4>
+
+    <table class="table-primary table-bordered" style = 'min-width:60vw;' id = 'pending'>
+    <tr>
+        <th class="table-primary cell">Post id</th>
+        <th class="table-primary cell">Post Content</th>
+        <th class="table-primary cell">Reporter</th>
+        <th class="table-primary cell">Reason</th>
+        <th class="table-primary cell">Flagged date</th>
+        <th class="table-primary cell">Mod approved<th>
+        <th class="table-primary cell">Flag</th>
+    </tr>
+
+    {% for flag in flagged %}
+        <div class="flag">
+            <tr>
+                <td class="table-primary"><a href="{{url_for('post', post_id=flag.post_id)}}">{{flag.post_id}}</a></td>
+                <td class="table-primary">{{flag.content}}</td>
+                <td class="table-primary"><a href="{{url_for('user', username=flag.reporter_id)}}">{{flag.username}}</a></td>
+                <td class="table-primary">{{flag.reason}}</td>
+                <td class="table-primary">{{flag.flagged_date}}</td>
+                <td class="table-primary">{{flag.mod_aprroved}}</td>
+                <td class="table-primary">
+                    <form method="POST" action="{{url_for('approve')}}">
+                        <button type = 'button' name="submit" onclick =  "approve('{{flag.post_id}}','{{flag.reporter_id}}','{{flag.report_id}}','Yes')" value="Yes">Yes</button>
+                        <button type = 'button' name="submit" onclick =  "approve('{{flag.post_id}}','{{flag.reporter_id}}','{{flag.report_id}}','No')" value="No">No</button>
+                    </form>
+                </td>
+            </tr>
+        </div>
+    {%endfor%}    
+    </table>
+
+<hr>
+
+<h4 class="card-header fw-bold">Reviewed Flag Requests</h4>
+    <table class="table-success table-bordered cell" style = 'min-width:60vw;' id = 'approved'>
+        <tr>
+            <th class="table-success cell" >Post id</th>
+            <th class="table-success cell" >Post Content</th>
+            <th class="table-success cell" >Reporter</th>
+            <th class="table-success cell" >Reason</th>
+            <th class="table-success cell" >Flagged date</th>
+            <th class="table-success cell" >Mod approved<th>
+        </tr>
+        {% for flag in approved %}
+            <div class="flag">
+                <tr>
+                    <td class="table-success" ><a href="{{url_for('post', post_id=flag.post_id)}}">{{flag.post_id}}</a></td>
+                    <td class="table-success" >{{flag.content}}</td>
+                    <td class="table-success" ><a href="{{url_for('user', username=flag.reporter_id)}}">{{flag.username}}</a></td>
+                    <td class="table-success" >{{flag.reason}}</td>
+                    <td class="table-success" >{{flag.flagged_date}}</td>
+                    <td class="table-success" >{{flag.mod_aprroved}}</td>
+                </tr>
+            </div>
+        {%endfor%}
+    </table>
+
+
+<script>
+    function approve(post_id, user_id, report_id, approval) {
+        $(this).closest("tr").remove();
+        console.log(approval);
+        console.log(post_id);
+        console.log(report_id);
+        $.ajax({
+                type: "POST",
+                url: "/modapprove/",
+                data: JSON.stringify({'post_id': post_id, 'user_id': user_id, 'approval':approval, 'report_id': report_id}),
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                async: true,
+                success: function(resp){
+                    var post_id = resp['post_id'];
+                    var post_content = resp['content'];
+                    var reporter = resp['username'];
+                    var reason = resp['reason'];
+                    var flagged_date = resp['flagged_date'];
+                    var mod_aprroved = resp['mod_aprroved'];
+                    console.log('came through');
+                    var table = document.getElementById("approved");
+                    var row = table.insertRow(1);
+                    var cell1 = row.insertCell(0);
+                    var cell2 = row.insertCell(1);
+                    var cell3 = row.insertCell(2);
+                    var cell4 = row.insertCell(3);
+                    var cell5 = row.insertCell(4);
+                    var cell6 = row.insertCell(5);
+
+                    cell1.innerHTML = post_id;
+                    cell2.innerHTML = post_content;
+                    cell3.innerHTML = reporter;
+                    cell4.innerHTML = reason;
+                    cell5.innerHTML = flagged_date;
+                    cell6.innerHTML = mod_aprroved;
+
+                }
+            });  event.preventDefault();
+    }    
+</script>

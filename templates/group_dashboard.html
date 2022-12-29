@@ -1,0 +1,154 @@
+
+
+        <form action="{{url_for('editGaggle')}}" method="POST">
+          <h5 class="card-header" style = 'padding-left: 0px;'>Edit <strong>{{gaggle.gaggle_name}}</strong>'s Description:</h5>
+          <div class="update_group">
+            <textarea title="Description of {{gaggle.gaggle_name}}" class="form-control" type="text" id="description">{{gaggle.description}}</textarea>
+          </div>
+          <h5 class="card-header" style = 'padding-left: 0px;'>Edit <strong>{{gaggle.gaggle_name}}</strong>'s Guidelines:</h5>
+          <div class="update_group">
+            <textarea title="Guidelines of {{gaggle.gaggle_name}}" class="form-control" type="text" id="guidelines">{{gaggle.guidelines}}</textarea>
+          </div>
+          <div class="mt-2">
+            <button type="button" class="btn btn-primary me-2"  onclick="editGaggle('{{gaggle.gaggle_id}}')"> Save changes</button>
+          </div>
+        </form>
+
+
+      <hr class="my-0"/>
+      <h5 class="card-header">Invite New Moderator to <strong>{{gaggle.gaggle_name}}</strong>:</h5>
+
+
+
+
+        <div class="input-group mb-3" style = 'max-width: 20vw;'>
+          <input type="text" class="form-control" id = 'invitee_username' placeholder="ex. ab6" aria-label="Invite new mod" aria-describedby="basic-addon2">
+            <form action="{{url_for('inviteUser')}}" method="POST">
+              <button type="submit" class="btn btn-outline-primary" onclick="inviteMod('{{gaggle.gaggle_id}}')">Invite</button>
+              </form>
+              <span id = 'invitation-result'></span>
+        </div>
+
+
+    <hr class="my-0"/>
+    <div class = 'container'>
+      <div class = 'row'>
+        <div class = 'col-sm-6'>
+    <h5 class="card-header"> Moderators:</h5>
+
+        <ol class="list-group list-group-numbered">
+            {% for user in mods %}
+              <li class="container list-group-item" id = 'mod-{{user.user_id}}'> @{{user.username}} 
+                <span class="badge rounded-pill bg-light text-dark">
+                    <form action="{{url_for('removeMod')}}" method="POST">
+                    <button type="button" class='btn-outline-primary rounded-pill btn-sm' onclick="removeMod('{{gaggle.gaggle_id}}', '{{user.user_id}}')">Remove</button>
+                    </form>
+                </span>
+            </li>
+            {%endfor%}
+        </ol>
+    </div>
+
+
+  <div class = 'col-sm-6'>
+    <h5 class="card-header">Moderator invitations status:</h5>
+
+      <ol class="list-group list-group-numbered" id = 'invite-status-list'>
+        {% for user in invitees %}
+          <li class="container list-group-item" id = 'invite-{{user.invitee_id}}'>   @{{user.username}}: {{user.status}}
+            <span class="badge rounded-pill bg-light text-dark">
+                <form action="{{url_for('removeInvite')}}" method="POST">
+                <button type="button" class='btn-outline-primary rounded-pill btn-sm' onclick="unsend('{{gaggle.gaggle_id}}', '{{user.invitee_id}}')">Remove</button>
+                </form>
+            </span>
+        </li>
+        {%endfor%}
+      </ol>
+    </div>
+    </div>
+  </div>
+
+
+
+<script>
+    function editGaggle(gaggle_id) {
+        console.log(gaggle_id);
+        var description = $('#description').val();
+        var guidelines = $('#guidelines').val();
+        $.ajax({
+                type: "POST",
+                url: "/edit/gaggle",
+                data: JSON.stringify({'gaggle_id': gaggle_id, 'description': description, 'guidelines': guidelines}),
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                async: true,
+                success: function(resp){
+                    var description = resp['description']
+                    var guidelines = resp['guidelines']
+                    $('description').val(description);
+                    $('guidelines').val(guidelines);
+                }
+            })
+        }
+        
+
+    function inviteMod(gaggle_id) {
+        console.log(gaggle_id);
+        var username = $('#invitee_username').val();
+        console.log(username);
+        $.ajax({
+                type: "POST",
+                url: "/inviteUser/",
+                data: JSON.stringify({'gaggle_id': gaggle_id, 'username': username}),
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                async: true,
+                success: function(resp){
+                    console.log(resp);
+                    var invite = resp['invite'];
+                    $('#invitee_username').val('');
+                    $('#invite-status-list').prepend(invite);
+                }
+            }); event.preventDefault();
+        }
+
+        function removeMod(gaggle_id, user_id) {
+          let li = document.getElementById('mod-'+user_id);
+          console.log(li);
+          li.parentNode.removeChild(li);
+          console.log(gaggle_id);
+          console.log(user_id);
+          $.ajax({
+                  type: "POST",
+                  url: "/mod/remove",
+                  data: JSON.stringify({'gaggle_id': gaggle_id, 'user_id': user_id}),
+                  contentType: 'application/json; charset=utf-8',
+                  dataType: 'json',
+                  async: true,
+                  success: function(resp){
+                      console.log(resp);
+                  }
+              }); event.preventDefault();
+          }
+
+        function unsend(gaggle_id, user_id) {
+          let li = document.getElementById('invite-'+user_id);
+          console.log(li);
+          li.parentNode.removeChild(li);
+          console.log(gaggle_id);
+          console.log(user_id);
+          $.ajax({
+                  type: "POST",
+                  url: "/invite/remove",
+                  data: JSON.stringify({'gaggle_id': gaggle_id, 'user_id': user_id}),
+                  contentType: 'application/json; charset=utf-8',
+                  dataType: 'json',
+                  async: true,
+                  success: function(resp){
+                      console.log(resp);
+                  }
+              }); event.preventDefault();
+        }
+
+
+</script>

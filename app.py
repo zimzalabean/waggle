@@ -11,7 +11,7 @@ app = Flask(__name__)
 import cs304dbi as dbi
 # import cs304dbi_sqlite3 as dbi
 import waggle
-import random
+import random, datetime
 import json
 
 app.secret_key = 'your secret here'
@@ -139,7 +139,7 @@ def homepage():
     else:
         gaggles = waggle.getUserGaggle(conn, my_username)
         posts = waggle.getPosts(conn, my_user_id)
-        return render_template('main.html',  gaggles = gaggles, my_username=my_username, posts=posts, my_user_id = my_user_id)
+        return render_template('main.html', section = 'homepage', gaggles = gaggles, my_username=my_username, posts=posts, my_user_id = my_user_id)
 
 ####_____Search Functions_____####
 
@@ -188,7 +188,7 @@ def history(username):
     posts = waggle.getUserPosts(conn, username)
     user_id = waggle.getUserID(conn, username)['user_id']
     comments = waggle.getUserComments(conn, user_id)
-    return render_template('history.html', username = username, posts = posts, comments = comments, my_username = my_username, my_user_id = my_user_id, user_id=user_id)
+    return render_template('history.html', section = 'history', username = username, posts = posts, comments = comments, my_username = my_username, my_user_id = my_user_id, user_id=user_id)
 
 
 @app.route('/user/history/')
@@ -336,24 +336,13 @@ def report():
     flags count for a post in post table.
     '''
     reporter_id = isLoggedIn()
-    username = session.get('username')
     data = request.get_json()
     post_id = data['post_id']
     reason = data['reason']
-    print(reason)
     conn = dbi.connect()
-    curs = dbi.dict_cursor(conn)
-    curs.execute('''SELECT *
-                    FROM flag_post
-                    WHERE post_id = %s and reporter_id = %s''',[post_id, reporter_id])
-    res = curs.fetchone()
-    # if res is not None: 
     flagged_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     #insert into flag_post table
-    curs.execute('''insert into flag_post (post_id, reporter_id, reason, flagged_date, mod_aprroved)
-                        values (%s,%s,%s,%s,'Pending')''',[post_id, reporter_id,reason,flagged_date])
-    conn.commit()
-    print('reported')
+    waggle.report(conn,post_id, reporter_id,reason,flagged_date)
     return jsonify({'reported': post_id, 'reason': reason})
 
 ####_____Comment/Replies Functions_____####
@@ -445,7 +434,7 @@ def editMyPage():
     conn = dbi.connect()
     user_info = waggle.getUserInfo(conn, my_user_id)
     if request.method == 'GET':
-        return render_template('edit_account_info-bs.html', user=user_info, my_username=my_username,my_user_id=my_user_id)
+        return render_template('edit_account_info-bs.html', section = 'profile', user=user_info, my_username=my_username,my_user_id=my_user_id)
     else:
         new_fn, new_ln, new_cy, new_bio = '', '', '', ''
         if request.form['first_name'] != '':
@@ -525,7 +514,7 @@ def user(username):
     isPersonal = False
     if my_user_id == uid: #if uid of person in question matches current user
         isPersonal = True
-    return render_template('user-bs.html', username=username, gagglesCreated=gagglesCreated, gagglesJoined=gagglesJoined, isPersonal = isPersonal, userInformation=userInfo, user_id=uid, my_user_id = my_user_id, my_username = my_username)
+    return render_template('user-bs.html', section = 'profile', username=username, gagglesCreated=gagglesCreated, gagglesJoined=gagglesJoined, isPersonal = isPersonal, userInformation=userInfo, user_id=uid, my_user_id = my_user_id, my_username = my_username)
 
 @app.route('/profile/')
 def profile():
@@ -643,42 +632,6 @@ def joinGroup():
     print(action)         
     return jsonify(action)
 
-@app.route('/creator/<gaggle_name>', methods=['GET', 'POST'])
-def editGaggle(gaggle_name):
-    '''
-    Edit Gaggle information 
-    '''
-    conn = dbi.connect() 
-    if request.method == 'GET':
-        return redirect(url_for('dashboard'))
-    else:
-        new_bio, new_guidelines = '', ''
-        gaggle_id = waggle.getGaggleID(conn, gaggle_name)['gaggle_id']
-        if request.form['description'] != '':
-            new_bio = request.form['description']
-            waggle.updateBio(conn, gaggle_id, new_bio)
-        if request.form['guidelines'] != '':
-            new_guidelines = request.form['guidelines']
-            waggle.updateGuidelines(conn, gaggle_id, new_guidelines)
-        flash('Your information was successfully updated.')
-        return redirect(url_for('dashboard')) 
-
-@app.route('/inviteUser/<gaggle_name>', methods=['POST'])
-def inviteUser(gaggle_name):
-    user_id = isLoggedIn()
-    conn = dbi.connect() 
-    invitee_username = ''
-    if request.form['invitee_username'] != '':
-        invitee_username = request.form['invitee_username']
-        gaggle_id = waggle.getGaggleID(conn, gaggle_name)['gaggle_id']
-        validInvite = waggle.modInvite(conn, gaggle_id, invitee_username,user_id)
-        if validInvite:
-            flash('Invitation sent')
-        else:
-            flash('Invitation already pending or User is not apart of gaggle group')
-    return redirect(url_for('dashboard'))
-    
-
 @app.route('/delete/<gaggle_id>', methods=['GET', 'POST'])
 def deleteGaggle(gaggle_id):
     '''
@@ -706,7 +659,7 @@ def createGaggle():
     conn = dbi.connect() 
     my_username = session.get('username')
     if request.method == 'GET':
-        return render_template('createGaggleForm.html', my_user_id = my_user_id, my_username = my_username)
+        return render_template('createGaggleForm.html', section = 'create', my_user_id = my_user_id, my_username = my_username)
     else:
         gaggle_name = request.form.get('gaggle_name')           
         description = request.form.get('description') 
@@ -718,10 +671,10 @@ def createGaggle():
                 return redirect(url_for('gaggle', gaggle_name = gaggle_name))  
             else:
                 flash("A Gaggle with that name already exists.")
-                return render_template('createGaggleForm.html', my_user_id = my_user_id, my_username = my_username)
+                return render_template('createGaggleForm.html', section = 'create', my_user_id = my_user_id, my_username = my_username)
         else:
             flash('Gaggle name cannot be empty.')
-            return render_template('createGaggleForm.html', my_user_id = my_user_id, my_username = my_username)
+            return render_template('createGaggleForm.html', section = 'create', my_user_id = my_user_id, my_username = my_username)
 
 @app.route('/unjoinGaggle/<username>/<gaggle_id>/<gaggle_name>', methods=['POST'])
 def unJoinGaggle(username,gaggle_id, gaggle_name):
@@ -741,27 +694,7 @@ def unJoinGaggle(username,gaggle_id, gaggle_name):
 
 ####_____Moderator Functions to be implemented in beta phase not tested _____####
 
-@app.route('/invitemod/', methods=['GET', 'POST'])
-def inviteMod():
-    '''Display gaggles you've created with the status of your mod invitation.
-    Let you send mod invitation to users for your specified gaggle.'''
-    user_id = isLoggedIn()
-    username = session.get('username')
-    conn = dbi.connect()     
-    gaggles = waggle.getInvitees(conn, user_id)     
-    if request.method == 'GET':
-        return render_template('invite_mod.html', gaggles = gaggles, username=username, user_id = user_id)
-    else: 
-        invitee_username = request.form.get('invitee_username')
-        gaggle_id = request.form.get('gaggle_id')
-        validInvite = waggle.modInvite(conn, gaggle_id, user_id, invitee_username)
-        if validInvite:
-            flash('Invitation sent')
-        else:
-            flash('Invitation already pending')
-        return redirect(url_for('inviteMod'))
-
-@app.route('/modqueue/', methods=['GET', 'POST'])
+@app.route('/modqueue/', methods=['GET'])
 def modqueue():
     logged_in = session.get('logged_in', False)
     if logged_in != False:
@@ -770,47 +703,51 @@ def modqueue():
         
         conn = dbi.connect()
         modgaggles = waggle.getMyModGaggles(conn, my_user_id)
+        invitations = waggle.getInvitation(conn, my_user_id)
         hasModGaggle = False
         if len(modgaggles) > 0:
-            gaggle_id = modgaggles[0]['gaggle_id']
             hasModGaggle = True
-            flagged = waggle.get_flagged_posts(conn, gaggle_id)
-            pending, approved = [], []
-            for flag in flagged:
-                if flag['mod_aprroved']=='Pending':
-                    pending.append(flag)
-                else:
-                    approved.append(flag)
-            if request.method == 'POST':
-                gaggle_id, gaggle_name = request.form.get('chosen_gaggle').split('_')[0], request.form.get('chosen_gaggle').split('_')[1]
-                flagged = waggle.get_flagged_posts(conn, gaggle_id)
-                pending, approved = [], []
-                for flag in flagged:
-                    if flag['mod_aprroved']=='Pending':
-                        pending.append(flag)
-                    else:
-                        approved.append(flag)
-            else:
-                gaggle_name = modgaggles[0]['gaggle_name']
-            return render_template('modqueue.html', modgaggles=modgaggles, gaggle_id=gaggle_id, pending = pending, approved = approved, my_username = my_username, my_user_id = my_user_id, chosenGaggle = gaggle_name, hasModGaggle = hasModGaggle)
-        else:
-            flash('You are not a moderator yet')
-            return redirect(request.referrer)
+        return render_template('dash.html', section = 'modqueue', modgaggles=modgaggles, invitations = invitations, my_username = my_username, my_user_id = my_user_id, hasModGaggle = hasModGaggle)
     else:
         flash('You are not logged in. Please login or join.')
         return redirect(url_for('login'))
 
-@app.route('/modapprove/<post_id>/<reported_user_id>', methods=['POST'])
-def modapprove(post_id, reported_user_id):
-    approval = request.form.get('submit')
+@app.route('/modqueue/<gaggle_name>', methods=['GET'])
+def getModqueue(gaggle_name):
+    conn = dbi.connect()
+    gaggle_id = waggle.getGaggleID(conn, gaggle_name)
+    flagged = waggle.get_flagged_posts(conn, gaggle_id)
+    bad_users = waggle.getBadUsers(conn, gaggle_id)
+    return render_template('queueTemplate.html', flagged = flagged, bad_users = bad_users)
+
+@app.route('/ban/', methods=['POST'])
+def ban():
+    conn = dbi.connect()
+    data = request.get_json()
+    username = data['username']
+    gaggle_id = data['gaggle_id']
+    period = data['period']
+    unban_time = datetime.now().timedelta(days=period)
+    banned = waggle.banUser(conn, gaggle_id, username)
+
+    return 'ok'
+
+@app.route('/modapprove/', methods=['POST'])
+def approve():
+    data = request.get_json()
+    print(data)
+    approval = data['approval']
+    post_id = data['report_id']
+    reported_user_id = data['user_id']
+    report_id = data['report_id']
     conn = dbi.connect()
     if approval == 'Yes':
         curs = dbi.dict_cursor(conn)
         curs.execute('''
             update flag_post
             set mod_aprroved = 'Yes'
-            where post_id = %s and reporter_id = %s
-        ''', [post_id, reported_user_id])
+            where report_id = %s
+        ''', [report_id])
         conn.commit()
         waggle.increment_flag(conn, post_id)
         res = waggle.increment_strikes(conn, reported_user_id)
@@ -821,24 +758,22 @@ def modapprove(post_id, reported_user_id):
         curs.execute('''
             update flag_post
             set mod_aprroved = 'No'
-            where post_id = %s and reporter_id = %s
-        ''', [post_id, reported_user_id])
+            where report_id = %s
+        ''', [report_id])
         conn.commit()
-    return redirect(url_for('modqueue'))
+    report = waggle.getReport(conn, report_id)
+    return jsonify(report)
 
-@app.route('/invitation/', methods=['GET', 'POST'])
+@app.route('/invitation/', methods=['POST'])
 def response_invite():
     '''Display invitations to become moderators and let you respond.'''
     user_id = isLoggedIn()
     conn = dbi.connect() 
-    invitations = waggle.getInvitation(conn, user_id)
-    if request.method == 'GET':
-        return render_template('invitation.html', invitations = invitations, user_id = user_id)
-    else:
-        response = request.form.get('submit')
-        gaggle_id = request.form.get('gaggle_id')
-        responded =  waggle.responseInvite(conn, gaggle_id, user_id, response)
-        return redirect(url_for('response_invite'))  
+    data = request.get_json()
+    gaggle_id = data['gaggle_id']
+    response = data['resp']
+    responded =  waggle.responseInvite(conn, gaggle_id, user_id, response)
+    return redirect(url_for('modqueue'))  
 
 @app.route('/notif/', methods=['GET','POST'])
 def notif():
@@ -848,7 +783,7 @@ def notif():
     my_username = session.get('username', '')
     notifs = formatNotif(waggle.getNotifs(conn, my_user_id))
     if request.method == 'GET':
-        return render_template('notifications.html', notifs = notifs, my_user_id = my_user_id, my_username = my_username)
+        return render_template('notifications.html', section = 'notif',  notifs = notifs, my_user_id = my_user_id, my_username = my_username)
     else:
         data = request.get_json()
         notif_id = data['notif_id']
@@ -865,6 +800,14 @@ def notif():
         else:
             return 'ok'
 
+@app.route('/get_notif/', methods=['GET'])
+def getNotif():
+    ''' View notifications '''
+    my_user_id = isLoggedIn()
+    conn = dbi.connect()
+    count = waggle.getNotifsCount(conn, my_user_id)
+    return jsonify({'count':count})
+    
 
 def formatNotif(notifs):
     conn = dbi.connect() 
@@ -902,8 +845,7 @@ def dashboard():
     my_username = session.get('username', '')
     hasGaggle = False  
     gaggles = waggle.getGagglesCreated(conn, my_user_id)
-    allInvitees = waggle.getAllInvitees(conn, my_user_id)
-    print(allInvitees)
+    # allInvitees = waggle.getAllInvitees(conn, my_user_id)
     if len(gaggles) > 0:
         gaggle = gaggles[0]
         gaggle_id = gaggle['gaggle_id']         
@@ -912,14 +854,83 @@ def dashboard():
         flash('You are not a creator of any gaggles yet. Want to create one?')
         return redirect(url_for('createGaggle'))
     if request.method == 'GET':
-        return render_template('dashboard.html', hasGaggle = hasGaggle, gaggles = gaggles, gaggle = gaggle, my_user_id = my_user_id, my_username = my_username, allInvitees = allInvitees)
+        return render_template('dashboard.html', section = 'dashboard', hasGaggle = hasGaggle, gaggles = gaggles, gaggle = gaggle, my_user_id = my_user_id, my_username = my_username)
 
+@app.route('/dashboard/get', methods=['GET'])
+def getDashboard():
+    """
+    Show dashboard where you can choose to edit information about groups you've created or moderate your gaggles.
+    """
+    print(request)
+    gaggle_name = request.args.get('gaggle_name')
+    print(gaggle_name)
+    conn = dbi.connect() 
+    gaggle = waggle.getGaggle(conn, gaggle_name)
+    gaggle_id = gaggle['gaggle_id']
+    mods = waggle.getModOfGaggles(conn, gaggle_id)
+    invitees = waggle.getInvitees(conn, gaggle_id)
+    return jsonify({'view': render_template('group_dashboard.html', gaggle = gaggle, mods = mods, invitees = invitees)})
+
+@app.route('/edit/gaggle', methods=['POST'])
+def editGaggle():
+    '''
+    Edit Gaggle information 
+    '''
+    conn = dbi.connect() 
+    data = request.get_json()
+    gaggle_id = data['gaggle_id']
+    description = data['description']
+    guidelines = data['guidelines']
+    waggle.updateBio(conn, gaggle_id, description)
+    waggle.updateGuidelines(conn, gaggle_id, guidelines)
+    return jsonify({'description':description, 'guidelines': guidelines})
+
+
+@app.route('/mod/remove', methods=['POST'])
+def removeMod():
+    """
+    Show dashboard where you can choose to edit information about groups you've created or moderate your gaggles.
+    """
+    data = request.get_json()
+    user_id = data['user_id']
+    gaggle_id = data['gaggle_id']
+    conn = dbi.connect() 
+    removal = waggle.removeMod(conn, gaggle_id, user_id)
+    return 'ok'
+
+@app.route('/inviteUser/', methods=['POST'])
+def inviteUser():
+    data = request.get_json()
+    gaggle_id = data['gaggle_id']
+    username = data['username']
+    posted_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = dbi.connect() 
+    if username != '':
+        validInvite = waggle.modInvite(conn, gaggle_id, username, posted_date)
+    status = 'Not valid'
+    if validInvite:
+        status = 'Pending'
+        user_id = waggle.getUserID(conn, username)['user_id']
+    return jsonify({'invite':render_template('invitationTemplate.html', username = username, status = status, gaggle_id = gaggle_id, user_id = user_id)})
+
+
+@app.route('/invite/remove', methods=['POST'])
+def removeInvite():
+    """
+    Show dashboard where you can choose to edit information about groups you've created or moderate your gaggles.
+    """
+    data = request.get_json()
+    user_id = data['user_id']
+    gaggle_id = data['gaggle_id']
+    conn = dbi.connect() 
+    unsend = waggle.removeInvite(conn, gaggle_id, user_id)
+    return 'ok'
 
 @app.before_first_request
 def init_db():
     dbi.cache_cnf()
     # set this local variable to 'wmdb' or your personal or team db
-    db_to_use = 'waggle_db' 
+    db_to_use = 'ldau_db' 
     dbi.use(db_to_use)
     print('will connect to {}'.format(db_to_use))
 

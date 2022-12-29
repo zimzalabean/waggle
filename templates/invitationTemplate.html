@@ -1,0 +1,7 @@
+<li class="container list-group-item" id = 'invite-{{user_id}}'>   @{{username}}: {{status}}
+    <span class="badge rounded-pill bg-light text-dark">
+        <form action="{{url_for('removeInvite')}}" method="POST">
+        <button type="button" class='btn-outline-primary rounded-pill btn-sm' onclick="unsend('{{gaggle_id}}', '{{user_id}}')">Remove</button>
+        </form>
+    </span>
+</li>

@@ -1,4 +1,5 @@
 import cs304dbi as dbi
+import datetime
 
 # ==========================================================
 # The functions that do most of the work.
@@ -358,15 +359,24 @@ def isGosling(conn, user_id, gaggle_id):
     '''Check if a user is in a gaggle member list'''  
     curs = dbi.dict_cursor(conn)  
     curs.execute('''
-        SELECT * from gosling
+        SELECT a.user_id, b.unban_time
+        FROM gosling a
+        LEFT JOIN bad_gosling b
+        USING (gaggle_id, user_id)
         WHERE user_id = %s
         AND gaggle_id = %s''',
                  [user_id, gaggle_id])   
-    result = len(curs.fetchall())
-    if result == 0:
+    result = curs.fetchone()
+    if result == None:
         return False
     else:
-        return True   
+        unban_time = result['unban_time']
+        if unban_time == None:
+            return True
+        elif unban_time < datetime.now():
+            return  False
+        else:
+            return True
 
 def addPost(conn, gaggle_id, poster_id, content, tag_id, posted_date):
     '''
@@ -452,16 +462,17 @@ def getInvitees(conn, gaggle_id):
     '''
     curs = dbi.dict_cursor(conn)  
     curs.execute('''
-        SELECT b.username, a.accepted 
+        SELECT a.*, b.username
         FROM 
         mod_invite as a
-        INNER JOIN user as b
+        LEFT JOIN user as b
         ON (a.invitee_id = b.user_id)
-        WHERE a.gaggle_id= %s''',
+        WHERE a.gaggle_id= %s
+        ORDER BY posted_date''',
                 [gaggle_id])  
     return curs.fetchall()
 
-def modInvite(conn, gaggle_id, username,user_id):
+def modInvite(conn, gaggle_id, username, posted_date):
     '''
     Add valid username and corresponding gaggle_id into mod_invite table. 
     '''
@@ -478,11 +489,11 @@ def modInvite(conn, gaggle_id, username,user_id):
     if len(exists) == 0: #if not set invitation as pending
         if isGosling(conn, invitee_id, gaggle_id): #check if user is a group member
             valid = True
-            accepted = 'Pending'
+            status = 'Pending'
             curs.execute('''
-                INSERT INTO mod_invite(gaggle_id, invitee_id,inviter_id, accepted) 
-                VALUES(%s,%s, %s, %s)''',
-                        [gaggle_id, invitee_id,user_id, accepted])         
+                INSERT INTO mod_invite(gaggle_id, invitee_id, posted_date, status) 
+                VALUES(%s,%s,%s,%s)''',
+                        [gaggle_id, invitee_id, posted_date, status])         
             conn.commit()  
             return valid
     return valid   
@@ -498,7 +509,7 @@ def getInvitation(conn, invitee_id):
         LEFT JOIN gaggle b 
         USING (gaggle_id)
         WHERE 
-            a.accepted = 'Pending'
+            a.status = 'Pending'
             AND a.invitee_id = %s''',
                  [invitee_id]) 
     return curs.fetchall()
@@ -511,7 +522,7 @@ def responseInvite(conn, gaggle_id, user_id, response):
     curs = dbi.dict_cursor(conn)  
     curs.execute('''
         UPDATE mod_invite
-        SET accepted = %s
+        SET status = %s
         WHERE gaggle_id = %s
         AND invitee_id = %s''',
                 [response, gaggle_id, user_id])
@@ -586,19 +597,18 @@ def getBadUsers(conn, gaggle_id):
                  [gaggle_id]) 
     return curs.fetchall()     
 
-def banUser(conn, gaggle_id, username):
+def banUser(conn, gaggle_id, user_id, unban_time):
     '''
     Ban user from accessing the group
     '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        UPDATE bad_gosling
-        SET ban_status = 'Yes'
-        WHERE gaggle_id = %s
-        AND username = %s''',
-                [gaggle_id, username])
+        INSERT INTO bad_gosling VALUES (%s,%s)
+        on duplicate key
+        UPDATE unban_time = %s''',
+                [gaggle_id, user_id, unban_time, unban_time])
     conn.commit()             
-    return username
+    return gaggle_id
 
 def reinstateUser(conn, gaggle_id, username):
     '''
@@ -893,11 +903,16 @@ def get_flagged_posts(conn, gaggle_id):
     '''
     curs = dbi.dict_cursor(conn)
     curs.execute('''
-        select a.*, b.content, c.username, c.user_id
+        select a.*, b.content, b.poster_id, c.username as reporter_username, d.username as reported_username
         from flag_post a
-        left join post b using (post_id)
-        left join user c on a.reporter_id = c.user_id
+        left join post b 
+        using (post_id)
+        left join user c 
+        on a.reporter_id = c.user_id
+        left join user d
+        ON b.poster_id = d.user_id
         where b.gaggle_id = %s
+        and a.mod_aprroved = 'Pending'
         order by a.flagged_date desc
         ''', [gaggle_id])
     return curs.fetchall()
@@ -1033,13 +1048,84 @@ def deleteComment(conn, comment_id, post_id):
     conn.commit()
     return comment_id
 
-def getAllInvitees(conn,user_id):
+def getAllInvitees(conn, user_id):
     '''
     Returns all the invitees status sent by specified user
     '''
     curs = dbi.dict_cursor(conn)  
     curs.execute('''
-        SELECT b.username, a.gaggle_id, a.accepted
-        FROM mod_invite as a INNER JOIN user as b ON (a.invitee_id = b.user_id)
-        WHERE a.inviter_id= %s''',[user_id])  
+        SELECT b.username, a.gaggle_id, a.status
+        FROM mod_invite as a 
+        LEFT JOIN user as b ON (a.invitee_id = b.user_id)
+        LEFT JOIN gaggle c USING (gaggle_id)
+        WHERE c.author_id= %s''',[user_id])  
     return curs.fetchall()
+
+def getNotifsCount(conn, user_id):
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        SELECT COUNT(*) as count
+        FROM notifs
+        WHERE status = 'pending' 
+        AND user_id= %s''',
+                    [user_id])  
+    result = curs.fetchone()    
+    return result['count']
+
+def report(conn,post_id, reporter_id,reason,flagged_date):
+    '''insert a new report'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''insert into flag_post(post_id, reporter_id, reason, flagged_date, mod_aprroved)
+                        values (%s,%s,%s,%s,'Pending')''',
+                        [post_id, reporter_id,reason,flagged_date])
+    print('reported')
+    conn.commit()  # need this! 
+
+def getReport(conn, report_id):
+    '''
+    get report
+    '''
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        SELECT a.*, b.username
+        FROM flag_post a
+        LEFT JOIN user b
+        ON a.reporter_id = b.user_id
+        WHERE a.report_id= %s''',[report_id])  
+    return curs.fetchone()    
+
+
+def removeMod(conn, gaggle_id, user_id):
+    '''Remove a user into a gaggle member list'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        DELETE FROM moderator
+        WHERE user_id = %s
+        AND gaggle_id = %s''', 
+                [user_id, gaggle_id])
+    conn.commit()  # need this!   
+    return {'gaggle_id':gaggle_id, 'result': 'removed'}    
+
+def removeInvite(conn, gaggle_id, user_id):
+    '''Remove a user into a gaggle member list'''
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        DELETE FROM mod_invite
+        WHERE invitee_id = %s
+        AND gaggle_id = %s''', 
+                [user_id, gaggle_id])
+    conn.commit()  # need this!   
+    return {'gaggle_id':gaggle_id, 'result': 'removed'}     
+
+
+def isBanned(conn, user_id, gaggle_id):
+    curs = dbi.dict_cursor(conn)  
+    curs.execute('''
+        SELECT user_id
+        FROM bad_gosling
+        WHERE user_id= %s
+        AND gaggle_id = %s''',[user_id, gaggle_id])  
+    result = curs.fetchone()  
+    if result == None:
+        return False
+    return True

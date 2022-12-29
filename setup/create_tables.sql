@@ -178,10 +178,10 @@ CREATE TABLE moderator (
 CREATE TABLE mod_invite (
   gaggle_id int,
   invitee_id int,
-  inviter_id int,
-  accepted enum('Yes', 'No', 'Pending'),
+  posted_date datetime,
+  status enum('Yes', 'No', 'Pending'),
   primary key(gaggle_id, invitee_id),
-  INDEX(inviter_id),
+  INDEX(invitee_id),
   foreign key (gaggle_id) references gaggle(gaggle_id)
     on update no action
     on delete cascade,
@@ -192,31 +192,25 @@ CREATE TABLE mod_invite (
 
 CREATE TABLE bad_gosling (
   gaggle_id int,
-  username varchar(30), 
-  ban_status enum('Yes','No'),
-  strikes int, 
-  reason varchar(300),
-  mod_id int, 
-  violated_time datetime,
-  kind enum('Post', 'Comment', 'Spam'),
-  remove_id int, 
-  INDEX(mod_id),
+  user_id int,  
+  unban_time datetime,
   foreign key (gaggle_id) references gaggle(gaggle_id)
     on update no action
       on delete cascade,
   foreign key (mod_id) references user(user_id)  
     on update no action
     on delete cascade
-)ENGINE = InnoDB;
+) ENGINE = InnoDB;
 
 CREATE TABLE flag_post (
+  report_id int not null auto_increment,  
   post_id int,
   reporter_id int,
   reason varchar(200),
   flagged_date datetime,
   mod_id int,
   mod_aprroved enum('Yes', 'No', 'Pending'),
-  INDEX(mod_id),
+  primary key (report_id),
   foreign key (post_id) references post(post_id)
     on update no action
     on delete cascade, 

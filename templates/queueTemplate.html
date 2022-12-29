@@ -1,0 +1,143 @@
+
+    <ul class="nav nav-pills nav-fill" role="tablist">
+        <li class="nav-item">
+          <button
+            type="button"
+            class="nav-link active"
+            role="representation"
+            data-bs-toggle="tab"
+            data-bs-target="#report"
+            aria-selected="false"
+          >
+          Report
+          </button>
+        </li>
+
+        <li class="nav-item">
+          <button
+            type="button"
+            class="nav-link"
+            role="representation"
+            data-bs-toggle="tab"
+            data-bs-target="#user"
+            aria-selected="false"
+          >
+          User
+          </button>
+        </li>
+      </ul>
+
+
+<div class="tab-content card">
+    <div class="tab-pane fade" role="tabpanel" aria-labelledby="report-tab" id = 'report'>
+
+        <div class = 'card-body overflow-auto' style = 'max-width:600px;'>
+            <div class="btn-group" role="group">
+                                                
+                <button type = 'button' class = 'btn-outline-primary rounded-pill btn-sm' name="submit">Most reported</button>
+                <button type = 'button' class = 'btn-outline-primary rounded-pill btn-sm' name="submit">Latest</button>
+            
+        </div>
+
+            <ul class="list-group border-0" style = 'max-height: 400px; max-width: 600px;'>
+                {% for flag in flagged %}
+                <li class="list-group-item border-0">
+        
+                        <div class = 'card mb-4'>
+                            <div class = 'card-body'>
+        
+                                <div class="container alert alert-primary align-items-sm-center" role="alert">
+                                    <div class = 'row'>
+                                        <div class = 'col-sm-8'>
+                                            Reported by @<strong>{{flag.reporter_username}}</strong> for: {{flag.reason}} 
+                                        </div>
+        
+                                        <div class = 'col-sm-4'>
+                                            <form method="POST" action="{{url_for('approve')}}">
+                                            <div class="btn-group" role="group">
+                                                
+                                                    <button type = 'button' class = 'btn-outline-primary rounded-pill btn-sm' name="submit" onclick =  "approve('{{flag.post_id}}','{{flag.reporter_id}}','{{flag.report_id}}','Yes')">Remove</button>
+                                                    <button type = 'button' class = 'btn-outline-primary rounded-pill btn-sm' name="submit" onclick =  "approve('{{flag.post_id}}','{{flag.reporter_id}}','{{flag.report_id}}','No')">Approve</button>
+                                                
+                                            </div>
+                                            </form>
+                                        </div>
+        
+                                    </div>
+                                </div>
+        
+                                <div class="comment-header">
+                                    <div class = 'avator-comment'>
+                                        <img src="{{url_for('profilePic',user_id=flag.poster_id)}}" alt="1" class = 'img-profile'>
+                                    </div>
+                                    <div class="comment-header-info">
+                                        <div><a href="{{url_for('user', username=flag.username)}}"><span class = 'author'> @{{flag.reported_username}}</span></a></div>        
+                                        <div><span class = 'posted-date'>{{flag.posted_date}}</span></div>
+                                    </div>      
+                                </div>
+                                
+                                <div class="comment-img-wrap">
+                                <p> {{flag.content}}</p>
+                                </div>                        
+                            </div>
+                        </div>
+                    </li>
+            {%endfor%}    
+            </ul>
+        </div>
+        
+    </div>
+    <div class="tab-pane fade" role="tabpanel" aria-labelledby="report-tab" id = 'user' style = 'max-width: 400px;'>
+      <form method = 'POST' action = "{{url_for('ban_user')}}">
+        <div class="mb-3">
+            <label for="exampleFormControlInput1" class="form-label">Ban user:</label>
+            <input type="email" class="form-control" id="exampleFormControlInput1" placeholder="@ab6">
+          </div>
+          <div class="mb-3">
+            <label for="exampleFormControlTextarea1" class="form-label">Reason for banning</label>
+            <textarea class="form-control" id="exampleFormControlTextarea1" rows="3"></textarea>
+          </div>
+          
+          <div class="input-group mb-3" style = 'max-width: 400px;'>
+            <span class="input-group-text" id="basic-addon2">Ban period</span>
+            <input type="text" class="form-control" placeholder="7" aria-label="Number of days" aria-describedby="basic-addon2">
+            <span class="input-group-text" id="basic-addon2">Days</span>
+          </div>
+      </form>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+    function approve(post_id, user_id, report_id, approval) {
+        $(this).closest("tr").remove();
+        console.log(approval);
+        console.log(post_id);
+        console.log(report_id);
+        $.ajax({
+                type: "POST",
+                url: "/modapprove/",
+                data: JSON.stringify({'post_id': post_id, 'user_id': user_id, 'approval':approval, 'report_id': report_id}),
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                async: true,
+                success: function(resp){
+                }
+            });  event.preventDefault();
+    }    
+</script>

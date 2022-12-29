@@ -99,7 +99,7 @@
       <div class = 'report-form' id = 'report-form-{{post.post_id}}'>
           <p>To help our moderators respond more efficiently, please provide a reason for your report.</p>
           <form action="{{url_for('report')}}" method="POST" >
-            <textarea title="Reason for report" id = 'report'class="form-control" name="reason" rows="2" style="width: 35vw; border: solid rgb(210, 210, 210) 1px;"></textarea>
+            <textarea title="Reason for report" id = 'report-reason-{{post.post_id}}' class="form-control" name="reason" rows="2" style="width: 35vw; border: solid rgb(210, 210, 210) 1px;"></textarea>
             <button type="submit" class="btn rounded-pill btn-outline-danger mt-2" onclick="reportPost('{{post.post_id}}')">Report</button>
           </form>
       </div>
@@ -185,8 +185,8 @@
 
   function reportPost(post_id) {
       console.log(post_id);
-      var reason = $('textarea#report').val();
-      console.log(reason)
+      var reason = $('#report-reason-'+post_id).val();
+      console.log(reason);
       $.ajax({
               type: "POST",
               url: "/report/",
