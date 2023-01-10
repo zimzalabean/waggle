@@ -1,7 +1,7 @@
 {% macro post_temp(post, user_id) -%}
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 
-<div class="post-wrap" id = "post-{{post.post_id}}">
+<div class="post-wrap {{'hidden' if post.isHidden == post.post_id}}" id = "post-{{post.post_id}}">
+  <div class = 'card mt-3 mb-3'>
   <div class="card-body">
     <div class="post-header">
         <div class = 'avator'>
@@ -16,9 +16,16 @@
 
     <a style="color:#566a7f" href="{{url_for('post', post_id=post.post_id)}}">
       <div class="post-img-wrap">
+        {%if post.poster_id|is_blocked%} 
+        <div class = 'card' style = 'background-color: #98a4b1; color: rgb(255, 255, 255);'>
+        <div class = 'card-body' >
+        You have been blocked from viewing this post from the author.
+        </div></div>
+        {%else%}
         <p> {{post.content}}</p>
-        {% if post.pic != None %}
-          <div style="max-width: 300px;"><img src="{{url_for('postPic', filename = post.pic)}}" alt="{{post.pic}}"></div>
+          {% if post.pic != None %}
+            <div style="max-width: 300px;"><img src="{{url_for('postPic', filename = post.pic)}}" alt="{{post.pic}}"></div>
+          {% endif %}
         {% endif %}
       </div></a>
 
@@ -53,6 +60,15 @@
             <div><span id="post-likes-count-{{post.post_id}}">{{post.likes}}</span></div>
           </div> 
      
+
+          <div class="bookmark" id ='bookmark-{{post.post_id}}' style = 'display: flex; align-items: center;'>
+            <div class = 'small-circle'>         
+                <button aria-label="view comments"><i class='bx bx-bookmark' onclick = "bookmark('{{post.post_id}}')"></i></button>
+            </div>
+          </div>
+
+
+
       <div class="action">
         <div class = 'small-circle'>
           <button aria-label="view more actions" onclick="showDropdown('{{post.post_id}}')">
@@ -106,6 +122,7 @@
     </div>
   </div>
 </div>
+</div>
 
 <script>
         function showDropdown(pid) {
@@ -126,7 +143,21 @@
                 }
             }}
 
-
+  function bookmark(post_id){
+    $.ajax({
+            type: "POST",
+            url: "/bookmark/",
+            data: JSON.stringify({'post_id': post_id}),
+            contentType: 'application/json; charset=utf-8',
+            dataType: 'json',
+            async: true,
+            success: function (resp) {
+                console.log(resp);
+                var post_id = resp.post_id;
+                document.getElementById("bookmark-"+post_id).classList.toggle("selected");
+            }
+        });  event.preventDefault();    
+  }
 
 
   function likePost(post_id, poster_id) {

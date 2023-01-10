@@ -6,25 +6,46 @@
        <!-- Tabs -->
       <div class="row">
         <div class="col-xl-12">
-            <h5 class="fw-bold mb-2 col-12">Mod queue:
-                <span class="badge">
-                    <div class="dropdown col-6">
-                        <button class="btn btn-secondary rounded-pill dropdown-toggle" type="button" id="dropdownMenu" data-bs-toggle="dropdown" aria-expanded="false">
-                        Choose Gaggle
-                        </button>
-                        <ul class="dropdown-menu" aria-labelledby="dropdownMenu2">
-                        {% for gaggle in modgaggles %}
-                        <li><a class="dropdown-item" href="{{url_for(getModqueue, gaggle_name = gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a></li>
+            <div class = 'card'>
+                <div class = 'card-body'>
+                <div class = 'card-body' style = 'min-width: 300px;'>  
+                <h5 class="fw-bold mb-2 col-12">Pending invitations:</h5>
+                    <ol class="list-group list-group-numbered">
+                        {% for gaggle in invitations %}
+                        <li id = 'invite-{{gaggle.gaggle_id}}'>
+                          Gaggle: <a href="{{url_for('gaggle',gaggle_name=gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a> 
+                          <span class = 'badge'>
+                          <form method="POST" action="{{url_for('response_invite')}}">
+                            <div class="btn-group" role="group">                                
+                                    <button type = 'button' class = 'btn-outline-primary rounded-pill' onclick =  "respond('{{gaggle.gaggle_id}}','Yes')">Yes</button>
+                                    <button type = 'button' class = 'btn-outline-primary rounded-pill' onclick =  "respond('{{gaggle.gaggle_id}}','No')">No</button>                                
+                            </div>
+                            </form>
+                          </span>
+                        </li>
                         {%endfor%}
-                        </ul>
-                    </div>
-                </span>
-                
-            </h5>
+                    </ol>
+                    <br>
+                    {% if not hasInvites %}
+                    No pending invitations
+                    {%endif%}
+                    <br>
+                </div>  
+                <br>
+            <hr class="my-0"/>     
+            <div class = 'card-body' style = 'min-width: 300px;'>     
+            <h5 class="fw-bold mb-2 col-12">Mod queues:</h5>
+            <ol class="list-group list-group-numbered" id = 'queue'>
+                {% for gaggle in modgaggles %}
+                  <li class="container list-group-item"> {{gaggle.gaggle_name}}<a href = "{{url_for('getModqueue', gaggle_name = gaggle.gaggle_name)}}">
+                  <span class="badge rounded-pill bg-light text-dark">
+                    <a href = "{{url_for('getModqueue', gaggle_name = gaggle.gaggle_name)}}"><button type="button" class='btn-outline-primary rounded-pill btn-sm'>View</button></a>
+                </span></li>
+                {%endfor%}
+            </ol>
 
-
-
-
+        </div></div>
+    </div>
         </div>
     </div>
 </div>
@@ -58,36 +79,17 @@
                 dataType: 'json',
                 async: true,
                 success: function(resp){
-                
+                    var accept = resp['resp'];
+                    if (accept == 'Yes') {
+                        var gaggle_name = resp['gaggle_name'];
+                        var new_gaggle = resp['new_gaggle'];
+                        $('#queue').prepend(new_gaggle);
+                    }
                 }
             });  event.preventDefault();
     } 
 
-    function ban() {
-        console.log(gaggle_id);
-        var form_data = new FormData();
-        var content = $('textarea#username').val();
-        var content = $('textarea#gaggle_id').val();
-        var content = $('textarea#content').val();
-        var content = $('textarea#content').val();
-        form_data.append('username', username);
-        form_data.append('gaggle_id', gaggle_id);
-        form_data.append('reason', reason);
-        form_data.append('period', period);
-        $.ajax({
-                type: "POST",
-                url: "/ban/",
-                data: form_data,
-                contentType: false,
-                cache: false,
-                processData: false,
-                dataType: 'json',
-                async: true,
-                success: function(resp){
 
-                }
-            });  event.preventDefault();
-    }    
 
 
 

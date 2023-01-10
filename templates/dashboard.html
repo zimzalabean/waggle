@@ -11,36 +11,39 @@
 
 
 
-    {% if hasGaggle %}
-            <div class="tab-content">
-              <div class="tab-pane fade show active" id="navs-justified-home" role="tabpanel">
-                <div class="card mb-3">
-                  <div class = 'card-body'>
-                    <h3 class="fw-bold py-2 mb-2 col-9">Creator Dashboard
-                    <span class="badge">
-                      <div class="dropdown col-6">
-                        <button class="btn btn-secondary rounded-pill dropdown-toggle" type="button" id="dropdownMenu" data-bs-toggle="dropdown" aria-expanded="false">
-                          Choose Gaggle
-                        </button>
-                        <ul class="dropdown-menu" aria-labelledby="dropdownMenu2">
-                          {% for gaggle in gaggles %}
-                          <li><button class="dropdown-item" type="button" onclick="getGaggle('{{gaggle.gaggle_name}}')">{{gaggle.gaggle_name}}</button></li>
-                          {%endfor%}
-                        </ul>
-                      </div>
-                    </span>
-                    </h3>              
-                    <div id = 'main-view'></div>
-                </div>
-                </div>
-        </div>
+
+    <div class="row my-3 ms-3 justify-content-start">
+      <!-- most recent 20 posts -->
+      <div class="card mb-3 ms-3 col-11" >
+      <div class = 'row card-body'>
+          {% block sub_content %} 
+          <nav aria-label="breadcrumb" style="--bs-breadcrumb-divider: '';">
+            <ol class="breadcrumb my-3 col-sm-12">
+              <li class="breadcrumb-item"><a href="{{url_for('dashboard')}}"><h4 style = 'color: blueviolet;'>Dashboard</h4></a></li>
+            </ol>
+          </nav>
+          
+                {% if hasGaggle %}
+                    <ul class="nav flex-column">
+                      {% for gaggle in gaggles%}
+                      <li class="nav-item">
+                        <a class="nav-link" aria-current="page" href="{{url_for('getDashboard', gaggle_name = gaggle.gaggle_name)}}">{{gaggle.gaggle_name}}</a>
+                      </li>
+                      {%endfor%}
+                    </ul>
+                {% else %}
+                  You haven't created any Gaggles.
+                {% endif %}
+
+          {% endblock %}    
+
       </div>
-      {% else %}
-        You haven't created any Gaggles.
-      {% endif %}
+      </div>
     </div>
-  </div>
-</div>
+
+
+
+
 
 <script>
   function getGaggle(gaggle_name) {

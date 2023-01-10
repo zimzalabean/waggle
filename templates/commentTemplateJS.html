@@ -56,21 +56,44 @@
         </div>
         <div id="myDropdownComment_{{comment.comment_id}}" class="card dropdown-content">
           {% if comment.commentor_id == user_id %}
-          <div class="justify-content-center">
             <form method = 'post' action="{{url_for('removeComment')}}">
-              <button onclick="deleteComment('{{comment.comment_id}}', '{{comment.post_id}}')">Delete Comment</button> 
+              <button style = 'min-width: 100%;' onclick="deleteComment('{{comment.comment_id}}', '{{comment.post_id}}')">Delete</button> 
             </form>
-          </div>
           {% else %}
-          <div>Not authorized to delete comment</div>
+          <button type="button" data-bs-toggle="modal" data-bs-target="#exampleModal" style = 'min-width: 100%;'>
+            Report reply
+          </button>
           {% endif %}
         </div> 
       </div>
-      {% if pageIsNotPost %}
-      <a href="{{url_for('post', post_id=comment.post_id)}}" class="btn btn-sm btn-outline-primary" style="float:right">View Post</a>
-      {% endif %}
     </div>
 </div>
+
+
+<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">Report form</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id = 'report-reply-{{comment.comment_id}}'>
+        <p>To help our moderators respond more efficiently, please provide a reason for your report.</p>
+        <form action="{{url_for('report')}}" method="POST" >
+          <textarea title="Reason for report" id = 'report-reason-reply-{{comment.comment_id}}' class="form-control" name="reason" rows="2" style="width: 35vw; border: solid rgb(210, 210, 210) 1px;"></textarea>
+          <button type="submit" class="btn rounded-pill btn-outline-danger mt-2" onclick="reportReply('{{comment.comment_id}}')">Report</button>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
 <div id="myDropdown_reply_{{comment.comment_id}}" class="dropdown-reply">   
     <form method='post' action="{{url_for('addReply', comment_id = comment.comment_id)}}" >     
       <div class = 'comment-header' style = 'align-items: center; '>
@@ -151,6 +174,23 @@
                     }
                 }
             }}
+
+  function reportReply(comment_id) {
+      console.log(comment_id);
+      var reason = $('#report-reason-reply-'+comment_id).val();
+      console.log(reason);
+      $.ajax({
+              type: "POST",
+              url: "/report/reply",
+              data: JSON.stringify({'comment_id': comment_id, 'reason': reason}),
+              contentType: 'application/json; charset=utf-8',
+              dataType: 'json',
+              async: true,
+              success: function(resp){
+                $('#report-reply-'+comment_id).text('Thank you for submitting your report. Our mods will look into it soon.');
+              }
+          });  event.preventDefault();
+  } 
 
 
 </script>

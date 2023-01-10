@@ -137,9 +137,6 @@ img {
   display: block;
   background: none;
   border-radius:3px;
-  padding: 0px 20px;
-  /* border-bottom: 1px solid #e6ecf0; */
-  /* border-top: 1px solid #e6ecf0; */
 }
 /* .post-wrap:hover{
     background-color:  rgb(243, 243, 243);
@@ -227,10 +224,6 @@ img {
   border-radius: 4px;
 }
 
-.dropdown-content div:hover{
-  background-color:  rgb(220, 208, 236)!important;
-  color:#725789 !important;
-}
 
 @media screen and (max-width:430px){
   body {
@@ -452,3 +445,17 @@ img {
   margin-left: 60px;
 }
 
+/*
+* Dashboard edit
+******************************************************************************/
+.text{
+  border: 0px; 
+  font-weight: 400;
+  font-size: 14px;
+}
+
+.text-active {
+  border: 1px rgb(226, 198, 255) solid !important;
+  color: blueviolet !important;
+  font-weight: 200;
+}

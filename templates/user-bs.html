@@ -28,16 +28,21 @@
                     <div class="col-sm-2">
                         {% if isPersonal %}
                         <div class="card-body py-3 px-0">
-                            <a href="{{url_for('editMyPage')}}"><button type="submit" class="btn rounded-pill btn-dark">Edit Profile</button></a>
+                            <a href="{{url_for('editMyPage')}}"><button type="button" class="btn rounded-pill btn-dark">Edit Profile</button></a>
                         </div>
+                        {%else%}
+                        <div class="card-body py-3 px-0">
+                            <button type="button" class="btn rounded-pill btn-dark" onclick = "block('{{user_id}}')">Block</button>
+                        </div>                        
                         {% endif %}
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="row">
-        <h4 class="fw-bold py-3 mb-4">Joined Gaggles</h4>
+{%if not user_id|is_blocked%} 
+    <div class="row" id = 'main-view'>
+        <h4 class="fw-bold py-3 mb-4">Joined Gaggles </h4>
         <div class="d-flex flex-wrap" id="icons-container">
             {% for gaggle in gagglesJoined %}
             {% if gaggle.isAuthor == False %}
@@ -70,5 +75,28 @@
             {% endfor %}
         </div> 
     </div>
+    {%else%}
+    <div class = 'card-body'> This user have blocked you from viewing their profile.</div>
+    {% endif %}
 </div>
+
+<script>
+
+function block(user_id) {
+    $.ajax({
+              type: "POST",
+              url: "/block",
+              data: JSON.stringify({'user_id':user_id}),
+              contentType: 'application/json; charset=utf-8',
+              dataType: 'json',
+              async: true,
+              success: function(resp){
+                document.getElementById("main-view").classList.toggle("hidden");
+              }
+          });  event.preventDefault();
+
+}
+
+</script>
+
 {% endblock %}

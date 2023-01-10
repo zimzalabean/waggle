@@ -1,40 +1,87 @@
 
+{% extends "dashboard.html" %}
 
-        <form action="{{url_for('editGaggle')}}" method="POST">
-          <h5 class="card-header" style = 'padding-left: 0px;'>Edit <strong>{{gaggle.gaggle_name}}</strong>'s Description:</h5>
-          <div class="update_group">
-            <textarea title="Description of {{gaggle.gaggle_name}}" class="form-control" type="text" id="description">{{gaggle.description}}</textarea>
-          </div>
-          <h5 class="card-header" style = 'padding-left: 0px;'>Edit <strong>{{gaggle.gaggle_name}}</strong>'s Guidelines:</h5>
-          <div class="update_group">
-            <textarea title="Guidelines of {{gaggle.gaggle_name}}" class="form-control" type="text" id="guidelines">{{gaggle.guidelines}}</textarea>
-          </div>
-          <div class="mt-2">
-            <button type="button" class="btn btn-primary me-2"  onclick="editGaggle('{{gaggle.gaggle_id}}')"> Save changes</button>
-          </div>
-        </form>
+{% block title_description %}
+<script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
+<title>Dashboard | Waggle</title>
+<meta name="description" content="" />
+{% endblock %}
+          
+{% block sub_content %}
+<nav aria-label="breadcrumb" style="--bs-breadcrumb-divider: '';">
+  <ol class="breadcrumb my-3 col-sm-12">
+    <li class="breadcrumb-item"><a href="{{url_for('dashboard')}}"><h4 style = 'color: blueviolet;'>Dashboard</h4></a></li>
+    <li class="breadcrumb-item active col-sm-5" aria-current="page"><a href="{{url_for('gaggle', gaggle_name = gaggle.gaggle_name)}}"><h4><i class="menu-icon tf-icons bx bxs-chevron-right"></i>{{gaggle.gaggle_name}}</h4></a></li>
+  </ol>
+</nav>
+
+<div class = 'col-sm-2 my-3'>
+
+  <ul class="nav flex-column nav-pills my-3" id="myTab" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="details-tab" data-bs-toggle="tab" data-bs-target="#details" type="button" role="tab" aria-controls="details" aria-selected="true">Details</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="mods-tab" data-bs-toggle="tab" data-bs-target="#mods" type="button" role="tab" aria-controls="mods" aria-selected="false">Moderators</button>
+    </li>
+  </ul>
+</div>
+<div class = 'col-sm-10 tab-content' id="myTabContent" style = 'min-height: 80vh;'>
 
 
-      <hr class="my-0"/>
-      <h5 class="card-header">Invite New Moderator to <strong>{{gaggle.gaggle_name}}</strong>:</h5>
 
+    <div class="tab-pane show active" id="details" role="tabpanel" aria-labelledby="details-tab">
+                    <!-- Account -->
+                    <hr class="my-0" />
+                    <div class="card-body">
+                      <div class="d-flex align-items-start align-items-sm-center gap-4">
+                        <img
+                          src="{{url_for('gagglePic', gaggle_id=gaggle.gaggle_id)}}"
+                          alt="user-avatar"
+                          class="d-block rounded"
+                          style="width: 15vw; max-width: 120px; height: 15vw; max-height: 120px; clip-path: circle(15vw); object-fit: cover;"
+                          id="gaggle-profile"
+                        />
+                        <div class="button-wrapper">
+                            Update gaggle's profile picture
+                            <form id = 'gaggle_pic' method="post" action="{{url_for('changeGagglePic')}}" enctype="multipart/form-data">
+                              <div class="input-group">
+                                <input class="form-control" type="file" id="pic">
+                                <div class="input-group-append">
+                                  <button type="button" class="btn btn-primary" onclick ="changePic('{{gaggle.gaggle_id}}')">Update</button>
+                                </div>
+                              </div>
+                              <p class="text-muted mb-0 mt-1">Allowed JPG, GIF or PNG. Max size of 1MB.</p>
+                            </form>
+                        </div>
+                      </div>
+                    </div>
+                    <hr class="my-0" />
 
+                      <form action="{{url_for('editGaggle')}}" method="POST">
+                        <h6 class="my-3" style = 'padding-left: 0px; color: rgb(156, 90, 218);'><strong>Description</strong> <i class='bx bx-edit-alt'></i></h6>
+                        <textarea title="Description of {{gaggle.gaggle_name}}" class="form-control text" type="text" id="description" >{{gaggle.description}}</textarea>
 
+                        <h6 class="my-3" style = 'padding-left: 0px; color: rgb(156, 90, 218);'><strong>Guidelines</strong><i class='bx bx-edit-alt'></i></h6>
+                        <textarea title="Guidelines of {{gaggle.gaggle_name}}" class="form-control text" type="text" id="guidelines">{{gaggle.guidelines}}</textarea>
 
-        <div class="input-group mb-3" style = 'max-width: 20vw;'>
-          <input type="text" class="form-control" id = 'invitee_username' placeholder="ex. ab6" aria-label="Invite new mod" aria-describedby="basic-addon2">
+                        <button type="button" class="btn btn-primary mt-2"  onclick="editGaggle('{{gaggle.gaggle_id}}')"> Save changes</button>
+                      </form>                      
+
+      </div>
+      
+      <div class="tab-pane" id="mods" role="tabpanel" aria-labelledby="mods-tab">   
+      <!-- <hr class="my-0"/> -->
+        <div class="input-group input-group-sm p-3" style = 'background-color: rgb(231, 231, 231);'>
+          <input type="text" class="form-control" id = 'invitee_username' placeholder="ex. ab6" aria-label="Invite new mod" aria-describedby="basic-addon2" style = 'background-color: rgb(255, 255, 255);'>
             <form action="{{url_for('inviteUser')}}" method="POST">
-              <button type="submit" class="btn btn-outline-primary" onclick="inviteMod('{{gaggle.gaggle_id}}')">Invite</button>
+              <button type="submit" class="btn btn-secondary btn-sm" onclick="inviteMod('{{gaggle.gaggle_id}}')">Invite new mod</button>
               </form>
-              <span id = 'invitation-result'></span>
         </div>
 
 
     <hr class="my-0"/>
-    <div class = 'container'>
-      <div class = 'row'>
-        <div class = 'col-sm-6'>
-    <h5 class="card-header"> Moderators:</h5>
+    <h6 class="card-header"> Moderators</h6>
 
         <ol class="list-group list-group-numbered">
             {% for user in mods %}
@@ -47,11 +94,10 @@
             </li>
             {%endfor%}
         </ol>
-    </div>
 
 
-  <div class = 'col-sm-6'>
-    <h5 class="card-header">Moderator invitations status:</h5>
+    <hr class="my-0"/>
+    <h6 class="card-header">Moderator invitations status</h6>
 
       <ol class="list-group list-group-numbered" id = 'invite-status-list'>
         {% for user in invitees %}
@@ -64,13 +110,23 @@
         </li>
         {%endfor%}
       </ol>
-    </div>
-    </div>
-  </div>
+    
 
 
+
+
+</div>
 
 <script>
+
+    $(document).ready(function() {
+        $('.form-control.text').on('click', function(evt) {
+          console.log('selected');
+          (this).classList.add('text-active');
+        }); 
+    });
+
+
     function editGaggle(gaggle_id) {
         console.log(gaggle_id);
         var description = $('#description').val();
@@ -83,14 +139,42 @@
                 dataType: 'json',
                 async: true,
                 success: function(resp){
-                    var description = resp['description']
-                    var guidelines = resp['guidelines']
-                    $('description').val(description);
-                    $('guidelines').val(guidelines);
+                    var description = resp['description'];
+                    var guidelines = resp['guidelines'];
+                    $('#description').val(description); 
+                    document.getElementById("description").classList.remove('text-active');
+                    $('#guidelines').val(guidelines);
+                    document.getElementById("guidelines").classList.remove('text-active');
                 }
             })
         }
-        
+
+    function changePic(gaggle_id){
+        var form_data = new FormData();
+        form_data.append('gaggle_id', gaggle_id);
+        form_data.append('gaggle_pic', $('#pic').prop('files')[0]);
+        $.ajax({
+                type: "POST",
+                url: "/gaggle/pic",
+                data: form_data,
+                contentType: false,
+                cache: false,
+                processData: false,
+                dataType: 'json',
+                async: true,
+                success: function(resp){
+                  var gaggle_id = resp['gaggle_id'];
+                  var new_src = ('/gaggle_pic/'+gaggle_id);
+                  reloadImg(new_src);
+                }
+            });  event.preventDefault();
+    }    
+
+    async function reloadImg(url) {
+      await fetch(url, { cache: 'reload', mode: 'no-cors' })
+      document.body.querySelectorAll(`img[src='${url}']`)
+        .forEach(img => img.src = url)
+    }
 
     function inviteMod(gaggle_id) {
         console.log(gaggle_id);
@@ -152,3 +236,6 @@
 
 
 </script>
+
+
+{% endblock %}

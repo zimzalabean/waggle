@@ -2,7 +2,7 @@ from flask import (Flask, render_template, make_response, url_for, request,
                    redirect, flash, session, send_from_directory, jsonify)
 from werkzeug.utils import secure_filename
 import bcrypt
-from datetime import datetime
+from datetime import datetime, timedelta
 app = Flask(__name__)
 
 # one or the other of these. Defaults to MySQL (PyMySQL)
@@ -11,7 +11,7 @@ app = Flask(__name__)
 import cs304dbi as dbi
 # import cs304dbi_sqlite3 as dbi
 import waggle
-import random, datetime
+import random
 import json
 
 app.secret_key = 'your secret here'
@@ -318,7 +318,7 @@ def likePost():
         else:
             kind = 'Like'
             waggle.likePost(conn, post_id, user_id, kind)
-            notif = f"{username} has liked your post:"
+            notif = username +" has liked your post:"
             noti_time = str(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             noti_kind = 'liked'
             source = 'post'
@@ -345,6 +345,23 @@ def report():
     waggle.report(conn,post_id, reporter_id,reason,flagged_date)
     return jsonify({'reported': post_id, 'reason': reason})
 
+@app.route('/report/reply', methods=['POST'])
+def reportReply():
+    '''
+    If a user is logged in then the function checks if they already reported this post,
+    if not then it inserts a new flag into a flag_post table and updates
+    flags count for a post in post table.
+    '''
+    reporter_id = isLoggedIn()
+    data = request.get_json()
+    comment_id = data['comment_id']
+    reason = data['reason']
+    conn = dbi.connect()
+    flagged_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    #insert into flag_post table
+    waggle.reportReply(conn,comment_id, reporter_id,reason,flagged_date)
+    return jsonify({'reported': comment_id, 'reason': reason})    
+
 ####_____Comment/Replies Functions_____####
 @app.route('/likeComment/', methods=['POST'])
 def likeComment(): #if comment isn't liked then insert like else unlike
@@ -366,7 +383,7 @@ def likeComment(): #if comment isn't liked then insert like else unlike
             kind = 'Like'
             waggle.likeComment(conn, comment_id, user_id, kind)
             commentor_id = data['commentor_id']
-            notif = f"{username} has liked your reply:"
+            notif = username+ " has liked your reply:"
             noti_time = str(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             noti_kind = 'liked'
             source = 'comment'
@@ -436,35 +453,15 @@ def editMyPage():
     if request.method == 'GET':
         return render_template('edit_account_info-bs.html', section = 'profile', user=user_info, my_username=my_username,my_user_id=my_user_id)
     else:
-        new_fn, new_ln, new_cy, new_bio = '', '', '', ''
-        if request.form['first_name'] != '':
-            new_fn = request.form['first_name']
-            curs = dbi.dict_cursor(conn)
-            curs.execute('''UPDATE user
-                            SET first_name = %s
-                            WHERE user_id = %s''',
-                        [new_fn,my_user_id])
-        if request.form['last_name'] != '':
-            new_ln = request.form['last_name']
-            curs = dbi.dict_cursor(conn)
-            curs.execute('''UPDATE user
-                            SET last_name = %s
-                            WHERE user_id = %s''',
-                        [new_ln,my_user_id])
-        if request.form['class_year'] != '':
-            new_cy = request.form['class_year']
-            curs = dbi.dict_cursor(conn)
-            curs.execute('''UPDATE user 
-                            SET class_year = %s
-                            WHERE user_id = %s''',
-                        [new_cy,my_user_id])
-        if request.form['bio_text'] != '':
-            new_bio = request.form['bio_text']
-            curs = dbi.dict_cursor(conn)
-            curs.execute('''UPDATE user
-                            SET bio_text = %s
-                            WHERE user_id = %s''',
-                        [new_bio,my_user_id])
+        new_fn = request.form['first_name']
+        new_ln = request.form['last_name']
+        new_cy = request.form['class_year']
+        new_bio = request.form['bio_text']
+        curs = dbi.dict_cursor(conn)
+        curs.execute('''UPDATE user
+                        SET first_name = %s, last_name = %s, class_year = %s, bio_text = %s
+                        WHERE user_id = %s''',
+                    [new_fn,my_user_id])
         conn.commit()
         flash('Profile successfully updated')
         return redirect(url_for('editMyPage'))
@@ -474,10 +471,7 @@ def file_upload():
     '''
     Allow user to upload their file and insert it into the database (profile picture specifically)
     '''
-    user_id = session.get('user_id', '')
-    if user_id == '':
-        flash('You are not logged in. Please log in or join.')
-        return redirect(url_for('login'))
+    user_id = isLoggedIn()
     username = session.get('username')
     conn = dbi.connect()    
     if request.method == 'GET':
@@ -598,8 +592,9 @@ def gaggle(gaggle_name):
         gaggle_id = waggle.getGaggleID(conn, gaggle_name)['gaggle_id']
         joined  = waggle.isGosling(conn, my_user_id, gaggle_id)
         isAuthor = waggle.isAuthor(conn, my_user_id, gaggle_id)
+        isBanned = waggle.isBanned(conn, my_user_id, gaggle_id)
         mods = waggle.getModOfGaggles(conn, gaggle_id)
-        return render_template('group-bs.html', gaggle = gaggle, posts = posts, joined = joined, isAuthor = isAuthor, my_username=my_username, my_user_id = my_user_id, mods=mods)
+        return render_template('group-bs.html', gaggle = gaggle, posts = posts, joined = joined, isAuthor = isAuthor, my_username=my_username, my_user_id = my_user_id, mods=mods, isBanned = isBanned)
 
 @app.route('/gaggle/<gaggle_name>/members/')
 def gaggleMembers(gaggle_name):
@@ -700,14 +695,16 @@ def modqueue():
     if logged_in != False:
         my_username = session.get('username')
         my_user_id = session.get('user_id')
-        
         conn = dbi.connect()
         modgaggles = waggle.getMyModGaggles(conn, my_user_id)
         invitations = waggle.getInvitation(conn, my_user_id)
         hasModGaggle = False
+        hasInvites = False
         if len(modgaggles) > 0:
             hasModGaggle = True
-        return render_template('dash.html', section = 'modqueue', modgaggles=modgaggles, invitations = invitations, my_username = my_username, my_user_id = my_user_id, hasModGaggle = hasModGaggle)
+        if len(invitations) > 0:
+            hasInvites = True
+        return render_template('dash.html', section = 'modqueue', modgaggles=modgaggles, invitations = invitations, my_username = my_username, my_user_id = my_user_id, hasModGaggle = hasModGaggle, hasInvites=hasInvites)
     else:
         flash('You are not logged in. Please login or join.')
         return redirect(url_for('login'))
@@ -715,52 +712,45 @@ def modqueue():
 @app.route('/modqueue/<gaggle_name>', methods=['GET'])
 def getModqueue(gaggle_name):
     conn = dbi.connect()
-    gaggle_id = waggle.getGaggleID(conn, gaggle_name)
+    gaggle_id = waggle.getGaggleID(conn, gaggle_name)['gaggle_id']
     flagged = waggle.get_flagged_posts(conn, gaggle_id)
     bad_users = waggle.getBadUsers(conn, gaggle_id)
-    return render_template('queueTemplate.html', flagged = flagged, bad_users = bad_users)
+    return render_template('queueTemplate.html', section = 'modqueue', flagged = flagged, bad_users = bad_users, gaggle_id = gaggle_id)
 
-@app.route('/ban/', methods=['POST'])
+@app.route('/ban', methods=['POST'])
 def ban():
     conn = dbi.connect()
     data = request.get_json()
     username = data['username']
+    user_id = waggle.getUserID(conn, username)['user_id']
     gaggle_id = data['gaggle_id']
-    period = data['period']
-    unban_time = datetime.now().timedelta(days=period)
-    banned = waggle.banUser(conn, gaggle_id, username)
+    period = int(data['period'])
+    reason = data['reason']
+    unban_time = (datetime.now()+timedelta(days=period)).strftime("%Y-%m-%d %H:%M:%S")
+    banned = waggle.banUser(conn, gaggle_id, user_id, reason, unban_time)
+    return jsonify({'success':'yes'}) 
 
-    return 'ok'
+@app.route('/reinstate', methods=['POST'])
+def reinstate():
+    conn = dbi.connect()
+    data = request.get_json()
+    user_id = data['user_id']
+    gaggle_id = data['gaggle_id']
+    waggle.reinstateUser(conn, gaggle_id, user_id)
+    return jsonify({'success':'yes'})   
 
 @app.route('/modapprove/', methods=['POST'])
 def approve():
     data = request.get_json()
-    print(data)
     approval = data['approval']
-    post_id = data['report_id']
     reported_user_id = data['user_id']
     report_id = data['report_id']
+    post_id = data['post_id']
     conn = dbi.connect()
+    waggle.modReview(conn, report_id, approval)
     if approval == 'Yes':
-        curs = dbi.dict_cursor(conn)
-        curs.execute('''
-            update flag_post
-            set mod_aprroved = 'Yes'
-            where report_id = %s
-        ''', [report_id])
-        conn.commit()
-        waggle.increment_flag(conn, post_id)
         res = waggle.increment_strikes(conn, reported_user_id)
-        if res == 'ban':
-            flash('user needs to get banned')
-    else:
-        curs = dbi.dict_cursor(conn)
-        curs.execute('''
-            update flag_post
-            set mod_aprroved = 'No'
-            where report_id = %s
-        ''', [report_id])
-        conn.commit()
+        waggle.hidePost(conn, post_id)
     report = waggle.getReport(conn, report_id)
     return jsonify(report)
 
@@ -771,9 +761,12 @@ def response_invite():
     conn = dbi.connect() 
     data = request.get_json()
     gaggle_id = data['gaggle_id']
+    gaggle_name = waggle.getGaggleName(conn, gaggle_id)
     response = data['resp']
-    responded =  waggle.responseInvite(conn, gaggle_id, user_id, response)
-    return redirect(url_for('modqueue'))  
+    waggle.responseInvite(conn, gaggle_id, user_id, response)
+    if response == 'Yes':
+        return jsonify({'resp': response, 'new_gaggle':render_template('queue_item.html', gaggle_name = gaggle_name)}) 
+    return jsonify({'resp': response})
 
 @app.route('/notif/', methods=['GET','POST'])
 def notif():
@@ -845,7 +838,6 @@ def dashboard():
     my_username = session.get('username', '')
     hasGaggle = False  
     gaggles = waggle.getGagglesCreated(conn, my_user_id)
-    # allInvitees = waggle.getAllInvitees(conn, my_user_id)
     if len(gaggles) > 0:
         gaggle = gaggles[0]
         gaggle_id = gaggle['gaggle_id']         
@@ -856,20 +848,17 @@ def dashboard():
     if request.method == 'GET':
         return render_template('dashboard.html', section = 'dashboard', hasGaggle = hasGaggle, gaggles = gaggles, gaggle = gaggle, my_user_id = my_user_id, my_username = my_username)
 
-@app.route('/dashboard/get', methods=['GET'])
-def getDashboard():
+@app.route('/dashboard/<gaggle_name>', methods=['GET'])
+def getDashboard(gaggle_name):
     """
     Show dashboard where you can choose to edit information about groups you've created or moderate your gaggles.
     """
-    print(request)
-    gaggle_name = request.args.get('gaggle_name')
-    print(gaggle_name)
     conn = dbi.connect() 
     gaggle = waggle.getGaggle(conn, gaggle_name)
     gaggle_id = gaggle['gaggle_id']
     mods = waggle.getModOfGaggles(conn, gaggle_id)
     invitees = waggle.getInvitees(conn, gaggle_id)
-    return jsonify({'view': render_template('group_dashboard.html', gaggle = gaggle, mods = mods, invitees = invitees)})
+    return render_template('group_dashboard.html',section = 'dashboard',  gaggle = gaggle, mods = mods, invitees = invitees)
 
 @app.route('/edit/gaggle', methods=['POST'])
 def editGaggle():
@@ -885,6 +874,38 @@ def editGaggle():
     waggle.updateGuidelines(conn, gaggle_id, guidelines)
     return jsonify({'description':description, 'guidelines': guidelines})
 
+@app.route('/gaggle/pic', methods=['POST'])
+def changeGagglePic():
+    gaggle_id = request.form.get('gaggle_id')
+    fname = request.files.get('gaggle_pic')
+    ext = fname.filename.split('.')[-1]
+    filename = secure_filename('gaggle_{}.{}'.format(gaggle_id,ext))
+    pathname = os.path.join(app.config['UPLOADS'],filename)
+    fname.save(pathname)
+    conn = dbi.connect()
+    curs = dbi.dict_cursor(conn)
+    curs.execute(
+            '''insert into gaggle_pics(gaggle_id,filename) values (%s,%s)
+            on duplicate key update filename = %s''',
+            [gaggle_id, filename, filename])
+    conn.commit()
+    return jsonify({'gaggle_id': gaggle_id})
+
+@app.route('/gaggle_pic/<gaggle_id>')
+def gagglePic(gaggle_id):
+    """
+    Retrieves the profile pic of the user from the database or the default photo
+    """
+    conn = dbi.connect()
+    curs = dbi.dict_cursor(conn)
+    curs.execute(
+            '''select filename from gaggle_pics where gaggle_id = %s''',
+            [gaggle_id])    
+    filename = curs.fetchone()
+    if (filename is None): #sets the default photo if gaggle's profile pic doesn't exist
+        return send_from_directory(app.config['DEFAULT'],'profile.jpeg')
+    return send_from_directory(app.config['UPLOADS'],filename['filename'])
+    
 
 @app.route('/mod/remove', methods=['POST'])
 def removeMod():
@@ -908,6 +929,7 @@ def inviteUser():
     if username != '':
         validInvite = waggle.modInvite(conn, gaggle_id, username, posted_date)
     status = 'Not valid'
+    user_id = ''
     if validInvite:
         status = 'Pending'
         user_id = waggle.getUserID(conn, username)['user_id']
@@ -925,6 +947,49 @@ def removeInvite():
     conn = dbi.connect() 
     unsend = waggle.removeInvite(conn, gaggle_id, user_id)
     return 'ok'
+
+@app.route('/block', methods=['POST'])
+def block():
+    """
+    Show dashboard where you can choose to edit information about groups you've created or moderate your gaggles.
+    """
+    data = request.get_json()
+    user_id = isLoggedIn()
+    blocked_user_id = data['user_id']
+    conn = dbi.connect() 
+    block = waggle.block(conn, user_id, blocked_user_id)
+    return 'ok'
+
+
+@app.route('/bookmark/', methods=['POST'])
+def bookmark():
+    """
+    Add post to personal bookmarks. 
+    """
+    data = request.get_json()
+    post_id = data['post_id']
+    user_id = isLoggedIn()
+    conn = dbi.connect() 
+    curs = dbi.dict_cursor(conn)
+    curs.execute('''
+        INSERT INTO bookmark(user_id, post_id) 
+        VALUES (%s,%s) ''', 
+                [user_id, post_id])
+    conn.commit()  # need this!   
+    return jsonify({'post_id':post_id})
+
+@app.context_processor
+def inject_userid():
+    user_id = isLoggedIn()
+    return dict(my_user_id=user_id)
+    
+
+@app.template_filter('is_blocked')
+def isBlocked(view_user_id):
+    user_id = isLoggedIn()
+    conn = dbi.connect()
+    return waggle.isBlocked(conn, user_id, view_user_id)
+
 
 @app.before_first_request
 def init_db():

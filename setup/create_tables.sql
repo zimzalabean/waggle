@@ -19,86 +19,81 @@ drop table if exists user;
 
 
 CREATE TABLE user (
-  user_id int not null auto_increment,
+  username varchar(20) not null,
   email varchar(30),
   hashed_pass varchar(60),
-  username varchar(20) not null,
   first_name varchar(30),
   last_name varchar(30),
   class_year varchar(4),
   bio_text varchar(200) COLLATE utf8_bin,
   strike int,
-  unique(username),
-  primary key (user_id)
+  primary key (username)
 ) ENGINE = InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE picfile (
-  user_id int,
+  username varchar(20),
   filename varchar(50),
-  primary key (user_id),
-  INDEX(user_id),
-  foreign key (user_id) references user(user_id)
+  primary key (username),
+  INDEX(username),
+  foreign key (username) references user(username)
     on update no action
     on delete cascade 
 ) ENGINE = InnoDB;
 
 CREATE TABLE gaggle (
-  gaggle_id int not null auto_increment,
-  gaggle_name varchar(20),
-  author_id int,
+  gaggle_name varchar(20) not null,
+  name varchar(50), 
+  author varchar(20),
   description varchar(100) COLLATE utf8_bin,
   guidelines varchar(100) COLLATE utf8_bin,
-  primary key(gaggle_id),
-  INDEX(author_id),
-  foreign key (author_id) references user(user_id) 
+  primary key(gaggle_name),
+  INDEX(gaggle_name),
+  foreign key (author) references user(username) 
     on update no action
     on delete cascade
 )  ENGINE = InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
-CREATE TABLE gosling (
-  user_id int,
-  gaggle_id int,
-  primary key (user_id, gaggle_id),
-  INDEX(user_id),
-  foreign key (user_id) references user(user_id)
-    on update no action
-    on delete cascade,
-  foreign key (gaggle_id) references gaggle(gaggle_id)  
+CREATE TABLE guidelines (
+  gaggle_name varchar(20), 
+  position int auto_increment, 
+  content varchar(500), 
+  primary key(gaggle_name, position),
+  index (gaggle_name),
+  foreign key (gaggle_name) references gaggle(gaggle_name)  
     on update no action
     on delete cascade 
 ) ENGINE = InnoDB;
 
-CREATE TABLE tag (
-  tag_id int not null auto_increment,
-  gaggle_id int,
-  tag_name varchar(50),
-  primary key(tag_id),  
-  INDEX(gaggle_id),
-  foreign key (gaggle_id) references gaggle(gaggle_id)  
+CREATE TABLE gosling (
+  username varchar(20),
+  gaggle_name varchar(20),
+  primary key (username, gaggle_name),
+  INDEX(username, gaggle_name),
+  foreign key (username) references user(username)
     on update no action
-    on delete cascade
+    on delete cascade,
+  foreign key (gaggle_name) references gaggle(gaggle_name)  
+    on update no action
+    on delete cascade 
 ) ENGINE = InnoDB;
 
 CREATE TABLE post (
   post_id int not null auto_increment,
-  gaggle_id int,
-  poster_id int,
+  gaggle_name varchar(20),
+  username varchar(20),
   content varchar(5000) COLLATE utf8_bin,
-  tag_id int,
   posted_date datetime,
-  likes int,
-  dislikes int,
-  flags int,
-  replies int, 
+  isHidden enum('Yes', 'No') DEFAULT 'No',
+  likes int DEFAULT 0,
+  dislikes int DEFAULT 0,
+  flags int DEFAULT 0,
+  replies int DEFAULT 0,
   primary key (post_id),
-  INDEX(gaggle_id),
-  foreign key (tag_id) references tag(tag_id) 
+  INDEX(gaggle_name),
+  foreign key (author) references user(username)
     on update no action
     on delete cascade,
-  foreign key (poster_id) references user(user_id)
-    on update no action
-    on delete cascade,
-  foreign key (gaggle_id) references gaggle(gaggle_id)  
+  foreign key (gaggle_name) references gaggle(gaggle_name)  
     on update no action
     on delete cascade
 ) ENGINE = InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
@@ -113,23 +108,38 @@ CREATE TABLE post_pics (
     on delete cascade 
 ) ENGINE = InnoDB;
 
+CREATE TABLE gaggle_pics (
+  gaggle_name varchar(20),
+  filename varchar(50),
+  primary key (gaggle_name),
+  INDEX(gaggle_name),
+  foreign key (gaggle_name) references gaggle(gaggle_name)
+    on update no action
+    on delete cascade 
+) ENGINE = InnoDB;
+
 CREATE TABLE comment (
     comment_id int not null auto_increment,
-    parent_comment_id int,
+    parent_comment_id int DEFAULT null,
     post_id int,
-    commentor_id int,
+    gaggle_name varchar(20),
+    username varchar(20),
     content varchar(5000) COLLATE utf8_bin,
     posted_date datetime,
-    likes int,
-    dislikes int,
-    flags int,
-    replies int, 
+    isHidden enum('Yes', 'No') DEFAULT 'No',
+    likes int DEFAULT 0,
+    dislikes int DEFAULT 0,
+    flags int DEFAULT 0,
+    replies int DEFAULT 0,
     primary key (comment_id),
     INDEX (post_id),
     foreign key (post_id) references post(post_id)
       on update no action
       on delete cascade, 
-    foreign key (commentor_id) references user(user_id)
+    foreign key (author) references user(username)
+      on update no action
+      on delete cascade, 
+    foreign key (gaggle_name) references gaggle(gaggle_name)
       on update no action
       on delete cascade, 
     foreign key (parent_comment_id) references comment(comment_id)
@@ -139,10 +149,8 @@ CREATE TABLE comment (
 
 CREATE TABLE post_like (
   post_id int,
-  user_id int,
-  kind enum('Like','Dislike'),
-  INDEX(user_id),
-  foreign key (user_id) references user(user_id)
+  username varchar(20),
+  foreign key (username) references user(username)
     on update no action
     on delete cascade, 
   foreign key (post_id) references post(post_id)  
@@ -152,10 +160,8 @@ CREATE TABLE post_like (
 
 CREATE TABLE comment_like (
   comment_id int,
-  user_id int,
-  kind enum('Like','Dislike'),
-  INDEX(user_id),
-  foreign key (user_id) references user(user_id)
+  username varchar(20),
+  foreign key (username) references user(username)
     on update no action
     on delete cascade, 
   foreign key (comment_id) references comment(comment_id)  
@@ -164,99 +170,84 @@ CREATE TABLE comment_like (
 ) ENGINE = InnoDB;
 
 CREATE TABLE moderator (
-  user_id int,
-  gaggle_id int,
-  INDEX(user_id),
-  foreign key (user_id) references user(user_id)
+  username varchar(20),
+  gaggle_name varchar(20),
+  primary key (username, gaggle_name),
+  foreign key (username) references user(username)
     on update no action
     on delete cascade, 
-  foreign key (gaggle_id) references gaggle(gaggle_id)
+  foreign key (gaggle_name) references gaggle(gaggle_name)
     on update no action
     on delete cascade
 ) ENGINE = InnoDB;
 
 CREATE TABLE mod_invite (
-  gaggle_id int,
-  invitee_id int,
+  gaggle_name varchar(20),
+  invitee varchar(20),
   posted_date datetime,
-  status enum('Yes', 'No', 'Pending'),
-  primary key(gaggle_id, invitee_id),
-  INDEX(invitee_id),
-  foreign key (gaggle_id) references gaggle(gaggle_id)
+  status enum('Yes', 'No', 'Pending') DEFAULT 'Pending',
+  primary key(gaggle_name, invitee),
+  foreign key (gaggle_name) references gaggle(gaggle_name)
     on update no action
     on delete cascade,
-  foreign key (invitee_id) references user(user_id)  
+  foreign key (invitee) references user(username)  
     on update no action
     on delete cascade
 ) ENGINE = InnoDB;
 
 CREATE TABLE bad_gosling (
-  gaggle_id int,
-  user_id int,  
+  gaggle_name varchar(20),
+  username varchar(20), 
   unban_time datetime,
-  foreign key (gaggle_id) references gaggle(gaggle_id)
+  reason varchar(255),
+  primary key (gaggle_name, username),
+  foreign key (gaggle_name) references gaggle(gaggle_name)
     on update no action
       on delete cascade,
-  foreign key (mod_id) references user(user_id)  
+  foreign key (username) references user(username)  
     on update no action
     on delete cascade
 ) ENGINE = InnoDB;
 
-CREATE TABLE flag_post (
+CREATE TABLE flag (
   report_id int not null auto_increment,  
   post_id int,
-  reporter_id int,
+  comment_id int, 
+  reporter varchar(20), 
   reason varchar(200),
   flagged_date datetime,
-  mod_id int,
-  mod_aprroved enum('Yes', 'No', 'Pending'),
+  mod varchar(20),
+  mod_approved enum('Yes', 'No', 'Pending'),
   primary key (report_id),
   foreign key (post_id) references post(post_id)
     on update no action
     on delete cascade, 
-  foreign key (reporter_id) references user(user_id)
-    on update no action
-    on delete cascade, 
-  foreign key (mod_id) references user(user_id)  
-    on update no action
-    on delete cascade
-) ENGINE = InnoDB;
-
-CREATE TABLE flag_comment (
-  comment_id int,
-  reporter_id int,
-  reason varchar(200),
-  flagged_date datetime,
-  mod_id int,
-  mod_aprroved enum('Yes', 'No', 'Pending'),
-  index(mod_id),
   foreign key (comment_id) references comment(comment_id)
     on update no action
-    on delete cascade, 
-  foreign key (reporter_id) references user(user_id)
+    on delete cascade,     
+  foreign key (reporter) references user(username)
     on update no action
-    on delete cascade,
-  foreign key (mod_id) references user(user_id)  
+    on delete cascade, 
+  foreign key (mod) references user(username)  
     on update no action
     on delete cascade
 ) ENGINE = InnoDB;
 
-CREATE TABLE group_blocked (
-  gaggle_id int,
-  blocked_user_id int,
-  ban_time datetime, 
-  unban_time datetime,
-  foreign key (gaggle_id) references gaggle(gaggle_id)
+CREATE TABLE blocked (
+  username varchar(20), 
+  blocked_username varchar(20), 
+  primary key(username, blocked_username),
+  foreign key (blocked_username) references user(username)  
     on update no action
-    on delete cascade,
-  foreign key (blocked_user_id) references user(user_id)  
+    on delete cascade, 
+  foreign key (username) references user(username)  
     on update no action
-    on delete cascade
+    on delete cascade     
 ) ENGINE = InnoDB;
 
 CREATE TABLE notifs(
   notif_id int not null auto_increment,
-  user_id int,
+  username int,
   content varchar(500),
   kind enum ('liked', 'replied'),
   source enum('post', 'comment'),
@@ -264,7 +255,7 @@ CREATE TABLE notifs(
   noti_time datetime,
   status enum('seen', 'pending'), 
   primary key (notif_id),
-  foreign key (user_id) references user(user_id)
+  foreign key (username) references user(username)
     on update no action
     on delete cascade
 ) ENGINE = InnoDB;
@@ -278,4 +269,16 @@ CREATE table convos(
   foreign key (des_id) references comment(comment_id)
     on update no action
     on delete cascade
+) ENGINE = InnoDB;
+
+CREATE TABLE bookmark (
+  username int, 
+  post_id int,
+  primary key(username, post_id),
+  foreign key (username) references user(username)  
+    on update no action
+    on delete cascade, 
+  foreign key (post_id) references post(post_id)  
+    on update no action
+    on delete cascade     
 ) ENGINE = InnoDB;
